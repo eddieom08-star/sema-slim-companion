@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth0, isAuthenticated } from "./auth0";
+import { setupAuth, isAuthenticated } from "./replitAuth";
 import {
   insertMedicationSchema,
   insertMedicationLogSchema,
@@ -15,13 +15,13 @@ import {
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Setup Auth0
-  setupAuth0(app);
+  // Setup Replit Auth
+  await setupAuth(app);
 
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -36,7 +36,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // User profile routes
   app.put('/api/user/profile', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.user.claims.sub;
       console.log("Updating profile for user:", userId, "with data:", req.body);
       const validatedData = updateUserProfileSchema.parse(req.body);
       const user = await storage.updateUserProfile(userId, validatedData);
@@ -54,7 +54,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dashboard data
   app.get('/api/dashboard', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.user.claims.sub;
       const dashboardData = await storage.getDashboardData(userId);
       res.json(dashboardData);
     } catch (error) {
@@ -66,7 +66,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Medication routes
   app.get('/api/medications', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.user.claims.sub;
       const medications = await storage.getUserMedications(userId);
       res.json(medications);
     } catch (error) {
@@ -77,7 +77,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/medications', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.user.claims.sub;
       const validatedData = insertMedicationSchema.parse({ ...req.body, userId });
       const medication = await storage.createMedication(validatedData);
       res.json(medication);
@@ -112,7 +112,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Medication log routes
   app.get('/api/medication-logs', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.user.claims.sub;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
       const logs = await storage.getUserMedicationLogs(userId, limit);
       res.json(logs);
@@ -124,7 +124,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/medication-logs', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.user.claims.sub;
       const validatedData = insertMedicationLogSchema.parse({ ...req.body, userId });
       const log = await storage.createMedicationLog(validatedData);
       
@@ -141,7 +141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Food entry routes
   app.get('/api/food-entries', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.user.claims.sub;
       const date = req.query.date ? new Date(req.query.date as string) : undefined;
       const entries = await storage.getUserFoodEntries(userId, date);
       res.json(entries);
@@ -153,7 +153,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/food-entries', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.user.claims.sub;
       const validatedData = insertFoodEntrySchema.parse({ ...req.body, userId });
       const entry = await storage.createFoodEntry(validatedData);
       
@@ -195,7 +195,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Weight log routes
   app.get('/api/weight-logs', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.user.claims.sub;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
       const logs = await storage.getUserWeightLogs(userId, limit);
       res.json(logs);
@@ -207,7 +207,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/weight-logs', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.user.claims.sub;
       const validatedData = insertWeightLogSchema.parse({ ...req.body, userId });
       const log = await storage.createWeightLog(validatedData);
       
@@ -227,7 +227,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Body measurement routes
   app.get('/api/body-measurements', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.user.claims.sub;
       const measurements = await storage.getUserBodyMeasurements(userId);
       res.json(measurements);
     } catch (error) {
@@ -238,7 +238,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/body-measurements', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.user.claims.sub;
       const validatedData = insertBodyMeasurementSchema.parse({ ...req.body, userId });
       const measurement = await storage.createBodyMeasurement(validatedData);
       res.json(measurement);
@@ -261,7 +261,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/user-achievements', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.user.claims.sub;
       const userAchievements = await storage.getUserAchievements(userId);
       res.json(userAchievements);
     } catch (error) {
@@ -273,7 +273,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Streak routes
   app.get('/api/streaks', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.user.claims.sub;
       const streaks = await storage.getUserStreaks(userId);
       res.json(streaks);
     } catch (error) {
@@ -285,7 +285,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Goal routes
   app.get('/api/goals', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.user.claims.sub;
       const goals = await storage.getUserGoals(userId);
       res.json(goals);
     } catch (error) {
@@ -296,7 +296,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/goals', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.user.claims.sub;
       const goal = await storage.createUserGoal({ ...req.body, userId });
       res.json(goal);
     } catch (error) {
@@ -308,7 +308,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dose escalation routes
   app.post('/api/dose-escalations', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.user.claims.sub;
       
       // Verify medication belongs to user
       const { medicationId } = req.body;
@@ -332,7 +332,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/medications/:id/dose-history', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.user.claims.sub;
       const { id } = req.params;
       
       // Verify medication belongs to user
@@ -353,7 +353,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Hunger log routes
   app.post('/api/hunger-logs', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.user.claims.sub;
       const validatedData = insertHungerLogSchema.parse({ ...req.body, userId });
       const log = await storage.createHungerLog(validatedData);
       
@@ -372,7 +372,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/hunger-logs', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.user.claims.sub;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 30;
       const logs = await storage.getUserHungerLogs(userId, limit);
       res.json(logs);
@@ -424,7 +424,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Gamification routes
   app.get('/api/gamification', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.user.claims.sub;
       let gamification = await storage.getUserGamification(userId);
       if (!gamification) {
         gamification = await storage.initializeUserGamification(userId);
@@ -438,7 +438,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/point-transactions', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.user.claims.sub;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
       const transactions = await storage.getUserPointTransactions(userId, limit);
       res.json(transactions);

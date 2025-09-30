@@ -4,9 +4,6 @@ import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
 
-// Trust proxy for secure cookies (required for Auth0 behind proxies/HTTPS)
-app.set('trust proxy', 1);
-
 declare module 'http' {
   interface IncomingMessage {
     rawBody: unknown

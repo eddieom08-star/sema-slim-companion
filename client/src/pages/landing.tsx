@@ -3,11 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 
 export default function Landing() {
   const handleLogin = () => {
-    window.location.href = "/login";
-  };
-
-  const handleSignup = () => {
-    window.location.href = "/signup";
+    window.location.href = "/api/login";
   };
 
   return (
@@ -26,22 +22,9 @@ export default function Landing() {
               </div>
             </div>
             
-            <div className="flex items-center gap-2">
-              <Button 
-                onClick={handleSignup} 
-                data-testid="button-signup"
-                className="bg-primary text-primary-foreground hover:bg-primary/90"
-              >
-                Sign Up
-              </Button>
-              <Button 
-                onClick={handleLogin} 
-                variant="outline"
-                data-testid="button-login"
-              >
-                Sign In
-              </Button>
-            </div>
+            <Button onClick={handleLogin} data-testid="button-login">
+              Sign In
+            </Button>
           </div>
         </div>
       </header>
@@ -63,7 +46,7 @@ export default function Landing() {
               
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button 
-                  onClick={handleSignup}
+                  onClick={handleLogin}
                   className="bg-card text-primary px-8 py-4 rounded-lg font-semibold hover:bg-card/90 transition-colors"
                   data-testid="button-start-trial"
                 >

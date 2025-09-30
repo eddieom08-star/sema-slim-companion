@@ -11,7 +11,6 @@ import Onboarding from "@/pages/onboarding";
 import FoodTracking from "@/pages/food-tracking";
 import Medication from "@/pages/medication";
 import Progress from "@/pages/progress";
-import Settings from "@/pages/settings";
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -41,7 +40,6 @@ function Router() {
               <Route path="/food-tracking" component={FoodTracking} />
               <Route path="/medication" component={Medication} />
               <Route path="/progress" component={Progress} />
-              <Route path="/settings" component={Settings} />
             </>
           )}
         </>

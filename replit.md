@@ -42,13 +42,15 @@ Preferred communication style: Simple, everyday language.
 
 ## Authentication
 
-**Provider**: Replit Auth using OpenID Connect (OIDC) protocol.
+**Provider**: Auth0 using OpenID Connect (OIDC) protocol via `express-openid-connect`.
 
 **Session Management**: Express-session with PostgreSQL session store (`connect-pg-simple`). Sessions persist for 7 days with secure, HTTP-only cookies.
 
-**User Storage**: Users table stores profile information synced from OIDC claims. Supports upsert operations to handle returning users.
+**User Storage**: Users table stores profile information synced from Auth0 OIDC claims. Supports upsert operations to handle returning users.
 
-**Authorization**: Custom `isAuthenticated` middleware validates session and populates `req.user` with claims including `sub` (user ID).
+**Authorization**: Custom `isAuthenticated` middleware validates Auth0 session and populates `req.oidc.user` with claims including `sub` (user ID).
+
+**Configuration**: Requires Auth0 tenant credentials (`AUTH0_DOMAIN`, `AUTH0_CLIENT_ID`, `AUTH0_CLIENT_SECRET`) and `SESSION_SECRET` for secure session encryption.
 
 ## Database
 
@@ -91,7 +93,7 @@ Preferred communication style: Simple, everyday language.
 
 **Database**: Neon PostgreSQL serverless database (required via `DATABASE_URL` environment variable).
 
-**Authentication Service**: Replit OIDC provider for user authentication (configured via `REPL_ID`, `ISSUER_URL`, `SESSION_SECRET` environment variables).
+**Authentication Service**: Auth0 for user authentication and authorization (configured via `AUTH0_DOMAIN`, `AUTH0_CLIENT_ID`, `AUTH0_CLIENT_SECRET`, `SESSION_SECRET` environment variables).
 
 **Session Storage**: PostgreSQL-backed session store using the same database connection.
 
@@ -104,6 +106,32 @@ Preferred communication style: Simple, everyday language.
 **Development Tools**: 
 - Replit-specific Vite plugins for runtime error overlay, cartographer, and dev banner
 - ESBuild for server-side bundling in production
+
+## Mobile Compilation
+
+**Framework**: Capacitor 7 for compiling the web app into native iOS and Android applications.
+
+**Configuration**: 
+- App ID: `com.semaslim.app` (customizable in `capacitor.config.ts`)
+- Web directory: `dist/public` (matches Vite build output)
+- HTTPS scheme for both platforms for enhanced security
+
+**Build Process**:
+1. Build web app: `npm run build`
+2. Sync to native platforms: `npx cap sync` or `./mobile-build.sh sync`
+3. Open in native IDE: `./mobile-build.sh ios` or `./mobile-build.sh android`
+
+**Platform Requirements**:
+- **iOS**: macOS with Xcode 14+, CocoaPods for dependency management
+- **Android**: Android Studio with JDK 17+ and Android SDK Platform 33+
+
+**Helper Scripts**: 
+- `mobile-build.sh` provides convenient commands for common Capacitor operations
+- `.env.mobile.example` template for mobile-specific environment configuration
+
+**Documentation**: See `MOBILE_SETUP.md` for complete mobile compilation instructions, troubleshooting, and deployment guides.
+
+**Native Features**: Capacitor provides JavaScript APIs for native device features like camera (barcode scanning), local notifications (medication reminders), and secure storage.
 
 ## Design Decisions
 

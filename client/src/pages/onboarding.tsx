@@ -59,8 +59,8 @@ export default function Onboarding() {
   const handleComplete = () => {
     const profileData = {
       medicationType: formData.medicationType,
-      currentWeight: formData.currentWeight ? parseFloat(formData.currentWeight) : null,
-      targetWeight: formData.targetWeight ? parseFloat(formData.targetWeight) : null,
+      currentWeight: formData.currentWeight || null,
+      targetWeight: formData.targetWeight || null,
       height: formData.height ? parseInt(formData.height) : null,
       dateOfBirth: formData.dateOfBirth || null,
       gender: formData.gender || null,

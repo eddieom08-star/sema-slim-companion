@@ -26,10 +26,11 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// User storage table (required for Replit Auth)
+// User storage table
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: varchar("email").unique(),
+  email: varchar("email").unique().notNull(),
+  password: varchar("password", { length: 255 }), // Nullable for migration - will be required for new users
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
@@ -337,8 +338,25 @@ export const updateUserProfileSchema = createInsertSchema(users).omit({
   createdAt: true,
   updatedAt: true,
   email: true,
+  password: true,
 }).extend({
   medicationType: z.enum(['ozempic', 'mounjaro', 'wegovy', 'rybelsus']).optional(),
   activityLevel: z.enum(['sedentary', 'lightly_active', 'moderately_active', 'very_active', 'extremely_active']).optional(),
   gender: z.enum(['male', 'female', 'other']).optional(),
 });
+
+// Auth schemas
+export const registerSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+  firstName: z.string().min(1, 'First name is required'),
+  lastName: z.string().min(1, 'Last name is required'),
+});
+
+export const loginSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(1, 'Password is required'),
+});
+
+export type RegisterInput = z.infer<typeof registerSchema>;
+export type LoginInput = z.infer<typeof loginSchema>;

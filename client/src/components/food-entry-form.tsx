@@ -7,9 +7,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { BarcodeScanner } from "@/components/barcode-scanner";
+import { Loader2 } from "lucide-react";
 
 export function FoodEntryForm() {
   const [activeTab, setActiveTab] = useState("manual");
+  const [isSearchingBarcode, setIsSearchingBarcode] = useState(false);
+  const [barcodeSearchResult, setBarcodeSearchResult] = useState<any>(null);
   const [formData, setFormData] = useState({
     foodName: "",
     brand: "",
@@ -97,12 +101,64 @@ export function FoodEntryForm() {
     });
   };
 
-  const handleBarcodeSearch = () => {
-    // Placeholder for barcode scanning functionality
-    toast({
-      title: "Feature coming soon",
-      description: "Barcode scanning will be available in a future update.",
-    });
+  const handleBarcodeScanned = async (barcode: string) => {
+    setIsSearchingBarcode(true);
+    setBarcodeSearchResult(null);
+    
+    try {
+      const response = await fetch(`/api/food-database/barcode/${barcode}`, {
+        credentials: "include",
+      });
+      
+      if (response.status === 401) {
+        toast({
+          title: "Authentication required",
+          description: "Please log in to use barcode scanning.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      if (!response.ok) {
+        throw new Error("Food not found");
+      }
+      
+      const food = await response.json();
+      setBarcodeSearchResult(food);
+      
+      // Auto-fill form with found food data
+      setFormData({
+        foodName: food.name,
+        brand: food.brand || "",
+        barcode: food.barcode,
+        quantity: food.servingSize?.toString() || "100",
+        unit: food.servingUnit || "grams",
+        calories: food.calories.toString(),
+        protein: food.protein?.toString() || "0",
+        carbs: food.carbs?.toString() || "0",
+        fat: food.fat?.toString() || "0",
+        fiber: food.fiber?.toString() || "0",
+        sugar: food.sugar?.toString() || "0",
+        sodium: food.sodium?.toString() || "0",
+        mealType: formData.mealType,
+      });
+      
+      toast({
+        title: "Food found!",
+        description: `${food.name} has been loaded. Adjust quantity if needed and add to your log.`,
+      });
+      
+      // Switch to manual tab so user can adjust and submit
+      setActiveTab("manual");
+    } catch (error) {
+      toast({
+        title: "Food not found",
+        description: "This barcode is not in our database. Try manual entry or a different product.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSearchingBarcode(false);
+    }
   };
 
   const calculateMacroPercentages = () => {
@@ -361,26 +417,18 @@ export function FoodEntryForm() {
         </TabsContent>
 
         <TabsContent value="barcode" className="space-y-4 mt-4">
-          <div className="text-center py-8">
-            <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center mx-auto mb-4">
-              <i className="fas fa-barcode text-2xl text-muted-foreground"></i>
+          {isSearchingBarcode && (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              <span className="ml-2 text-muted-foreground">Searching food database...</span>
             </div>
-            <h3 className="text-lg font-semibold text-foreground mb-2">Barcode Scanner</h3>
-            <p className="text-sm text-muted-foreground mb-6">
-              Scan product barcodes to quickly add foods with nutritional information
-            </p>
-            
-            <Button onClick={handleBarcodeSearch} data-testid="button-scan-barcode">
-              <i className="fas fa-camera mr-2"></i>
-              Scan Barcode
-            </Button>
-            
-            <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-              <p className="text-xs text-muted-foreground">
-                Feature coming soon! For now, please use manual entry to add your foods.
-              </p>
-            </div>
-          </div>
+          )}
+          
+          {!isSearchingBarcode && (
+            <BarcodeScanner 
+              onScanSuccess={handleBarcodeScanned}
+            />
+          )}
         </TabsContent>
       </Tabs>
     </div>

@@ -9,6 +9,11 @@ import {
   userAchievements,
   dailyStreaks,
   userGoals,
+  doseEscalations,
+  hungerLogs,
+  foodDatabase,
+  userGamification,
+  pointTransactions,
   type User,
   type UpsertUser,
   type Medication,
@@ -25,6 +30,15 @@ import {
   type UserAchievement,
   type DailyStreak,
   type UserGoal,
+  type DoseEscalation,
+  type InsertDoseEscalation,
+  type HungerLog,
+  type InsertHungerLog,
+  type FoodDatabase,
+  type InsertFoodDatabase,
+  type UserGamification,
+  type PointTransaction,
+  type InsertPointTransaction,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gte, lte, sql } from "drizzle-orm";
@@ -83,6 +97,25 @@ export interface IStorage {
     currentStreak: number;
     upcomingMedication: Medication | null;
   }>;
+
+  // Dose escalation operations
+  createDoseEscalation(escalation: InsertDoseEscalation): Promise<DoseEscalation>;
+  getMedicationDoseHistory(medicationId: string): Promise<DoseEscalation[]>;
+
+  // Hunger log operations
+  createHungerLog(log: InsertHungerLog): Promise<HungerLog>;
+  getUserHungerLogs(userId: string, limit?: number): Promise<HungerLog[]>;
+
+  // Food database operations
+  searchFoodByBarcode(barcode: string): Promise<FoodDatabase | undefined>;
+  searchFoodByName(query: string, limit?: number): Promise<FoodDatabase[]>;
+  addFoodToDatabase(food: InsertFoodDatabase): Promise<FoodDatabase>;
+
+  // Gamification operations
+  getUserGamification(userId: string): Promise<UserGamification | undefined>;
+  initializeUserGamification(userId: string): Promise<UserGamification>;
+  addPoints(userId: string, points: number, reason: string, description?: string): Promise<void>;
+  getUserPointTransactions(userId: string, limit?: number): Promise<PointTransaction[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -438,6 +471,127 @@ export class DatabaseStorage implements IStorage {
       currentStreak,
       upcomingMedication: upcomingMedication || null,
     };
+  }
+
+  // Dose escalation operations
+  async createDoseEscalation(escalation: InsertDoseEscalation): Promise<DoseEscalation> {
+    const [result] = await db.insert(doseEscalations).values(escalation).returning();
+    return result;
+  }
+
+  async getMedicationDoseHistory(medicationId: string): Promise<DoseEscalation[]> {
+    return await db
+      .select()
+      .from(doseEscalations)
+      .where(eq(doseEscalations.medicationId, medicationId))
+      .orderBy(desc(doseEscalations.escalationDate));
+  }
+
+  // Hunger log operations
+  async createHungerLog(log: InsertHungerLog): Promise<HungerLog> {
+    const [result] = await db.insert(hungerLogs).values(log).returning();
+    return result;
+  }
+
+  async getUserHungerLogs(userId: string, limit: number = 30): Promise<HungerLog[]> {
+    return await db
+      .select()
+      .from(hungerLogs)
+      .where(eq(hungerLogs.userId, userId))
+      .orderBy(desc(hungerLogs.loggedAt))
+      .limit(limit);
+  }
+
+  // Food database operations
+  async searchFoodByBarcode(barcode: string): Promise<FoodDatabase | undefined> {
+    const [result] = await db
+      .select()
+      .from(foodDatabase)
+      .where(eq(foodDatabase.barcode, barcode));
+    return result;
+  }
+
+  async searchFoodByName(query: string, limit: number = 20): Promise<FoodDatabase[]> {
+    return await db
+      .select()
+      .from(foodDatabase)
+      .where(sql`${foodDatabase.productName} ILIKE ${'%' + query + '%'}`)
+      .limit(limit);
+  }
+
+  async addFoodToDatabase(food: InsertFoodDatabase): Promise<FoodDatabase> {
+    const [result] = await db.insert(foodDatabase).values(food).returning();
+    return result;
+  }
+
+  // Gamification operations
+  async getUserGamification(userId: string): Promise<UserGamification | undefined> {
+    const [result] = await db
+      .select()
+      .from(userGamification)
+      .where(eq(userGamification.userId, userId));
+    return result;
+  }
+
+  async initializeUserGamification(userId: string): Promise<UserGamification> {
+    const [result] = await db
+      .insert(userGamification)
+      .values({
+        userId,
+        totalPoints: 0,
+        currentLevel: 1,
+        levelProgress: 0,
+        lifetimePoints: 0,
+      })
+      .returning();
+    return result;
+  }
+
+  async addPoints(userId: string, points: number, reason: string, description?: string): Promise<void> {
+    // Check if user gamification exists, create if not
+    let gamification = await this.getUserGamification(userId);
+    if (!gamification) {
+      gamification = await this.initializeUserGamification(userId);
+    }
+
+    // Calculate level progression (100 points per level)
+    const currentPoints = gamification.totalPoints || 0;
+    const currentLifetimePoints = gamification.lifetimePoints || 0;
+    const newTotalPoints = currentPoints + points;
+    const newLevel = Math.floor(newTotalPoints / 100) + 1;
+    const levelProgress = (newTotalPoints % 100);
+
+    // Use transaction to ensure atomicity
+    await db.transaction(async (tx) => {
+      // Update gamification record
+      await tx
+        .update(userGamification)
+        .set({
+          totalPoints: newTotalPoints,
+          currentLevel: newLevel,
+          levelProgress,
+          lifetimePoints: currentLifetimePoints + points,
+          updatedAt: new Date(),
+        })
+        .where(eq(userGamification.userId, userId));
+
+      // Log the transaction
+      await tx.insert(pointTransactions).values({
+        userId,
+        points,
+        reason,
+        description,
+      });
+    });
+  }
+
+  async getUserPointTransactions(userId: string, limit: number = 50): Promise<PointTransaction[]> {
+    return await db
+      .select()
+      .from(pointTransactions)
+      .where(eq(pointTransactions.userId, userId))
+      .orderBy(desc(pointTransactions.createdAt))
+      .limit(limit);
   }
 }
 

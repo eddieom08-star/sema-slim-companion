@@ -8,7 +8,10 @@ import {
   insertFoodEntrySchema,
   insertWeightLogSchema,
   insertBodyMeasurementSchema,
-  updateUserProfileSchema
+  updateUserProfileSchema,
+  insertDoseEscalationSchema,
+  insertHungerLogSchema,
+  insertFoodDatabaseSchema
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -286,6 +289,149 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating goal:", error);
       res.status(500).json({ message: "Failed to create goal" });
+    }
+  });
+
+  // Dose escalation routes
+  app.post('/api/dose-escalations', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Verify medication belongs to user
+      const { medicationId } = req.body;
+      const medications = await storage.getUserMedications(userId);
+      const medication = medications.find(m => m.id === medicationId);
+      if (!medication) {
+        return res.status(404).json({ message: "Medication not found" });
+      }
+      
+      const validatedData = insertDoseEscalationSchema.parse({ ...req.body, userId });
+      const escalation = await storage.createDoseEscalation(validatedData);
+      res.json(escalation);
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Validation failed", errors: error.issues });
+      }
+      console.error("Error creating dose escalation:", error);
+      res.status(500).json({ message: "Failed to create dose escalation" });
+    }
+  });
+
+  app.get('/api/medications/:id/dose-history', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { id } = req.params;
+      
+      // Verify medication belongs to user
+      const medications = await storage.getUserMedications(userId);
+      const medication = medications.find(m => m.id === id);
+      if (!medication) {
+        return res.status(404).json({ message: "Medication not found" });
+      }
+      
+      const history = await storage.getMedicationDoseHistory(id);
+      res.json(history);
+    } catch (error) {
+      console.error("Error fetching dose history:", error);
+      res.status(500).json({ message: "Failed to fetch dose history" });
+    }
+  });
+
+  // Hunger log routes
+  app.post('/api/hunger-logs', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const validatedData = insertHungerLogSchema.parse({ ...req.body, userId });
+      const log = await storage.createHungerLog(validatedData);
+      
+      // Award points for logging hunger
+      await storage.addPoints(userId, 5, 'hunger_logged', 'Logged hunger/satiety data');
+      
+      res.json(log);
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Validation failed", errors: error.issues });
+      }
+      console.error("Error creating hunger log:", error);
+      res.status(500).json({ message: "Failed to create hunger log" });
+    }
+  });
+
+  app.get('/api/hunger-logs', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 30;
+      const logs = await storage.getUserHungerLogs(userId, limit);
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching hunger logs:", error);
+      res.status(500).json({ message: "Failed to fetch hunger logs" });
+    }
+  });
+
+  // Food database routes (barcode scanning)
+  app.get('/api/food-database/barcode/:barcode', isAuthenticated, async (req: any, res) => {
+    try {
+      const { barcode } = req.params;
+      const food = await storage.searchFoodByBarcode(barcode);
+      if (food) {
+        res.json(food);
+      } else {
+        res.status(404).json({ message: "Food not found" });
+      }
+    } catch (error) {
+      console.error("Error searching food by barcode:", error);
+      res.status(500).json({ message: "Failed to search food" });
+    }
+  });
+
+  app.get('/api/food-database/search', isAuthenticated, async (req: any, res) => {
+    try {
+      const query = req.query.q as string;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+      const foods = await storage.searchFoodByName(query, limit);
+      res.json(foods);
+    } catch (error) {
+      console.error("Error searching food:", error);
+      res.status(500).json({ message: "Failed to search food" });
+    }
+  });
+
+  app.post('/api/food-database', isAuthenticated, async (req: any, res) => {
+    try {
+      const validatedData = insertFoodDatabaseSchema.parse({ ...req.body, source: 'user_contributed' });
+      const food = await storage.addFoodToDatabase(validatedData);
+      res.json(food);
+    } catch (error) {
+      console.error("Error adding food to database:", error);
+      res.status(500).json({ message: "Failed to add food to database" });
+    }
+  });
+
+  // Gamification routes
+  app.get('/api/gamification', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      let gamification = await storage.getUserGamification(userId);
+      if (!gamification) {
+        gamification = await storage.initializeUserGamification(userId);
+      }
+      res.json(gamification);
+    } catch (error) {
+      console.error("Error fetching gamification data:", error);
+      res.status(500).json({ message: "Failed to fetch gamification data" });
+    }
+  });
+
+  app.get('/api/point-transactions', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      const transactions = await storage.getUserPointTransactions(userId, limit);
+      res.json(transactions);
+    } catch (error) {
+      console.error("Error fetching point transactions:", error);
+      res.status(500).json({ message: "Failed to fetch point transactions" });
     }
   });
 

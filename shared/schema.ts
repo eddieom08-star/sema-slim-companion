@@ -57,6 +57,7 @@ export const medications = pgTable("medications", {
   startDate: date("start_date").notNull(),
   nextDueDate: timestamp("next_due_date").notNull(),
   reminderEnabled: boolean("reminder_enabled").default(true),
+  adherenceScore: integer("adherence_score").default(100), // 0-100 percentage
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -167,6 +168,79 @@ export const userGoals = pgTable("user_goals", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Dose escalation tracking
+export const doseEscalations = pgTable("dose_escalations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  medicationId: varchar("medication_id").notNull().references(() => medications.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  previousDose: varchar("previous_dose", { length: 10 }).notNull(),
+  newDose: varchar("new_dose", { length: 10 }).notNull(),
+  escalationDate: date("escalation_date").notNull(),
+  reason: text("reason"),
+  prescribedBy: varchar("prescribed_by", { length: 100 }),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Hunger and satiety tracking
+export const hungerLogs = pgTable("hunger_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  foodEntryId: varchar("food_entry_id").references(() => foodEntries.id),
+  hungerBefore: integer("hunger_before").notNull(), // 1-10 scale
+  hungerAfter: integer("hunger_after"), // 1-10 scale
+  fullnessDuration: integer("fullness_duration"), // hours feeling full
+  cravingIntensity: integer("craving_intensity"), // 1-10 scale
+  cravingType: varchar("craving_type", { length: 50 }), // sweet, salty, savory
+  loggedAt: timestamp("logged_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Food database for barcode scanning
+export const foodDatabase = pgTable("food_database", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  barcode: varchar("barcode", { length: 50 }).notNull().unique(),
+  productName: varchar("product_name", { length: 255 }).notNull(),
+  brand: varchar("brand", { length: 255 }),
+  servingSize: decimal("serving_size", { precision: 8, scale: 3 }).notNull(),
+  servingUnit: varchar("serving_unit", { length: 20 }).notNull(),
+  calories: integer("calories").notNull(),
+  protein: decimal("protein", { precision: 8, scale: 3 }).notNull(),
+  carbs: decimal("carbs", { precision: 8, scale: 3 }).notNull(),
+  fat: decimal("fat", { precision: 8, scale: 3 }).notNull(),
+  fiber: decimal("fiber", { precision: 8, scale: 3 }),
+  sugar: decimal("sugar", { precision: 8, scale: 3 }),
+  sodium: decimal("sodium", { precision: 8, scale: 3 }),
+  region: varchar("region", { length: 5 }), // US, UK, EU
+  source: varchar("source", { length: 50 }), // openfoodfacts, usda, user_contributed
+  verified: boolean("verified").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Gamification: User points and levels
+export const userGamification = pgTable("user_gamification", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id).unique(),
+  totalPoints: integer("total_points").default(0),
+  currentLevel: integer("current_level").default(1),
+  levelProgress: integer("level_progress").default(0), // percentage to next level
+  lifetimePoints: integer("lifetime_points").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Point transactions log
+export const pointTransactions = pgTable("point_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  points: integer("points").notNull(),
+  reason: varchar("reason", { length: 100 }).notNull(), // streak_bonus, meal_logged, weight_milestone
+  description: text("description"),
+  multiplier: decimal("multiplier", { precision: 3, scale: 2 }).default('1.0'),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Export types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -192,6 +266,21 @@ export type UserAchievement = typeof userAchievements.$inferSelect;
 export type DailyStreak = typeof dailyStreaks.$inferSelect;
 export type UserGoal = typeof userGoals.$inferSelect;
 
+export type InsertDoseEscalation = typeof doseEscalations.$inferInsert;
+export type DoseEscalation = typeof doseEscalations.$inferSelect;
+
+export type InsertHungerLog = typeof hungerLogs.$inferInsert;
+export type HungerLog = typeof hungerLogs.$inferSelect;
+
+export type InsertFoodDatabase = typeof foodDatabase.$inferInsert;
+export type FoodDatabase = typeof foodDatabase.$inferSelect;
+
+export type InsertUserGamification = typeof userGamification.$inferInsert;
+export type UserGamification = typeof userGamification.$inferSelect;
+
+export type InsertPointTransaction = typeof pointTransactions.$inferInsert;
+export type PointTransaction = typeof pointTransactions.$inferSelect;
+
 // Zod schemas for validation
 export const insertMedicationSchema = createInsertSchema(medications).omit({
   id: true,
@@ -214,6 +303,31 @@ export const insertWeightLogSchema = createInsertSchema(weightLogs).omit({
 });
 
 export const insertBodyMeasurementSchema = createInsertSchema(bodyMeasurements).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertDoseEscalationSchema = createInsertSchema(doseEscalations).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertHungerLogSchema = createInsertSchema(hungerLogs).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  hungerBefore: z.number().min(1).max(10),
+  hungerAfter: z.number().min(1).max(10).optional(),
+  cravingIntensity: z.number().min(1).max(10).optional(),
+});
+
+export const insertFoodDatabaseSchema = createInsertSchema(foodDatabase).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPointTransactionSchema = createInsertSchema(pointTransactions).omit({
   id: true,
   createdAt: true,
 });

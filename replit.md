@@ -32,7 +32,7 @@ Preferred communication style: Simple, everyday language.
 
 **Framework**: Express.js server with TypeScript support, using ESM modules.
 
-**API Design**: RESTful API endpoints under `/api` prefix. All endpoints require authentication except `/api/login` and `/api/logout`.
+**API Design**: RESTful API endpoints under `/api` prefix. All endpoints require authentication. Auth0 handles authentication via `/login`, `/logout`, and `/callback` routes at the root level.
 
 **Request Handling**: Express middleware for JSON parsing, request logging, and error handling. Custom middleware captures response times and logs API calls.
 

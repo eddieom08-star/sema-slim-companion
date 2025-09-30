@@ -14,6 +14,10 @@ if (!process.env.AUTH0_CLIENT_SECRET) {
   throw new Error('AUTH0_CLIENT_SECRET environment variable is required');
 }
 
+if (!process.env.SESSION_SECRET) {
+  throw new Error('SESSION_SECRET environment variable is required for secure session management');
+}
+
 const baseURL = process.env.REPLIT_DOMAINS 
   ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
   : 'http://localhost:5000';
@@ -21,7 +25,7 @@ const baseURL = process.env.REPLIT_DOMAINS
 const config = {
   authRequired: false,
   auth0Logout: true,
-  secret: process.env.SESSION_SECRET || 'a-long-random-secret',
+  secret: process.env.SESSION_SECRET,
   baseURL,
   clientID: process.env.AUTH0_CLIENT_ID,
   issuerBaseURL: `https://${process.env.AUTH0_DOMAIN}`,

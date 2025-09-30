@@ -42,13 +42,13 @@ Preferred communication style: Simple, everyday language.
 
 ## Authentication
 
-**Provider**: Replit Auth using OpenID Connect (OIDC) protocol via passport.js and openid-client.
+**Provider**: Auth0 using OpenID Connect (OIDC) protocol via express-openid-connect library.
 
-**Session Management**: Express-session with PostgreSQL session store (`connect-pg-simple`). Sessions persist for 7 days with secure, HTTP-only cookies.
+**Session Management**: Express-session with secure, HTTP-only cookies.
 
 **User Storage**: Users table stores profile information synced from OIDC claims. Supports upsert operations to handle returning users.
 
-**Authorization**: Custom `isAuthenticated` middleware validates session and populates `req.user` with claims including `sub` (user ID).
+**Authorization**: Custom `isAuthenticated` middleware validates session and populates `req.oidc.user` with claims including `sub` (user ID).
 
 ## Database
 
@@ -91,7 +91,7 @@ Preferred communication style: Simple, everyday language.
 
 **Database**: Neon PostgreSQL serverless database (required via `DATABASE_URL` environment variable).
 
-**Authentication Service**: Replit OIDC provider for user authentication (configured via `REPL_ID`, `ISSUER_URL`, `SESSION_SECRET` environment variables).
+**Authentication Service**: Auth0 OIDC provider for user authentication (configured via `AUTH0_DOMAIN`, `AUTH0_CLIENT_ID`, `AUTH0_CLIENT_SECRET`, `SESSION_SECRET` environment variables).
 
 **Session Storage**: PostgreSQL-backed session store using the same database connection.
 

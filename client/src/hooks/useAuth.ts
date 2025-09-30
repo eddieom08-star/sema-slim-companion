@@ -6,9 +6,19 @@ export function useAuth() {
     retry: false,
   });
 
+  const login = () => {
+    window.location.href = '/login';
+  };
+
+  const logout = () => {
+    window.location.href = '/logout';
+  };
+
   return {
     user,
     isLoading,
     isAuthenticated: !!user,
+    login,
+    logout,
   };
 }

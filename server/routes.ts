@@ -199,6 +199,173 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Food database routes - Open Food Facts integration
+  app.get('/api/food-database/search', isAuthenticated, async (req: any, res) => {
+    try {
+      const { q, limit = 20 } = req.query;
+      
+      if (!q || typeof q !== 'string') {
+        return res.status(400).json({ message: "Search query is required" });
+      }
+
+      // Search Open Food Facts API
+      const searchUrl = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=${limit}`;
+      
+      const response = await fetch(searchUrl, {
+        headers: {
+          'User-Agent': 'SemaSlim/1.0 (Weight Management App)'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to search Open Food Facts');
+      }
+
+      const data = await response.json();
+      
+      // Transform Open Food Facts data to our format
+      const products = data.products?.map((product: any) => ({
+        id: product.code,
+        barcode: product.code,
+        name: product.product_name || product.product_name_en || 'Unknown Product',
+        brand: product.brands || '',
+        imageUrl: product.image_url || product.image_small_url || null,
+        servingSize: product.serving_quantity || 100,
+        servingUnit: product.serving_quantity_unit || 'g',
+        calories: Math.round(product.nutriments?.['energy-kcal_100g'] || 0),
+        protein: product.nutriments?.proteins_100g || 0,
+        carbs: product.nutriments?.carbohydrates_100g || 0,
+        fat: product.nutriments?.fat_100g || 0,
+        fiber: product.nutriments?.fiber_100g || 0,
+        sugar: product.nutriments?.sugars_100g || 0,
+        sodium: product.nutriments?.sodium_100g ? product.nutriments.sodium_100g * 1000 : 0, // Convert g to mg
+        source: 'openfoodfacts'
+      })) || [];
+
+      res.json(products);
+    } catch (error) {
+      console.error("Error searching food database:", error);
+      res.status(500).json({ message: "Failed to search food database" });
+    }
+  });
+
+  app.get('/api/food-database/barcode/:barcode', isAuthenticated, async (req: any, res) => {
+    try {
+      const { barcode } = req.params;
+
+      // First, try to find in our local database
+      const localFood = await storage.searchFoodByBarcode(barcode);
+      if (localFood) {
+        return res.json({
+          id: localFood.id,
+          barcode: localFood.barcode,
+          name: localFood.productName,
+          brand: localFood.brand,
+          imageUrl: null,
+          servingSize: Number(localFood.servingSize),
+          servingUnit: localFood.servingUnit,
+          calories: localFood.calories,
+          protein: Number(localFood.protein),
+          carbs: Number(localFood.carbs),
+          fat: Number(localFood.fat),
+          fiber: Number(localFood.fiber),
+          sugar: Number(localFood.sugar),
+          sodium: Number(localFood.sodium),
+          source: 'local'
+        });
+      }
+
+      // If not found locally, search Open Food Facts
+      const offUrl = `https://world.openfoodfacts.org/api/v2/product/${barcode}.json`;
+      
+      const response = await fetch(offUrl, {
+        headers: {
+          'User-Agent': 'SemaSlim/1.0 (Weight Management App)'
+        }
+      });
+
+      if (!response.ok) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+
+      const data = await response.json();
+      
+      if (data.status === 0 || !data.product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+
+      const product = data.product;
+      
+      // Save to local database for future lookups
+      try {
+        await storage.addFoodToDatabase({
+          barcode: product.code,
+          productName: product.product_name || product.product_name_en || 'Unknown Product',
+          brand: product.brands || null,
+          servingSize: product.serving_quantity || "100",
+          servingUnit: product.serving_quantity_unit || 'g',
+          calories: Math.round(product.nutriments?.['energy-kcal_100g'] || 0),
+          protein: product.nutriments?.proteins_100g?.toString() || "0",
+          carbs: product.nutriments?.carbohydrates_100g?.toString() || "0",
+          fat: product.nutriments?.fat_100g?.toString() || "0",
+          fiber: product.nutriments?.fiber_100g?.toString() || "0",
+          sugar: product.nutriments?.sugars_100g?.toString() || "0",
+          sodium: product.nutriments?.sodium_100g ? (product.nutriments.sodium_100g * 1000).toString() : "0",
+        });
+      } catch (saveError) {
+        console.error("Error saving to local database:", saveError);
+        // Continue even if save fails
+      }
+
+      res.json({
+        id: product.code,
+        barcode: product.code,
+        name: product.product_name || product.product_name_en || 'Unknown Product',
+        brand: product.brands || '',
+        imageUrl: product.image_url || product.image_small_url || null,
+        servingSize: product.serving_quantity || 100,
+        servingUnit: product.serving_quantity_unit || 'g',
+        calories: Math.round(product.nutriments?.['energy-kcal_100g'] || 0),
+        protein: product.nutriments?.proteins_100g || 0,
+        carbs: product.nutriments?.carbohydrates_100g || 0,
+        fat: product.nutriments?.fat_100g || 0,
+        fiber: product.nutriments?.fiber_100g || 0,
+        sugar: product.nutriments?.sugars_100g || 0,
+        sodium: product.nutriments?.sodium_100g ? product.nutriments.sodium_100g * 1000 : 0,
+        source: 'openfoodfacts'
+      });
+    } catch (error) {
+      console.error("Error looking up barcode:", error);
+      res.status(500).json({ message: "Failed to lookup barcode" });
+    }
+  });
+
+  // Custom food database management
+  app.post('/api/food-database', isAuthenticated, async (req: any, res) => {
+    try {
+      const validatedData = insertFoodDatabaseSchema.parse(req.body);
+      const food = await storage.addFoodToDatabase(validatedData);
+      res.json(food);
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Validation failed", errors: error.issues });
+      }
+      console.error("Error creating food database entry:", error);
+      res.status(500).json({ message: "Failed to create food database entry" });
+    }
+  });
+
+  app.get('/api/food-database/custom', isAuthenticated, async (req: any, res) => {
+    try {
+      const { search } = req.query;
+      const foods = await storage.searchFoodByName(search as string || "");
+      res.json(foods);
+    } catch (error) {
+      console.error("Error searching custom foods:", error);
+      res.status(500).json({ message: "Failed to search custom foods" });
+    }
+  });
+
   // Weight log routes
   app.get('/api/weight-logs', isAuthenticated, async (req: any, res) => {
     try {

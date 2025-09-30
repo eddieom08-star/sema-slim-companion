@@ -124,6 +124,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const validatedData = insertMedicationLogSchema.parse({ ...req.body, userId });
       const log = await storage.createMedicationLog(validatedData);
+      
+      // Award points for taking medication
+      await storage.addPoints(userId, 5, 'medication_taken', 'Logged medication');
+      
       res.json(log);
     } catch (error) {
       console.error("Error creating medication log:", error);
@@ -152,6 +156,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Update food tracking streak
       await storage.updateStreak(userId, 'food_tracking', true);
+      
+      // Award points for logging food
+      await storage.addPoints(userId, 3, 'food_logged', 'Logged food entry');
       
       res.json(entry);
     } catch (error) {
@@ -203,6 +210,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Update weight logging streak
       await storage.updateStreak(userId, 'weight_logging', true);
+      
+      // Award points for logging weight
+      await storage.addPoints(userId, 5, 'weight_logged', 'Logged weight');
       
       res.json(log);
     } catch (error) {

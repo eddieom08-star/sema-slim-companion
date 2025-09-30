@@ -6,6 +6,10 @@ export default function Landing() {
     window.location.href = "/api/login";
   };
 
+  const handleSignup = () => {
+    window.location.href = "/signup";
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -46,7 +50,7 @@ export default function Landing() {
               
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button 
-                  onClick={handleLogin}
+                  onClick={handleSignup}
                   className="bg-card text-primary px-8 py-4 rounded-lg font-semibold hover:bg-card/90 transition-colors"
                   data-testid="button-start-trial"
                 >
@@ -187,7 +191,7 @@ export default function Landing() {
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Button 
-                onClick={handleLogin}
+                onClick={handleSignup}
                 className="bg-card text-primary px-8 py-4 rounded-lg font-semibold hover:bg-card/90 transition-colors min-w-48"
                 data-testid="button-start-trial-cta"
               >

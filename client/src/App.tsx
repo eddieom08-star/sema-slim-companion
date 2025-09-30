@@ -29,22 +29,28 @@ function Router() {
   return (
     <Switch>
       {!isAuthenticated ? (
-        <Route path="/" component={Landing} />
+        <>
+          <Route path="/" component={Landing} />
+          <Route path="/:any*" component={Landing} />
+        </>
       ) : (
         <>
           {user && !(user as any).onboardingCompleted ? (
-            <Route path="/" component={Onboarding} />
+            <>
+              <Route path="/" component={Onboarding} />
+              <Route path="/:any*" component={Onboarding} />
+            </>
           ) : (
             <>
               <Route path="/" component={Dashboard} />
               <Route path="/food-tracking" component={FoodTracking} />
               <Route path="/medication" component={Medication} />
               <Route path="/progress" component={Progress} />
+              <Route component={NotFound} />
             </>
           )}
         </>
       )}
-      <Route component={NotFound} />
     </Switch>
   );
 }

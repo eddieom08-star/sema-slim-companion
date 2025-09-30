@@ -208,8 +208,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Search query is required" });
       }
 
-      // Search Open Food Facts API
-      const searchUrl = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=${limit}`;
+      const searchLimit = parseInt(limit as string);
+
+      // First, search our local database
+      const localFoods = await storage.searchFoodByName(q, searchLimit);
+      
+      // Transform local foods to match response format
+      const localResults = localFoods.map((food) => ({
+        id: food.id,
+        barcode: food.barcode,
+        name: food.productName,
+        brand: food.brand,
+        servingSize: parseFloat(food.servingSize),
+        servingUnit: food.servingUnit,
+        calories: food.calories,
+        protein: food.protein,
+        carbs: food.carbs,
+        fat: food.fat,
+        fiber: food.fiber,
+        sugar: food.sugar,
+        sodium: food.sodium,
+        imageUrl: food.imageUrl,
+        source: 'local',
+      }));
+
+      // If we have enough local results, return them first
+      if (localResults.length >= 5) {
+        return res.json(localResults.slice(0, searchLimit));
+      }
+
+      // Otherwise, supplement with Open Food Facts API
+      const searchUrl = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=${searchLimit - localResults.length}`;
       
       const response = await fetch(searchUrl, {
         headers: {
@@ -218,13 +247,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to search Open Food Facts');
+        // If API fails, just return local results
+        return res.json(localResults);
       }
 
       const data = await response.json();
       
       // Transform Open Food Facts data to our format
-      const products = data.products?.map((product: any) => ({
+      const remoteProducts = data.products?.map((product: any) => ({
         id: product.code,
         barcode: product.code,
         name: product.product_name || product.product_name_en || 'Unknown Product',
@@ -242,7 +272,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         source: 'openfoodfacts'
       })) || [];
 
-      res.json(products);
+      // Merge local and remote results, prioritizing local foods
+      // Deduplicate by barcode if present
+      const seen = new Set(localResults.map(f => f.barcode).filter(Boolean));
+      const uniqueRemoteProducts = remoteProducts.filter((food: any) => !food.barcode || !seen.has(food.barcode));
+      
+      const mergedResults = [...localResults, ...uniqueRemoteProducts].slice(0, searchLimit);
+
+      res.json(mergedResults);
     } catch (error) {
       console.error("Error searching food database:", error);
       res.status(500).json({ message: "Failed to search food database" });
@@ -556,44 +593,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Food database routes (barcode scanning)
-  app.get('/api/food-database/barcode/:barcode', isAuthenticated, async (req: any, res) => {
-    try {
-      const { barcode } = req.params;
-      const food = await storage.searchFoodByBarcode(barcode);
-      if (food) {
-        res.json(food);
-      } else {
-        res.status(404).json({ message: "Food not found" });
-      }
-    } catch (error) {
-      console.error("Error searching food by barcode:", error);
-      res.status(500).json({ message: "Failed to search food" });
-    }
-  });
-
-  app.get('/api/food-database/search', isAuthenticated, async (req: any, res) => {
-    try {
-      const query = req.query.q as string;
-      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
-      const foods = await storage.searchFoodByName(query, limit);
-      res.json(foods);
-    } catch (error) {
-      console.error("Error searching food:", error);
-      res.status(500).json({ message: "Failed to search food" });
-    }
-  });
-
-  app.post('/api/food-database', isAuthenticated, async (req: any, res) => {
-    try {
-      const validatedData = insertFoodDatabaseSchema.parse({ ...req.body, source: 'user_contributed' });
-      const food = await storage.addFoodToDatabase(validatedData);
-      res.json(food);
-    } catch (error) {
-      console.error("Error adding food to database:", error);
-      res.status(500).json({ message: "Failed to add food to database" });
-    }
-  });
 
   // Gamification routes
   app.get('/api/gamification', isAuthenticated, async (req: any, res) => {

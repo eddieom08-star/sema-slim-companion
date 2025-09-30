@@ -15,6 +15,7 @@ export default function Navigation() {
     { path: "/food-tracking", label: "Food", icon: "fas fa-utensils" },
     { path: "/medication", label: "Medication", icon: "fas fa-syringe" },
     { path: "/progress", label: "Progress", icon: "fas fa-chart-line" },
+    { path: "/settings", label: "Settings", icon: "fas fa-cog" },
   ];
 
   return (

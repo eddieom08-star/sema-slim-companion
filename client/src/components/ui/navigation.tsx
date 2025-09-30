@@ -1,0 +1,106 @@
+import { Link, useLocation } from "wouter";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
+
+export default function Navigation() {
+  const [location] = useLocation();
+  const { user } = useAuth();
+
+  const handleLogout = () => {
+    window.location.href = "/api/logout";
+  };
+
+  const navItems = [
+    { path: "/", label: "Dashboard", icon: "fas fa-tachometer-alt" },
+    { path: "/food-tracking", label: "Food", icon: "fas fa-utensils" },
+    { path: "/medication", label: "Medication", icon: "fas fa-syringe" },
+    { path: "/progress", label: "Progress", icon: "fas fa-chart-line" },
+  ];
+
+  return (
+    <header className="bg-card border-b border-border sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-16">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+              <i className="fas fa-heartbeat text-primary-foreground text-xl"></i>
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-foreground">SemaSlim</h1>
+              <p className="text-xs text-muted-foreground">GLP-1 Weight Management</p>
+            </div>
+          </div>
+          
+          <nav className="hidden md:flex items-center space-x-8">
+            {navItems.map((item) => (
+              <Link key={item.path} href={item.path}>
+                <a 
+                  className={`text-sm font-medium transition-colors flex items-center space-x-2 ${
+                    location === item.path 
+                      ? "text-primary" 
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  data-testid={`nav-link-${item.label.toLowerCase()}`}
+                >
+                  <i className={item.icon}></i>
+                  <span>{item.label}</span>
+                </a>
+              </Link>
+            ))}
+          </nav>
+          
+          <div className="flex items-center space-x-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="p-2 rounded-lg hover:bg-muted transition-colors"
+              data-testid="button-notifications"
+            >
+              <i className="fas fa-bell text-muted-foreground"></i>
+            </Button>
+            
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+                <span className="text-xs font-medium text-primary-foreground">
+                  {(user as any)?.firstName?.[0] || (user as any)?.email?.[0] || 'U'}
+                </span>
+              </div>
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                className="text-sm text-muted-foreground hover:text-foreground"
+                data-testid="button-logout"
+              >
+                <i className="fas fa-sign-out-alt mr-2"></i>
+                Logout
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Mobile Navigation */}
+      <div className="md:hidden border-t border-border">
+        <div className="flex justify-around py-2">
+          {navItems.map((item) => (
+            <Link key={item.path} href={item.path}>
+              <a 
+                className={`flex flex-col items-center p-2 text-xs transition-colors ${
+                  location === item.path 
+                    ? "text-primary" 
+                    : "text-muted-foreground"
+                }`}
+                data-testid={`mobile-nav-${item.label.toLowerCase()}`}
+              >
+                <i className={`${item.icon} text-lg mb-1`}></i>
+                <span>{item.label}</span>
+              </a>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </header>
+  );
+}

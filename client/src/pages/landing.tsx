@@ -6,6 +6,10 @@ export default function Landing() {
     window.location.href = "/login";
   };
 
+  const handleSignup = () => {
+    window.location.href = "/signup";
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -22,9 +26,22 @@ export default function Landing() {
               </div>
             </div>
             
-            <Button onClick={handleLogin} data-testid="button-login">
-              Sign In
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button 
+                onClick={handleSignup} 
+                data-testid="button-signup"
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                Sign Up
+              </Button>
+              <Button 
+                onClick={handleLogin} 
+                variant="outline"
+                data-testid="button-login"
+              >
+                Sign In
+              </Button>
+            </div>
           </div>
         </div>
       </header>

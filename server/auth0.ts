@@ -38,6 +38,16 @@ const config = {
 
 export function setupAuth0(app: Express) {
   app.use(auth(config));
+  
+  // Custom sign-up route with screen_hint=signup to show registration form
+  app.get('/signup', (req, res) => {
+    res.oidc.login({
+      authorizationParams: {
+        screen_hint: 'signup',
+      },
+      returnTo: '/',
+    });
+  });
 }
 
 export const isAuthenticated: RequestHandler = async (req: any, res, next) => {

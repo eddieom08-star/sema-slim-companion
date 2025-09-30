@@ -3,24 +3,42 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
 import Navigation from "@/components/ui/navigation";
 import { FoodEntryForm } from "@/components/food-entry-form";
 import { apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
+import { Brain, Zap, Pizza, IceCream, Cookie } from "lucide-react";
 
 export default function FoodTracking() {
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [hungerLevel, setHungerLevel] = useState(5);
+  const [fullnessLevel, setFullnessLevel] = useState(5);
+  const [cravingIntensity, setCravingIntensity] = useState(0);
+  const [cravingType, setCravingType] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  const dateStr = format(selectedDate, 'yyyy-MM-dd');
   const { data: foodEntries, isLoading } = useQuery({
-    queryKey: ["/api/food-entries", selectedDate.toISOString().split('T')[0]],
+    queryKey: ["/api/food-entries", dateStr],
     queryFn: async () => {
-      const response = await fetch(`/api/food-entries?date=${selectedDate.toISOString()}`, {
+      const response = await fetch(`/api/food-entries?date=${dateStr}`, {
         credentials: "include",
       });
       if (!response.ok) throw new Error("Failed to fetch food entries");
+      return response.json();
+    },
+  });
+
+  const { data: hungerLogs } = useQuery({
+    queryKey: ["/api/hunger-logs"],
+    queryFn: async () => {
+      const response = await fetch(`/api/hunger-logs?limit=10`, {
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to fetch hunger logs");
       return response.json();
     },
   });
@@ -40,6 +58,36 @@ export default function FoodTracking() {
       toast({
         title: "Error",
         description: "Failed to delete food entry. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const logHunger = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", "/api/hunger-logs", {
+        hungerLevel,
+        fullnessLevel,
+        cravingIntensity: cravingIntensity > 0 ? cravingIntensity : null,
+        cravingType: cravingType || null,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/hunger-logs"] });
+      toast({
+        title: "Hunger log recorded",
+        description: "Your appetite data has been saved successfully.",
+      });
+      // Reset form
+      setHungerLevel(5);
+      setFullnessLevel(5);
+      setCravingIntensity(0);
+      setCravingType("");
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to save hunger log. Please try again.",
         variant: "destructive",
       });
     },
@@ -144,6 +192,125 @@ export default function FoodTracking() {
               </div>
               <div className="text-xs text-muted-foreground mt-1">
                 {Math.max(fatTarget - todaysFat, 0).toFixed(1)}g to go
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Hunger & Appetite Tracking */}
+        <div className="mb-8">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Brain className="w-5 h-5 text-primary" />
+                <span>Appetite & Satiety Intelligence</span>
+              </CardTitle>
+              <p className="text-sm text-muted-foreground mt-2">
+                Track your hunger and fullness levels to optimize your GLP-1 medication response
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Hunger Level */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium">Hunger Level</label>
+                    <span className="text-2xl font-bold text-primary">{hungerLevel}/10</span>
+                  </div>
+                  <Slider
+                    value={[hungerLevel]}
+                    onValueChange={(value) => setHungerLevel(value[0])}
+                    min={0}
+                    max={10}
+                    step={1}
+                    className="w-full"
+                    data-testid="slider-hunger-level"
+                  />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Not Hungry</span>
+                    <span>Starving</span>
+                  </div>
+                </div>
+
+                {/* Fullness Level */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium">Fullness Level</label>
+                    <span className="text-2xl font-bold text-secondary">{fullnessLevel}/10</span>
+                  </div>
+                  <Slider
+                    value={[fullnessLevel]}
+                    onValueChange={(value) => setFullnessLevel(value[0])}
+                    min={0}
+                    max={10}
+                    step={1}
+                    className="w-full"
+                    data-testid="slider-fullness-level"
+                  />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Empty</span>
+                    <span>Very Full</span>
+                  </div>
+                </div>
+
+                {/* Craving Tracking */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium">Craving Intensity</label>
+                    <span className="text-2xl font-bold text-accent">{cravingIntensity}/10</span>
+                  </div>
+                  <Slider
+                    value={[cravingIntensity]}
+                    onValueChange={(value) => setCravingIntensity(value[0])}
+                    min={0}
+                    max={10}
+                    step={1}
+                    className="w-full"
+                    data-testid="slider-craving-intensity"
+                  />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>None</span>
+                    <span>Strong</span>
+                  </div>
+                </div>
+
+                {/* Craving Type */}
+                <div className="space-y-4">
+                  <label className="text-sm font-medium">Craving Type (Optional)</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { type: "sweet", icon: IceCream, label: "Sweet" },
+                      { type: "salty", icon: Pizza, label: "Salty" },
+                      { type: "carbs", icon: Cookie, label: "Carbs" },
+                    ].map(({ type, icon: Icon, label }) => (
+                      <Button
+                        key={type}
+                        variant={cravingType === type ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setCravingType(cravingType === type ? "" : type)}
+                        className="flex flex-col items-center py-4 h-auto"
+                        data-testid={`button-craving-${type}`}
+                      >
+                        <Icon className="w-5 h-5 mb-1" />
+                        <span className="text-xs">{label}</span>
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 flex items-center justify-between">
+                <div className="text-sm text-muted-foreground" data-testid="text-last-logged">
+                  <Zap className="w-4 h-4 inline mr-1" />
+                  Last logged: {hungerLogs?.[0] ? format(new Date(hungerLogs[0].loggedAt), 'h:mm a') : 'Never'}
+                </div>
+                <Button 
+                  onClick={() => logHunger.mutate()}
+                  disabled={logHunger.isPending}
+                  data-testid="button-log-hunger"
+                >
+                  {logHunger.isPending ? "Saving..." : "Log Appetite"}
+                </Button>
               </div>
             </CardContent>
           </Card>

@@ -58,7 +58,14 @@ export default function Onboarding() {
 
   const handleComplete = () => {
     const profileData = {
-      ...formData,
+      medicationType: formData.medicationType,
+      currentWeight: formData.currentWeight ? parseFloat(formData.currentWeight) : null,
+      targetWeight: formData.targetWeight ? parseFloat(formData.targetWeight) : null,
+      height: formData.height ? parseInt(formData.height) : null,
+      dateOfBirth: formData.dateOfBirth || null,
+      gender: formData.gender || null,
+      activityLevel: formData.activityLevel || null,
+      startDate: formData.startDate || null,
       onboardingCompleted: true,
     };
     updateProfileMutation.mutate(profileData);

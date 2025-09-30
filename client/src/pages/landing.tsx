@@ -3,11 +3,11 @@ import { Card, CardContent } from "@/components/ui/card";
 
 export default function Landing() {
   const handleLogin = () => {
-    window.location.href = "/login";
+    window.location.href = "/dev-login";
   };
 
   const handleSignup = () => {
-    window.location.href = "/signup";
+    window.location.href = "/dev-login";
   };
 
   return (

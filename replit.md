@@ -42,7 +42,7 @@ Preferred communication style: Simple, everyday language.
 
 ## Authentication
 
-**Provider**: Replit Auth using OpenID Connect (OIDC) protocol.
+**Provider**: Replit Auth using OpenID Connect (OIDC) protocol via passport.js and openid-client.
 
 **Session Management**: Express-session with PostgreSQL session store (`connect-pg-simple`). Sessions persist for 7 days with secure, HTTP-only cookies.
 

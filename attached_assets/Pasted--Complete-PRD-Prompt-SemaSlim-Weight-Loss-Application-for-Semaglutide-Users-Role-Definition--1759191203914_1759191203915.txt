@@ -1,0 +1,545 @@
+# Complete PRD Prompt: SemaSlim - Weight Loss Application for Semaglutide Users
+
+## Role Definition
+
+You are a **Senior Product Manager** with 10+ years of experience building healthcare applications at companies like MyFitnessPal, Noom, and Teladoc. You specialize in creating production-ready health & fitness applications that handle sensitive medical data while driving exceptional user engagement through evidence-based behavioral science.
+
+## Application Overview: SemaSlim
+
+### **Product Vision**
+
+Create a comprehensive weight management application specifically designed for users taking semaglutide medications (Ozempic, Mounjaro, Wegovy, Rybelsus) that combines intelligent nutrition tracking, medication management, and behavioral gamification to optimize weight loss outcomes.
+
+### **Target User Profile**
+
+- **Primary**: Adults 25-65 taking semaglutide medications for weight loss
+- **Secondary**: Healthcare providers monitoring patient progress
+- **Tertiary**: Family members supporting weight loss journey
+
+### **Inspiration Reference**
+
+Use <https://teamrhfitness.com> as design and UX inspiration while creating unique functionality specifically for semaglutide users.
+
+-----
+
+## Core Product Requirements
+
+### **1. Medication-Specific Features**
+
+#### **Semaglutide Journey Tracking**
+
+```
+REQUIREMENT: Medication Management System
+- Weekly injection schedule with reminders
+- Dose escalation tracking (0.25mg → 0.5mg → 1mg → 2.4mg pathway)
+- Side effect monitoring (nausea, fatigue, appetite changes)
+- Integration with common injection pens (Ozempic, Mounjaro, Wegovy)
+- Medication adherence scoring and insights
+- Healthcare provider sharing dashboard
+```
+
+#### **Appetite & Satiety Intelligence**
+
+```
+REQUIREMENT: GLP-1 Response Tracking
+- Hunger level tracking (1-10 scale) before/after meals
+- Fullness duration tracking post-meal
+- Food craving intensity monitoring
+- Correlation analysis between medication timing and appetite
+- Personalized eating window recommendations
+- Meal size optimization based on satiety patterns
+```
+
+### **2. Advanced Nutrition Tracking**
+
+#### **Barcode Scanning System**
+
+```
+REQUIREMENT: Multi-Region Food Database Integration
+DATABASES REQUIRED:
+- UK: Open Food Facts API + Tesco/ASDA product databases
+- EU: Open Food Facts + country-specific databases (Germany, France, Spain)
+- US: USDA FoodData Central + UPC Database + Nutritionix API
+
+SCANNER FUNCTIONALITY:
+- Real-time barcode recognition using device camera
+- Offline scanning capability with sync when online
+- Custom portion size adjustment with visual guides
+- Nutrition label OCR for non-barcoded items
+- User-contributed product database with moderation
+- Restaurant chain integration (McDonald's, Starbucks, etc.)
+
+TECHNICAL IMPLEMENTATION:
+- Use react-native-vision-camera for camera access
+- Integrate Google ML Kit for barcode detection
+- Implement react-native-text-recognition for OCR
+- Cache frequently scanned items for offline use
+- Provide manual entry fallback for unrecognized items
+```
+
+#### **Smart Meal Planning**
+
+```
+REQUIREMENT: Semaglutide-Optimized Meal Recommendations
+- High-protein, low-volume meal suggestions
+- Anti-nausea food recommendations
+- Meal timing optimization around injection schedule
+- Portion size guidance based on current dose
+- Macro distribution tailored to reduced appetite
+- Meal prep planning for consistent nutrition
+```
+
+### **3. Gamification & Engagement System**
+
+#### **Core Game Mechanics**
+
+```
+REQUIREMENT: Behavioral Gamification Framework
+
+POINTS & REWARDS SYSTEM:
+- Daily tracking streak multipliers (2x points after 7 days, 3x after 30 days)
+- Medication adherence rewards (50 points per injection)
+- Nutrition goal achievements (protein targets, calorie ranges)
+- Weight milestone celebrations with virtual rewards
+- Weekly challenges (try 3 new recipes, hit step goals)
+- Social sharing achievements (optional community features)
+
+PROGRESSION SYSTEM:
+- Level-based advancement (Beginner → Committed → Expert → Champion)
+- Skill trees for different areas (Nutrition, Activity, Consistency)
+- Achievement badges (Week 1 Warrior, Protein Pro, Scale Master)
+- Virtual coaching unlock system
+- Customizable avatar progression tied to real progress
+
+ENGAGEMENT MECHANICS:
+- Daily/weekly quests aligned with health goals
+- Seasonal challenges (Summer Shape-Up, Holiday Maintenance)
+- Mini-games for educational content (nutrition trivia, portion size games)
+- Progress visualization with satisfying animations
+- Celebration moments for non-scale victories
+```
+
+#### **Social Features (Optional)**
+
+```
+REQUIREMENT: Community & Support System
+- Anonymous progress sharing with semaglutide community
+- Peer support groups based on medication type/dose
+- Recipe sharing and rating system
+- Weekly group challenges
+- Healthcare provider portal for monitoring multiple patients
+- Family member progress sharing (with permission)
+```
+
+### **4. Weight & Progress Tracking**
+
+#### **Comprehensive Progress Monitoring**
+
+```
+REQUIREMENT: Multi-Dimensional Progress Tracking
+
+WEIGHT TRACKING:
+- Daily, weekly, or bi-weekly weigh-in schedules
+- Trend analysis with moving averages to smooth fluctuations
+- Progress photos with before/after comparisons
+- Body measurements tracking (waist, hips, arms, etc.)
+- Non-scale victory logging (energy levels, sleep quality, mood)
+- Integration with smart scales (Withings, Fitbit Aria)
+
+ANALYTICS & INSIGHTS:
+- Weight loss velocity tracking vs. typical semaglutide timelines
+- Correlation analysis between medication dose and progress
+- Plateau detection with breakthrough strategies
+- Seasonal trend analysis and predictions
+- Goal setting with realistic timeline projections
+- Weekly progress reports with actionable insights
+```
+
+### **5. Technical Requirements**
+
+#### **Frontend Architecture**
+
+```
+REQUIREMENT: Production-Ready React Application
+
+TECHNOLOGY STACK:
+- React 18+ with TypeScript for type safety
+- React Native for mobile apps (iOS/Android)
+- Next.js for web application with SSR
+- TailwindCSS for responsive design system
+- Framer Motion for smooth animations
+- React Query for server state management
+- Zustand for client state management
+
+PERFORMANCE REQUIREMENTS:
+- <2 second initial load time
+- 60fps animations and interactions
+- Offline functionality for core features
+- <100ms response time for user interactions
+- Progressive Web App (PWA) capabilities
+- Optimistic updates for better UX
+
+MOBILE-FIRST DESIGN:
+- Touch-optimized interfaces with 44px+ touch targets
+- Thumb-friendly navigation patterns
+- Swipe gestures for quick data entry
+- Voice input for hands-free logging
+- Camera integration for barcode scanning
+- Push notifications for reminders and motivation
+```
+
+#### **Backend Infrastructure**
+
+```
+REQUIREMENT: Scalable Healthcare-Grade Backend
+
+ARCHITECTURE:
+- Node.js/Express.js REST API with TypeScript
+- PostgreSQL primary database with Redis caching
+- AWS/Google Cloud hosting with auto-scaling
+- Microservices architecture for different domains
+- GraphQL API for complex data relationships
+- Real-time features using WebSockets
+
+DATA MANAGEMENT:
+- Encrypted data storage (AES-256)
+- HIPAA-compliant data handling procedures
+- Automated backup and disaster recovery
+- Data retention policies (7 years for health data)
+- User data export functionality
+- GDPR compliance for EU users
+
+INTEGRATIONS:
+- Health app integrations (Apple Health, Google Fit)
+- Wearable device APIs (Fitbit, Garmin, Apple Watch)
+- Pharmacy APIs for prescription tracking
+- Healthcare provider EHR integration capabilities
+- Food database APIs with fallback strategies
+```
+
+#### **Security & Compliance**
+
+```
+REQUIREMENT: Healthcare Data Security
+
+SECURITY MEASURES:
+- OAuth 2.0 + JWT authentication
+- Multi-factor authentication for sensitive actions
+- End-to-end encryption for sensitive data
+- API rate limiting and DDoS protection
+- Regular security audits and penetration testing
+- SOC 2 Type II compliance
+
+HEALTHCARE COMPLIANCE:
+- HIPAA compliance for US users
+- GDPR compliance for EU users
+- FDA guidelines for digital health tools
+- Medical device software considerations
+- Clinical data accuracy validation
+- Audit trails for all data modifications
+```
+
+### **6. User Experience Requirements**
+
+#### **Onboarding Flow**
+
+```
+REQUIREMENT: Semaglutide-Specific User Onboarding
+
+ONBOARDING SEQUENCE:
+1. Medication assessment (type, dose, start date, prescribing doctor)
+2. Health profile setup (current weight, goal weight, medical history)
+3. Lifestyle assessment (activity level, dietary preferences, restrictions)
+4. App feature introduction with interactive tutorials
+5. Goal setting with realistic timeline expectations
+6. First week guidance with daily check-ins
+
+PERSONALIZATION:
+- Medication-specific tips and guidance
+- Customized calorie and macro targets
+- Personalized reminder scheduling
+- Preferred notification types and timing
+- Accessibility options (large text, voice commands)
+```
+
+#### **Daily User Flow**
+
+```
+REQUIREMENT: Streamlined Daily Experience
+
+CORE USER JOURNEY:
+1. Morning check-in: weight (optional), mood, energy level
+2. Meal logging: barcode scan → portion adjustment → quick add
+3. Medication tracking: injection confirmation with side effect check
+4. Activity logging: automatic step counting + manual exercise entry
+5. Evening reflection: hunger levels, fullness, daily wins
+6. Progress review: weekly stats, trends, next week planning
+
+SMART FEATURES:
+- Predictive text for common foods
+- Voice-to-text meal logging
+- Photo-based portion estimation
+- Smart reminder timing based on user patterns
+- Contextual tips based on current medication phase
+```
+
+### **7. Data Analytics & Insights**
+
+#### **Personal Analytics Dashboard**
+
+```
+REQUIREMENT: Comprehensive Progress Analytics
+
+USER INSIGHTS:
+- Weight loss trajectory vs. clinical expectations
+- Medication effectiveness correlation with lifestyle factors
+- Nutritional pattern analysis and optimization suggestions
+- Activity impact on weight loss and side effects
+- Sleep quality correlation with progress
+- Mood tracking and correlation with medication timing
+
+PREDICTIVE FEATURES:
+- Weight loss plateau prediction and prevention
+- Optimal meal timing recommendations
+- Side effect pattern recognition and mitigation
+- Goal achievement probability with current habits
+- Seasonal trend predictions and preparation strategies
+```
+
+### **8. Content & Education System**
+
+#### **Evidence-Based Educational Content**
+
+```
+REQUIREMENT: Curated Health Education Library
+
+CONTENT CATEGORIES:
+- Semaglutide mechanism of action and expectations
+- Nutrition education specific to GLP-1 medications
+- Exercise recommendations during weight loss
+- Managing side effects with lifestyle modifications
+- Psychological aspects of weight loss with medication
+- Maintenance strategies for long-term success
+
+CONTENT DELIVERY:
+- Interactive video lessons with progress tracking
+- Weekly newsletter with personalized tips
+- Push notification micro-lessons
+- Podcast integration with health experts
+- Recipe database with nutritional analysis
+- Meal prep guides with shopping lists
+```
+
+-----
+
+## Implementation Specifications
+
+### **Database Schema Requirements**
+
+```sql
+-- Core user data structure
+USERS TABLE:
+- user_id (UUID, primary key)
+- email (encrypted)
+- profile_data (JSON, encrypted)
+- medication_info (JSON, encrypted)
+- created_at, updated_at, last_active
+
+WEIGHT_ENTRIES TABLE:
+- entry_id (UUID, primary key)
+- user_id (foreign key)
+- weight_value (decimal)
+- measurement_date (timestamp)
+- entry_method (scale, manual, estimated)
+- notes (text, optional)
+
+MEDICATION_LOGS TABLE:
+- log_id (UUID, primary key)
+- user_id (foreign key)
+- medication_type (enum)
+- dose_amount (decimal)
+- injection_date (timestamp)
+- side_effects (JSON array)
+- adherence_score (integer 1-10)
+
+FOOD_ENTRIES TABLE:
+- entry_id (UUID, primary key)
+- user_id (foreign key)
+- food_item_id (foreign key)
+- quantity (decimal)
+- meal_type (breakfast, lunch, dinner, snack)
+- logged_at (timestamp)
+- barcode_scanned (boolean)
+
+GAMIFICATION_DATA TABLE:
+- user_id (foreign key)
+- total_points (integer)
+- current_level (integer)
+- streak_days (integer)
+- achievements (JSON array)
+- badges_earned (JSON array)
+```
+
+### **API Endpoints Structure**
+
+```typescript
+// Core API endpoints
+interface APIEndpoints {
+  // Authentication
+  'POST /auth/login': { email: string; password: string };
+  'POST /auth/register': UserRegistration;
+  'POST /auth/refresh': { refresh_token: string };
+  
+  // User Profile
+  'GET /user/profile': UserProfile;
+  'PUT /user/profile': Partial<UserProfile>;
+  'DELETE /user/account': { confirmation: string };
+  
+  // Weight Tracking
+  'GET /weight/entries': WeightEntry[];
+  'POST /weight/entry': CreateWeightEntry;
+  'PUT /weight/entry/:id': UpdateWeightEntry;
+  
+  // Medication Management
+  'GET /medication/schedule': MedicationSchedule;
+  'POST /medication/log': MedicationLog;
+  'GET /medication/adherence': AdherenceStats;
+  
+  // Food Database
+  'GET /food/search': { query: string; region: string };
+  'GET /food/barcode/:code': FoodItem;
+  'POST /food/custom': CustomFoodItem;
+  
+  // Gamification
+  'GET /gamification/stats': GamificationStats;
+  'POST /gamification/achievement': AchievementUnlock;
+  'GET /leaderboard/:type': LeaderboardData;
+  
+  // Analytics
+  'GET /analytics/progress': ProgressAnalytics;
+  'GET /analytics/insights': PersonalInsights;
+  'GET /analytics/export': ExportData;
+}
+```
+
+### **Performance Benchmarks**
+
+```
+PERFORMANCE REQUIREMENTS:
+- App startup time: <3 seconds cold start, <1 second warm start
+- Barcode scan recognition: <2 seconds from camera activation
+- Data sync speed: <5 seconds for daily data upload
+- Offline functionality: 7 days of local data storage
+- Image upload: <10 seconds for progress photos
+- Search response: <500ms for food database queries
+
+SCALABILITY TARGETS:
+- Support 100K+ concurrent users
+- Handle 1M+ barcode scans per day
+- Process 10M+ food entries per month
+- 99.9% uptime SLA
+- Auto-scaling based on user load
+- Global CDN for fast content delivery
+```
+
+### **Testing & Quality Assurance**
+
+```
+TESTING REQUIREMENTS:
+- Unit test coverage: >90% for business logic
+- Integration tests: All API endpoints and database operations
+- E2E tests: Critical user journeys (onboarding, daily logging, progress review)
+- Performance tests: Load testing with 10x expected traffic
+- Security tests: Penetration testing and vulnerability scans
+- Accessibility tests: WCAG 2.1 AA compliance
+- Cross-platform tests: iOS 14+, Android 10+, modern web browsers
+
+QUALITY GATES:
+- All tests must pass before deployment
+- Performance benchmarks must be met
+- Security scan results must be clean
+- Accessibility audit must pass
+- Manual QA testing for new features
+```
+
+-----
+
+## Deployment & Operations
+
+### **Hosting & Infrastructure**
+
+```
+RECOMMENDED ARCHITECTURE:
+- Frontend: Vercel (React/Next.js) with global CDN
+- Mobile Apps: App Store and Google Play Store distribution
+- Backend API: AWS ECS or Google Cloud Run with auto-scaling
+- Database: AWS RDS PostgreSQL with read replicas
+- Cache: Redis cluster for session and frequently accessed data
+- File Storage: AWS S3 or Google Cloud Storage for images
+- Monitoring: Sentry for error tracking, DataDog for performance
+
+DEVELOPMENT ENVIRONMENTS:
+- Local development with Docker Compose
+- Staging environment matching production
+- Feature branch deployments for testing
+- Automated CI/CD pipeline with GitHub Actions
+- Database migrations with rollback capability
+```
+
+### **Launch Strategy**
+
+```
+PHASED ROLLOUT PLAN:
+Phase 1 (MVP - 3 months):
+- Basic weight tracking and medication logging
+- Simple barcode scanning for major food brands
+- Core gamification (points, streaks, basic achievements)
+- iOS and web app launch
+
+Phase 2 (Enhanced - 6 months):
+- Advanced analytics and insights
+- Comprehensive barcode database coverage
+- Social features and community
+- Android app launch
+- Healthcare provider portal
+
+Phase 3 (Scale - 12 months):
+- AI-powered recommendations
+- Advanced meal planning and recipes
+- Wearable device integrations
+- Telehealth integration
+- International expansion (EU launch)
+```
+
+### **Success Metrics & KPIs**
+
+```
+USER ENGAGEMENT METRICS:
+- Daily Active Users (DAU): Target 70% of MAU
+- Weekly retention: 80% week 1, 60% week 4, 40% week 12
+- Session duration: Average 5-8 minutes per session
+- Feature adoption: 90% weight logging, 70% food tracking, 80% medication logging
+- User-generated content: 50% progress photos, 30% recipe sharing
+
+HEALTH OUTCOME METRICS:
+- Average weight loss: 10-15% body weight in 6 months
+- Medication adherence: >90% injection compliance
+- User satisfaction: >4.5/5 app store rating
+- Clinical validation: Partner with healthcare providers for efficacy studies
+- Long-term retention: 50% users still active after 12 months
+
+BUSINESS METRICS:
+- User acquisition cost: <$50 per user
+- Lifetime value: >$200 per user
+- Premium subscription conversion: 15-25%
+- Healthcare provider partnerships: 10+ pilot programs
+- Revenue growth: 20% month-over-month
+```
+
+-----
+
+## Development Instructions
+
+Create a production-ready application following this complete specification. The application should be built using modern React/TypeScript with a focus on user experience, data security, and scalability. Implement the core features first (weight tracking, medication logging, basic food scanning) before adding advanced gamification and analytics features.
+
+Ensure all healthcare data handling follows HIPAA compliance guidelines and implement proper security measures from the beginning. The application should feel like a premium health app while being specifically tailored to the unique needs of semaglutide users.​​​​​​​​​​​​​​​​

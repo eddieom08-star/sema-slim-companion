@@ -39,11 +39,11 @@ export default function Landing() {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-8">
               <div className="space-y-4">
-                <h2 className="text-4xl lg:text-6xl font-bold leading-tight">
+                <h2 className="text-4xl lg:text-6xl font-bold leading-tight text-black">
                   Optimize Your<br />
-                  <span className="text-accent-foreground">GLP-1 Journey</span>
+                  <span className="text-black">GLP-1 Journey</span>
                 </h2>
-                <p className="text-xl text-primary-foreground/90 leading-relaxed">
+                <p className="text-xl text-black leading-relaxed">
                   The only weight management app designed specifically for semaglutide users. Track nutrition, manage medications, and achieve sustainable results.
                 </p>
               </div>
@@ -67,16 +67,16 @@ export default function Landing() {
               
               <div className="flex items-center space-x-8 pt-4">
                 <div className="text-center">
-                  <div className="text-2xl font-bold" data-testid="text-users-count">500K+</div>
-                  <div className="text-sm text-primary-foreground/80">Active Users</div>
+                  <div className="text-2xl font-bold text-black" data-testid="text-users-count">500K+</div>
+                  <div className="text-sm text-black">Active Users</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold" data-testid="text-app-rating">4.9★</div>
-                  <div className="text-sm text-primary-foreground/80">App Rating</div>
+                  <div className="text-2xl font-bold text-black" data-testid="text-app-rating">4.9★</div>
+                  <div className="text-sm text-black">App Rating</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold" data-testid="text-avg-loss">18 lbs</div>
-                  <div className="text-sm text-primary-foreground/80">Avg. Loss</div>
+                  <div className="text-2xl font-bold text-black" data-testid="text-avg-loss">18 lbs</div>
+                  <div className="text-sm text-black">Avg. Loss</div>
                 </div>
               </div>
             </div>

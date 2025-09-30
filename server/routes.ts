@@ -31,10 +31,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/user/profile', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
+      console.log("Updating profile for user:", userId, "with data:", req.body);
       const validatedData = updateUserProfileSchema.parse(req.body);
       const user = await storage.updateUserProfile(userId, validatedData);
       res.json(user);
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        console.error("Validation error:", error.issues);
+        return res.status(400).json({ message: "Validation failed", errors: error.issues });
+      }
       console.error("Error updating user profile:", error);
       res.status(500).json({ message: "Failed to update profile" });
     }

@@ -59,9 +59,6 @@ export default function Onboarding() {
   const handleComplete = () => {
     const profileData = {
       ...formData,
-      currentWeight: parseFloat(formData.currentWeight),
-      targetWeight: parseFloat(formData.targetWeight),
-      height: parseInt(formData.height),
       onboardingCompleted: true,
     };
     updateProfileMutation.mutate(profileData);

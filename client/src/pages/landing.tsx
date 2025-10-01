@@ -57,8 +57,7 @@ export default function Landing() {
                   Start Free Trial
                 </Button>
                 <Button 
-                  variant="outline"
-                  className="border-2 border-primary-foreground text-primary-foreground px-8 py-4 rounded-lg font-semibold hover:bg-primary-foreground hover:text-primary transition-colors"
+                  className="bg-blue-600 text-white px-8 py-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
                   data-testid="button-view-demo"
                 >
                   View Demo

@@ -11,6 +11,9 @@ import { logger } from "./logger";
 
 const app = express();
 
+// Trust proxy for rate limiting in Replit environment
+app.set('trust proxy', 1);
+
 // Security Headers - Helmet
 app.use(helmet({
   contentSecurityPolicy: {

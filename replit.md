@@ -31,6 +31,17 @@ Preferred communication style: Simple, everyday language.
 
 **Notification System**: Slide-out notification center accessible via bell icon in navigation. Displays unread count badge, supports marking as read/unread, deleting notifications, and clicking notifications to navigate to related content. Auto-refreshes every 30 seconds.
 
+**Progressive Web App (PWA)**: Full PWA capabilities with offline support, installability, and push notifications:
+- Service worker with smart caching (network-first for navigation/API, cache-first for static assets)
+- Web Push API integration for browser notifications with push_subscriptions table
+- Offline queue with IndexedDB for failed requests (3 retry attempts with exponential backoff)
+- Network-aware components that detect slow connections and adjust UI accordingly
+- Image optimization with lazy loading, intersection observer, and WebP format support
+- Resource preloading for critical assets (icons, manifest, fonts)
+- Touch target accessibility with 44x44px minimum for all interactive elements
+- Install prompts for adding app to home screen
+- Offline indicator and fallback pages
+
 ## Backend Architecture
 
 **Framework**: Express.js server with TypeScript support, using ESM modules.
@@ -77,6 +88,7 @@ Preferred communication style: Simple, everyday language.
 - `daily_streaks`: Consistency tracking for various activities
 - `user_goals`: Personal goals and targets
 - `notifications`: User notifications with type, title, message, read status, and optional action URL
+- `push_subscriptions`: Web Push API subscriptions for browser notifications
 - `sessions`: Session storage for authentication
 
 **Data Validation**: Zod schemas generated from Drizzle tables using `drizzle-zod` for runtime validation on API endpoints.
@@ -136,6 +148,25 @@ Preferred communication style: Simple, everyday language.
 **Documentation**: See `MOBILE_SETUP.md` for complete mobile compilation instructions, troubleshooting, and deployment guides.
 
 **Native Features**: Capacitor provides JavaScript APIs for native device features like camera (barcode scanning), local notifications (medication reminders), and secure storage.
+
+## PWA Implementation
+
+**Service Worker**: `client/public/sw.js` - Handles offline caching with network-first strategy for navigation/API requests and cache-first for static assets. Fallback to `/index.html` from static cache when offline.
+
+**PWA Utilities**: `client/src/lib/pwa.ts` - Service worker registration, install prompts, connection speed detection, and critical asset preloading.
+
+**Offline Queue**: `client/src/lib/offline-queue.ts` - IndexedDB-based request queue with 3 retry attempts and exponential backoff. Processes automatically when connection restored.
+
+**PWA Components**:
+- `client/src/components/pwa-install-prompt.tsx` - Installability prompt for adding to home screen
+- `client/src/components/offline-indicator.tsx` - Visual indicator when device is offline  
+- `client/src/components/network-aware.tsx` - Slow connection detection and UI adaptation
+- `client/src/components/optimized-image.tsx` - Lazy loading images with intersection observer and WebP support
+- `client/src/components/notification-permission.tsx` - Web Push notification permission UI
+
+**Manifest**: `client/public/manifest.json` - PWA metadata, icons (192x192, 512x512 SVG), theme colors, and display mode.
+
+**Touch Accessibility**: All interactive UI components (buttons, checkboxes, radio buttons) updated to meet 44x44px minimum touch target size for mobile accessibility.
 
 ## Design Decisions
 

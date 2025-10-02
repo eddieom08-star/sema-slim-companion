@@ -249,7 +249,7 @@ export default function Landing() {
               </Button>
               <Button 
                 variant="outline"
-                className="border-2 border-primary-foreground text-primary-foreground px-8 py-4 rounded-lg font-semibold hover:bg-primary-foreground hover:text-primary transition-colors min-w-48"
+                className="border-2 border-blue-600 text-blue-600 px-8 py-4 rounded-lg font-semibold hover:bg-blue-600 hover:text-white transition-colors min-w-48"
                 data-testid="button-watch-demo"
               >
                 Watch Demo Video

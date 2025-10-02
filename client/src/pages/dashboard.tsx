@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,6 +14,7 @@ import { Trophy, Zap, TrendingUp } from "lucide-react";
 
 export default function Dashboard() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
   const { data: dashboardData, isLoading: isDashboardLoading } = useQuery({
     queryKey: ["/api/dashboard"],
@@ -290,7 +292,7 @@ export default function Dashboard() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Button 
                   className="h-20 flex flex-col items-center justify-center space-y-2"
-                  onClick={() => window.location.href = "/food-tracking"}
+                  onClick={() => setLocation("/food-tracking")}
                   data-testid="button-log-food"
                 >
                   <i className="fas fa-plus text-lg"></i>
@@ -299,7 +301,7 @@ export default function Dashboard() {
                 <Button 
                   variant="outline"
                   className="h-20 flex flex-col items-center justify-center space-y-2"
-                  onClick={() => window.location.href = "/medication"}
+                  onClick={() => setLocation("/medication")}
                   data-testid="button-log-medication"
                 >
                   <i className="fas fa-syringe text-lg"></i>
@@ -308,7 +310,7 @@ export default function Dashboard() {
                 <Button 
                   variant="outline"
                   className="h-20 flex flex-col items-center justify-center space-y-2"
-                  onClick={() => window.location.href = "/progress"}
+                  onClick={() => setLocation("/progress")}
                   data-testid="button-log-weight"
                 >
                   <i className="fas fa-weight text-lg"></i>

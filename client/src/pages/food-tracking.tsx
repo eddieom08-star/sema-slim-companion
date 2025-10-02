@@ -66,10 +66,11 @@ export default function FoodTracking() {
   const logHunger = useMutation({
     mutationFn: async () => {
       await apiRequest("POST", "/api/hunger-logs", {
-        hungerLevel,
-        fullnessLevel,
+        hungerBefore: Math.max(hungerLevel, 1),
+        hungerAfter: fullnessLevel > 0 ? Math.max(11 - fullnessLevel, 1) : null,
         cravingIntensity: cravingIntensity > 0 ? cravingIntensity : null,
         cravingType: cravingType || null,
+        loggedAt: new Date().toISOString(),
       });
     },
     onSuccess: () => {

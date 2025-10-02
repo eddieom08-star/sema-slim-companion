@@ -470,8 +470,8 @@ export const insertHungerLogSchema = createInsertSchema(hungerLogs).omit({
   createdAt: true,
 }).extend({
   hungerBefore: z.number().min(1).max(10),
-  hungerAfter: z.number().min(1).max(10).optional(),
-  cravingIntensity: z.number().min(1).max(10).optional(),
+  hungerAfter: z.number().min(1).max(10).nullable().optional(),
+  cravingIntensity: z.number().min(1).max(10).nullable().optional(),
 });
 
 export const insertFoodDatabaseSchema = createInsertSchema(foodDatabase).omit({

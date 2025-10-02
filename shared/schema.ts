@@ -265,6 +265,111 @@ export const pushSubscriptions = pgTable("push_subscriptions", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Recipes
+export const recipeTypeEnum = pgEnum("recipe_type", ["breakfast", "lunch", "dinner", "snack", "dessert"]);
+export const difficultyEnum = pgEnum("difficulty", ["easy", "medium", "hard"]);
+
+export const recipes = pgTable("recipes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id), // null for system/admin recipes
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  recipeType: recipeTypeEnum("recipe_type").notNull(),
+  difficulty: difficultyEnum("difficulty").notNull(),
+  prepTime: integer("prep_time"), // minutes
+  cookTime: integer("cook_time"), // minutes
+  servings: integer("servings").notNull().default(1),
+  imageUrl: varchar("image_url", { length: 500 }),
+  ingredients: jsonb("ingredients").notNull(), // [{name, quantity, unit}]
+  instructions: text("instructions").notNull(),
+  calories: integer("calories").notNull(),
+  protein: decimal("protein", { precision: 8, scale: 3 }).notNull(),
+  carbs: decimal("carbs", { precision: 8, scale: 3 }).notNull(),
+  fat: decimal("fat", { precision: 8, scale: 3 }).notNull(),
+  fiber: decimal("fiber", { precision: 8, scale: 3 }),
+  sugar: decimal("sugar", { precision: 8, scale: 3 }),
+  sodium: decimal("sodium", { precision: 8, scale: 3 }),
+  isGlp1Friendly: boolean("is_glp1_friendly").default(true),
+  isHighProtein: boolean("is_high_protein").default(false),
+  isLowCarb: boolean("is_low_carb").default(false),
+  isPublic: boolean("is_public").default(false), // whether visible to other users
+  likes: integer("likes").default(0),
+  tags: text("tags").array(), // ["keto", "vegetarian", "quick", etc]
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Recipe favorites
+export const recipeFavorites = pgTable("recipe_favorites", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  recipeId: varchar("recipe_id").notNull().references(() => recipes.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Meal plans
+export const mealPlans = pgTable("meal_plans", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date").notNull(),
+  targetCalories: integer("target_calories"),
+  targetProtein: decimal("target_protein", { precision: 8, scale: 3 }),
+  targetCarbs: decimal("target_carbs", { precision: 8, scale: 3 }),
+  targetFat: decimal("target_fat", { precision: 8, scale: 3 }),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Meal plan entries (scheduled meals)
+export const mealTypeEnum = pgEnum("meal_type_enum", ["breakfast", "lunch", "dinner", "snack"]);
+
+export const mealPlanEntries = pgTable("meal_plan_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  mealPlanId: varchar("meal_plan_id").notNull().references(() => mealPlans.id),
+  recipeId: varchar("recipe_id").references(() => recipes.id),
+  date: date("date").notNull(),
+  mealType: mealTypeEnum("meal_type").notNull(),
+  servings: decimal("servings", { precision: 3, scale: 1 }).notNull().default('1.0'),
+  notes: text("notes"),
+  completed: boolean("completed").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Meal prep schedules
+export const mealPrepSchedules = pgTable("meal_prep_schedules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  recipeId: varchar("recipe_id").notNull().references(() => recipes.id),
+  prepDate: date("prep_date").notNull(),
+  prepTime: timestamp("prep_time"),
+  servingsPrepped: integer("servings_prepped").notNull(),
+  storageInstructions: text("storage_instructions"),
+  expiryDate: date("expiry_date"),
+  completed: boolean("completed").default(false),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Nutritional recommendations
+export const nutritionalRecommendations = pgTable("nutritional_recommendations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  recommendationType: varchar("recommendation_type", { length: 50 }).notNull(), // daily_calories, protein_target, meal_timing, etc
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description").notNull(),
+  targetValue: decimal("target_value", { precision: 8, scale: 3 }),
+  unit: varchar("unit", { length: 20 }),
+  priority: varchar("priority", { length: 20 }).notNull(), // high, medium, low
+  basedOnMedicationType: varchar("based_on_medication_type", { length: 20 }), // ozempic, mounjaro, etc
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Export types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -310,6 +415,24 @@ export type Notification = typeof notifications.$inferSelect;
 
 export type InsertPushSubscription = typeof pushSubscriptions.$inferInsert;
 export type PushSubscription = typeof pushSubscriptions.$inferSelect;
+
+export type InsertRecipe = typeof recipes.$inferInsert;
+export type Recipe = typeof recipes.$inferSelect;
+
+export type InsertRecipeFavorite = typeof recipeFavorites.$inferInsert;
+export type RecipeFavorite = typeof recipeFavorites.$inferSelect;
+
+export type InsertMealPlan = typeof mealPlans.$inferInsert;
+export type MealPlan = typeof mealPlans.$inferSelect;
+
+export type InsertMealPlanEntry = typeof mealPlanEntries.$inferInsert;
+export type MealPlanEntry = typeof mealPlanEntries.$inferSelect;
+
+export type InsertMealPrepSchedule = typeof mealPrepSchedules.$inferInsert;
+export type MealPrepSchedule = typeof mealPrepSchedules.$inferSelect;
+
+export type InsertNutritionalRecommendation = typeof nutritionalRecommendations.$inferInsert;
+export type NutritionalRecommendation = typeof nutritionalRecommendations.$inferSelect;
 
 // Zod schemas for validation
 export const insertMedicationSchema = createInsertSchema(medications).omit({
@@ -381,4 +504,38 @@ export const updateUserProfileSchema = createInsertSchema(users).omit({
   medicationType: z.enum(['ozempic', 'mounjaro', 'wegovy', 'rybelsus']).optional(),
   activityLevel: z.enum(['sedentary', 'lightly_active', 'moderately_active', 'very_active', 'extremely_active']).optional(),
   gender: z.enum(['male', 'female', 'other']).optional(),
+});
+
+export const insertRecipeSchema = createInsertSchema(recipes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  likes: true,
+});
+
+export const insertRecipeFavoriteSchema = createInsertSchema(recipeFavorites).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertMealPlanSchema = createInsertSchema(mealPlans).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertMealPlanEntrySchema = createInsertSchema(mealPlanEntries).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertMealPrepScheduleSchema = createInsertSchema(mealPrepSchedules).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertNutritionalRecommendationSchema = createInsertSchema(nutritionalRecommendations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
 });

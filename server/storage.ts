@@ -16,6 +16,12 @@ import {
   pointTransactions,
   notifications,
   pushSubscriptions,
+  recipes,
+  recipeFavorites,
+  mealPlans,
+  mealPlanEntries,
+  mealPrepSchedules,
+  nutritionalRecommendations,
   type User,
   type UpsertUser,
   type Medication,
@@ -45,6 +51,17 @@ import {
   type InsertNotification,
   type PushSubscription,
   type InsertPushSubscription,
+  type Recipe,
+  type InsertRecipe,
+  type RecipeFavorite,
+  type MealPlan,
+  type InsertMealPlan,
+  type MealPlanEntry,
+  type InsertMealPlanEntry,
+  type MealPrepSchedule,
+  type InsertMealPrepSchedule,
+  type NutritionalRecommendation,
+  type InsertNutritionalRecommendation,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gte, lte, sql } from "drizzle-orm";
@@ -135,6 +152,42 @@ export interface IStorage {
   createPushSubscription(subscription: InsertPushSubscription): Promise<PushSubscription>;
   getUserPushSubscriptions(userId: string): Promise<PushSubscription[]>;
   deletePushSubscription(endpoint: string, userId: string): Promise<boolean>;
+
+  // Recipe operations
+  createRecipe(recipe: any): Promise<any>;
+  getRecipe(id: string): Promise<any>;
+  getUserRecipes(userId: string): Promise<any[]>;
+  getPublicRecipes(limit?: number, filters?: any): Promise<any[]>;
+  updateRecipe(id: string, data: any): Promise<any>;
+  deleteRecipe(id: string): Promise<void>;
+  searchRecipes(query: string, filters?: any): Promise<any[]>;
+  toggleRecipeFavorite(userId: string, recipeId: string): Promise<void>;
+  getUserFavoriteRecipes(userId: string): Promise<any[]>;
+
+  // Meal plan operations
+  createMealPlan(mealPlan: any): Promise<any>;
+  getUserMealPlans(userId: string): Promise<any[]>;
+  getActiveMealPlan(userId: string): Promise<any | undefined>;
+  updateMealPlan(id: string, data: any): Promise<any>;
+  deleteMealPlan(id: string): Promise<void>;
+
+  // Meal plan entry operations
+  createMealPlanEntry(entry: any): Promise<any>;
+  getMealPlanEntries(mealPlanId: string): Promise<any[]>;
+  getMealPlanEntriesByDate(mealPlanId: string, date: Date): Promise<any[]>;
+  updateMealPlanEntry(id: string, data: any): Promise<any>;
+  deleteMealPlanEntry(id: string): Promise<void>;
+
+  // Meal prep operations
+  createMealPrepSchedule(schedule: any): Promise<any>;
+  getUserMealPrepSchedules(userId: string): Promise<any[]>;
+  updateMealPrepSchedule(id: string, data: any): Promise<any>;
+  deleteMealPrepSchedule(id: string): Promise<void>;
+
+  // Nutritional recommendation operations
+  getUserRecommendations(userId: string): Promise<any[]>;
+  createRecommendation(recommendation: any): Promise<any>;
+  updateRecommendation(id: string, data: any): Promise<any>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -710,6 +763,264 @@ export class DatabaseStorage implements IStorage {
       )
       .returning();
     return result.length > 0;
+  }
+
+  // Recipe operations
+  async createRecipe(recipe: InsertRecipe): Promise<Recipe> {
+    const [result] = await db.insert(recipes).values(recipe).returning();
+    return result;
+  }
+
+  async getRecipe(id: string): Promise<Recipe | undefined> {
+    const [recipe] = await db.select().from(recipes).where(eq(recipes.id, id));
+    return recipe;
+  }
+
+  async getUserRecipes(userId: string): Promise<Recipe[]> {
+    return await db
+      .select()
+      .from(recipes)
+      .where(eq(recipes.userId, userId))
+      .orderBy(desc(recipes.createdAt));
+  }
+
+  async getPublicRecipes(limit: number = 50, filters?: any): Promise<Recipe[]> {
+    let query = db.select().from(recipes).where(eq(recipes.isPublic, true));
+    
+    if (filters?.isGlp1Friendly) {
+      query = query.where(eq(recipes.isGlp1Friendly, true)) as any;
+    }
+    if (filters?.isHighProtein) {
+      query = query.where(eq(recipes.isHighProtein, true)) as any;
+    }
+    if (filters?.isLowCarb) {
+      query = query.where(eq(recipes.isLowCarb, true)) as any;
+    }
+    
+    return await query.orderBy(desc(recipes.likes)).limit(limit);
+  }
+
+  async updateRecipe(id: string, data: Partial<Recipe>): Promise<Recipe> {
+    const [result] = await db
+      .update(recipes)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(recipes.id, id))
+      .returning();
+    return result;
+  }
+
+  async deleteRecipe(id: string): Promise<void> {
+    await db.delete(recipes).where(eq(recipes.id, id));
+  }
+
+  async searchRecipes(query: string, filters?: any): Promise<Recipe[]> {
+    const searchTerm = `%${query.toLowerCase()}%`;
+    return await db
+      .select()
+      .from(recipes)
+      .where(
+        and(
+          eq(recipes.isPublic, true),
+          sql`LOWER(${recipes.name}) LIKE ${searchTerm} OR LOWER(${recipes.description}) LIKE ${searchTerm}`
+        )
+      )
+      .limit(50);
+  }
+
+  async toggleRecipeFavorite(userId: string, recipeId: string): Promise<void> {
+    const [existing] = await db
+      .select()
+      .from(recipeFavorites)
+      .where(
+        and(
+          eq(recipeFavorites.userId, userId),
+          eq(recipeFavorites.recipeId, recipeId)
+        )
+      );
+
+    if (existing) {
+      await db
+        .delete(recipeFavorites)
+        .where(
+          and(
+            eq(recipeFavorites.userId, userId),
+            eq(recipeFavorites.recipeId, recipeId)
+          )
+        );
+    } else {
+      await db.insert(recipeFavorites).values({ userId, recipeId });
+    }
+  }
+
+  async getUserFavoriteRecipes(userId: string): Promise<Recipe[]> {
+    return await db
+      .select({
+        id: recipes.id,
+        userId: recipes.userId,
+        name: recipes.name,
+        description: recipes.description,
+        recipeType: recipes.recipeType,
+        difficulty: recipes.difficulty,
+        prepTime: recipes.prepTime,
+        cookTime: recipes.cookTime,
+        servings: recipes.servings,
+        imageUrl: recipes.imageUrl,
+        ingredients: recipes.ingredients,
+        instructions: recipes.instructions,
+        calories: recipes.calories,
+        protein: recipes.protein,
+        carbs: recipes.carbs,
+        fat: recipes.fat,
+        fiber: recipes.fiber,
+        sugar: recipes.sugar,
+        sodium: recipes.sodium,
+        isGlp1Friendly: recipes.isGlp1Friendly,
+        isHighProtein: recipes.isHighProtein,
+        isLowCarb: recipes.isLowCarb,
+        isPublic: recipes.isPublic,
+        likes: recipes.likes,
+        tags: recipes.tags,
+        createdAt: recipes.createdAt,
+        updatedAt: recipes.updatedAt,
+      })
+      .from(recipeFavorites)
+      .innerJoin(recipes, eq(recipeFavorites.recipeId, recipes.id))
+      .where(eq(recipeFavorites.userId, userId));
+  }
+
+  // Meal plan operations
+  async createMealPlan(mealPlan: InsertMealPlan): Promise<MealPlan> {
+    const [result] = await db.insert(mealPlans).values(mealPlan).returning();
+    return result;
+  }
+
+  async getUserMealPlans(userId: string): Promise<MealPlan[]> {
+    return await db
+      .select()
+      .from(mealPlans)
+      .where(eq(mealPlans.userId, userId))
+      .orderBy(desc(mealPlans.createdAt));
+  }
+
+  async getActiveMealPlan(userId: string): Promise<MealPlan | undefined> {
+    const [plan] = await db
+      .select()
+      .from(mealPlans)
+      .where(
+        and(
+          eq(mealPlans.userId, userId),
+          eq(mealPlans.isActive, true)
+        )
+      )
+      .limit(1);
+    return plan;
+  }
+
+  async updateMealPlan(id: string, data: Partial<MealPlan>): Promise<MealPlan> {
+    const [result] = await db
+      .update(mealPlans)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(mealPlans.id, id))
+      .returning();
+    return result;
+  }
+
+  async deleteMealPlan(id: string): Promise<void> {
+    await db.delete(mealPlans).where(eq(mealPlans.id, id));
+  }
+
+  // Meal plan entry operations
+  async createMealPlanEntry(entry: InsertMealPlanEntry): Promise<MealPlanEntry> {
+    const [result] = await db.insert(mealPlanEntries).values(entry).returning();
+    return result;
+  }
+
+  async getMealPlanEntries(mealPlanId: string): Promise<MealPlanEntry[]> {
+    return await db
+      .select()
+      .from(mealPlanEntries)
+      .where(eq(mealPlanEntries.mealPlanId, mealPlanId))
+      .orderBy(mealPlanEntries.date);
+  }
+
+  async getMealPlanEntriesByDate(mealPlanId: string, date: Date): Promise<MealPlanEntry[]> {
+    return await db
+      .select()
+      .from(mealPlanEntries)
+      .where(
+        and(
+          eq(mealPlanEntries.mealPlanId, mealPlanId),
+          eq(mealPlanEntries.date, date.toISOString().split('T')[0])
+        )
+      );
+  }
+
+  async updateMealPlanEntry(id: string, data: Partial<MealPlanEntry>): Promise<MealPlanEntry> {
+    const [result] = await db
+      .update(mealPlanEntries)
+      .set(data)
+      .where(eq(mealPlanEntries.id, id))
+      .returning();
+    return result;
+  }
+
+  async deleteMealPlanEntry(id: string): Promise<void> {
+    await db.delete(mealPlanEntries).where(eq(mealPlanEntries.id, id));
+  }
+
+  // Meal prep operations
+  async createMealPrepSchedule(schedule: InsertMealPrepSchedule): Promise<MealPrepSchedule> {
+    const [result] = await db.insert(mealPrepSchedules).values(schedule).returning();
+    return result;
+  }
+
+  async getUserMealPrepSchedules(userId: string): Promise<MealPrepSchedule[]> {
+    return await db
+      .select()
+      .from(mealPrepSchedules)
+      .where(eq(mealPrepSchedules.userId, userId))
+      .orderBy(mealPrepSchedules.prepDate);
+  }
+
+  async updateMealPrepSchedule(id: string, data: Partial<MealPrepSchedule>): Promise<MealPrepSchedule> {
+    const [result] = await db
+      .update(mealPrepSchedules)
+      .set(data)
+      .where(eq(mealPrepSchedules.id, id))
+      .returning();
+    return result;
+  }
+
+  async deleteMealPrepSchedule(id: string): Promise<void> {
+    await db.delete(mealPrepSchedules).where(eq(mealPrepSchedules.id, id));
+  }
+
+  // Nutritional recommendation operations
+  async getUserRecommendations(userId: string): Promise<NutritionalRecommendation[]> {
+    return await db
+      .select()
+      .from(nutritionalRecommendations)
+      .where(
+        and(
+          eq(nutritionalRecommendations.userId, userId),
+          eq(nutritionalRecommendations.isActive, true)
+        )
+      )
+      .orderBy(desc(nutritionalRecommendations.createdAt));
+  }
+
+  async createRecommendation(recommendation: InsertNutritionalRecommendation): Promise<NutritionalRecommendation> {
+    const [result] = await db.insert(nutritionalRecommendations).values(recommendation).returning();
+    return result;
+  }
+
+  async updateRecommendation(id: string, data: Partial<NutritionalRecommendation>): Promise<NutritionalRecommendation> {
+    const [result] = await db
+      .update(nutritionalRecommendations)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(nutritionalRecommendations.id, id))
+      .returning();
+    return result;
   }
 }
 

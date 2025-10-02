@@ -801,6 +801,286 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Recipe routes
+  app.post('/api/recipes', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.oidc.user.sub;
+      const recipeData = { ...req.body, userId };
+      const recipe = await storage.createRecipe(recipeData);
+      res.status(201).json(recipe);
+    } catch (error) {
+      console.error("Error creating recipe:", error);
+      res.status(500).json({ message: "Failed to create recipe" });
+    }
+  });
+
+  app.get('/api/recipes', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.oidc.user.sub;
+      const recipes = await storage.getUserRecipes(userId);
+      res.json(recipes);
+    } catch (error) {
+      console.error("Error fetching recipes:", error);
+      res.status(500).json({ message: "Failed to fetch recipes" });
+    }
+  });
+
+  app.get('/api/recipes/public', isAuthenticated, async (req: any, res) => {
+    try {
+      const { limit = 50, isGlp1Friendly, isHighProtein, isLowCarb } = req.query;
+      const filters = { isGlp1Friendly, isHighProtein, isLowCarb };
+      const recipes = await storage.getPublicRecipes(parseInt(limit as string), filters);
+      res.json(recipes);
+    } catch (error) {
+      console.error("Error fetching public recipes:", error);
+      res.status(500).json({ message: "Failed to fetch public recipes" });
+    }
+  });
+
+  app.get('/api/recipes/search', isAuthenticated, async (req: any, res) => {
+    try {
+      const { q } = req.query;
+      if (!q) {
+        return res.status(400).json({ message: "Search query is required" });
+      }
+      const recipes = await storage.searchRecipes(q as string);
+      res.json(recipes);
+    } catch (error) {
+      console.error("Error searching recipes:", error);
+      res.status(500).json({ message: "Failed to search recipes" });
+    }
+  });
+
+  app.get('/api/recipes/favorites', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.oidc.user.sub;
+      const favorites = await storage.getUserFavoriteRecipes(userId);
+      res.json(favorites);
+    } catch (error) {
+      console.error("Error fetching favorite recipes:", error);
+      res.status(500).json({ message: "Failed to fetch favorite recipes" });
+    }
+  });
+
+  app.get('/api/recipes/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const recipe = await storage.getRecipe(id);
+      if (!recipe) {
+        return res.status(404).json({ message: "Recipe not found" });
+      }
+      res.json(recipe);
+    } catch (error) {
+      console.error("Error fetching recipe:", error);
+      res.status(500).json({ message: "Failed to fetch recipe" });
+    }
+  });
+
+  app.put('/api/recipes/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const recipe = await storage.updateRecipe(id, req.body);
+      res.json(recipe);
+    } catch (error) {
+      console.error("Error updating recipe:", error);
+      res.status(500).json({ message: "Failed to update recipe" });
+    }
+  });
+
+  app.delete('/api/recipes/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteRecipe(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting recipe:", error);
+      res.status(500).json({ message: "Failed to delete recipe" });
+    }
+  });
+
+  app.post('/api/recipes/:id/favorite', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.oidc.user.sub;
+      const { id } = req.params;
+      await storage.toggleRecipeFavorite(userId, id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error toggling recipe favorite:", error);
+      res.status(500).json({ message: "Failed to toggle recipe favorite" });
+    }
+  });
+
+  // Meal plan routes
+  app.post('/api/meal-plans', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.oidc.user.sub;
+      const mealPlanData = { ...req.body, userId };
+      const mealPlan = await storage.createMealPlan(mealPlanData);
+      res.status(201).json(mealPlan);
+    } catch (error) {
+      console.error("Error creating meal plan:", error);
+      res.status(500).json({ message: "Failed to create meal plan" });
+    }
+  });
+
+  app.get('/api/meal-plans', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.oidc.user.sub;
+      const mealPlans = await storage.getUserMealPlans(userId);
+      res.json(mealPlans);
+    } catch (error) {
+      console.error("Error fetching meal plans:", error);
+      res.status(500).json({ message: "Failed to fetch meal plans" });
+    }
+  });
+
+  app.get('/api/meal-plans/active', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.oidc.user.sub;
+      const mealPlan = await storage.getActiveMealPlan(userId);
+      res.json(mealPlan || null);
+    } catch (error) {
+      console.error("Error fetching active meal plan:", error);
+      res.status(500).json({ message: "Failed to fetch active meal plan" });
+    }
+  });
+
+  app.put('/api/meal-plans/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const mealPlan = await storage.updateMealPlan(id, req.body);
+      res.json(mealPlan);
+    } catch (error) {
+      console.error("Error updating meal plan:", error);
+      res.status(500).json({ message: "Failed to update meal plan" });
+    }
+  });
+
+  app.delete('/api/meal-plans/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteMealPlan(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting meal plan:", error);
+      res.status(500).json({ message: "Failed to delete meal plan" });
+    }
+  });
+
+  // Meal plan entry routes
+  app.post('/api/meal-plan-entries', isAuthenticated, async (req: any, res) => {
+    try {
+      const entry = await storage.createMealPlanEntry(req.body);
+      res.status(201).json(entry);
+    } catch (error) {
+      console.error("Error creating meal plan entry:", error);
+      res.status(500).json({ message: "Failed to create meal plan entry" });
+    }
+  });
+
+  app.get('/api/meal-plan-entries/:mealPlanId', isAuthenticated, async (req: any, res) => {
+    try {
+      const { mealPlanId } = req.params;
+      const entries = await storage.getMealPlanEntries(mealPlanId);
+      res.json(entries);
+    } catch (error) {
+      console.error("Error fetching meal plan entries:", error);
+      res.status(500).json({ message: "Failed to fetch meal plan entries" });
+    }
+  });
+
+  app.put('/api/meal-plan-entries/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const entry = await storage.updateMealPlanEntry(id, req.body);
+      res.json(entry);
+    } catch (error) {
+      console.error("Error updating meal plan entry:", error);
+      res.status(500).json({ message: "Failed to update meal plan entry" });
+    }
+  });
+
+  app.delete('/api/meal-plan-entries/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteMealPlanEntry(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting meal plan entry:", error);
+      res.status(500).json({ message: "Failed to delete meal plan entry" });
+    }
+  });
+
+  // Meal prep routes
+  app.post('/api/meal-prep', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.oidc.user.sub;
+      const scheduleData = { ...req.body, userId };
+      const schedule = await storage.createMealPrepSchedule(scheduleData);
+      res.status(201).json(schedule);
+    } catch (error) {
+      console.error("Error creating meal prep schedule:", error);
+      res.status(500).json({ message: "Failed to create meal prep schedule" });
+    }
+  });
+
+  app.get('/api/meal-prep', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.oidc.user.sub;
+      const schedules = await storage.getUserMealPrepSchedules(userId);
+      res.json(schedules);
+    } catch (error) {
+      console.error("Error fetching meal prep schedules:", error);
+      res.status(500).json({ message: "Failed to fetch meal prep schedules" });
+    }
+  });
+
+  app.put('/api/meal-prep/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const schedule = await storage.updateMealPrepSchedule(id, req.body);
+      res.json(schedule);
+    } catch (error) {
+      console.error("Error updating meal prep schedule:", error);
+      res.status(500).json({ message: "Failed to update meal prep schedule" });
+    }
+  });
+
+  app.delete('/api/meal-prep/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteMealPrepSchedule(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting meal prep schedule:", error);
+      res.status(500).json({ message: "Failed to delete meal prep schedule" });
+    }
+  });
+
+  // Nutritional recommendations routes
+  app.get('/api/recommendations', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.oidc.user.sub;
+      const recommendations = await storage.getUserRecommendations(userId);
+      res.json(recommendations);
+    } catch (error) {
+      console.error("Error fetching recommendations:", error);
+      res.status(500).json({ message: "Failed to fetch recommendations" });
+    }
+  });
+
+  app.post('/api/recommendations', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.oidc.user.sub;
+      const recommendationData = { ...req.body, userId };
+      const recommendation = await storage.createRecommendation(recommendationData);
+      res.status(201).json(recommendation);
+    } catch (error) {
+      console.error("Error creating recommendation:", error);
+      res.status(500).json({ message: "Failed to create recommendation" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

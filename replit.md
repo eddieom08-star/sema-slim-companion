@@ -26,6 +26,7 @@ Preferred communication style: Simple, everyday language.
 - Dashboard showing key metrics and recent activity
 - Food tracking page for logging meals and nutrition
 - Medication page for managing and logging medications
+- Recipes page for browsing, creating, and managing GLP-1-friendly recipes
 - Progress page for visualizing weight loss and achievements
 - Profile page for viewing and editing user information
 
@@ -53,6 +54,15 @@ Preferred communication style: Simple, everyday language.
 **Development Server**: Vite middleware integration for HMR and development builds. Production builds serve static files from `dist/public`.
 
 **Error Handling**: Centralized error responses with appropriate HTTP status codes. Unauthorized errors (401) trigger client-side redirect to login.
+
+**Security Middleware**: Enterprise-grade security hardening with multiple layers of protection:
+- **Helmet.js**: Secure HTTP headers (CSP, X-Frame-Options, X-Content-Type-Options, etc.)
+- **Rate Limiting**: IP-based request throttling (100 requests/15min for API, 5 requests/15min for auth endpoints)
+- **CORS**: Configured to allow same-origin requests and trusted domains (.replit.app, .replit.dev, localhost in development)
+- **XSS Protection**: Input sanitization via express-xss-sanitizer to prevent cross-site scripting attacks
+- **NoSQL Injection Prevention**: express-mongo-sanitize removes MongoDB operators from user input
+- **HTTP Parameter Pollution (HPP)**: Protection against parameter pollution attacks
+- **Trust Proxy**: Configured for Replit environment to enable accurate IP-based rate limiting behind proxies
 
 ## Authentication
 
@@ -90,6 +100,12 @@ Preferred communication style: Simple, everyday language.
 - `notifications`: User notifications with type, title, message, read status, and optional action URL
 - `push_subscriptions`: Web Push API subscriptions for browser notifications
 - `sessions`: Session storage for authentication
+- `recipes`: User and public recipes with nutritional information, ingredients, instructions, and GLP-1-friendly filtering
+- `recipe_favorites`: User's favorited recipes
+- `meal_plans`: Weekly meal planning schedules
+- `meal_plan_entries`: Individual meal assignments within meal plans
+- `meal_prep_schedules`: Meal preparation scheduling and tracking
+- `nutritional_recommendations`: GLP-1-friendly nutritional guidance and recommendations
 
 **Data Validation**: Zod schemas generated from Drizzle tables using `drizzle-zod` for runtime validation on API endpoints.
 

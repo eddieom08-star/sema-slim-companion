@@ -28,10 +28,21 @@ app.use(helmet({
 }));
 
 // CORS Configuration
-const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5000'];
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [];
 app.use(cors({
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-    if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.replit.app') || origin.endsWith('.replit.dev')) {
+    // Allow requests with no origin (same-origin requests, including Vite dev server)
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+    
+    // Allow localhost and Replit domains in development
+    if (process.env.NODE_ENV === 'development' || 
+        allowedOrigins.includes(origin) || 
+        origin.includes('localhost') || 
+        origin.endsWith('.replit.app') || 
+        origin.endsWith('.replit.dev')) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));

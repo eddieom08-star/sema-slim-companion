@@ -13,6 +13,7 @@ import FoodTracking from "@/pages/food-tracking";
 import Medication from "@/pages/medication";
 import Progress from "@/pages/progress";
 import Profile from "@/pages/profile";
+import Recipes from "@/pages/recipes";
 import { PWAInstallPrompt } from "@/components/pwa-install-prompt";
 import { OfflineIndicator } from "@/components/offline-indicator";
 import { NetworkAwareIndicator } from "@/components/network-aware";
@@ -51,6 +52,7 @@ function Router() {
               <Route path="/" component={Dashboard} />
               <Route path="/food-tracking" component={FoodTracking} />
               <Route path="/medication" component={Medication} />
+              <Route path="/recipes" component={Recipes} />
               <Route path="/progress" component={Progress} />
               <Route path="/profile" component={Profile} />
               <Route component={NotFound} />

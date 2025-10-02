@@ -18,6 +18,7 @@ export default function Navigation() {
     { path: "/", label: "Dashboard", icon: "fas fa-tachometer-alt" },
     { path: "/food-tracking", label: "Food", icon: "fas fa-utensils" },
     { path: "/medication", label: "Medication", icon: "fas fa-syringe" },
+    { path: "/recipes", label: "Recipes", icon: "fas fa-book" },
     { path: "/progress", label: "Progress", icon: "fas fa-chart-line" },
   ];
 

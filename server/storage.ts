@@ -15,6 +15,7 @@ import {
   userGamification,
   pointTransactions,
   notifications,
+  pushSubscriptions,
   type User,
   type UpsertUser,
   type Medication,
@@ -42,6 +43,8 @@ import {
   type InsertPointTransaction,
   type Notification,
   type InsertNotification,
+  type PushSubscription,
+  type InsertPushSubscription,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gte, lte, sql } from "drizzle-orm";
@@ -127,6 +130,11 @@ export interface IStorage {
   markNotificationAsRead(id: string, userId: string): Promise<Notification | undefined>;
   markAllNotificationsAsRead(userId: string): Promise<void>;
   deleteNotification(id: string, userId: string): Promise<boolean>;
+
+  // Push subscription operations
+  createPushSubscription(subscription: InsertPushSubscription): Promise<PushSubscription>;
+  getUserPushSubscriptions(userId: string): Promise<PushSubscription[]>;
+  deletePushSubscription(endpoint: string, userId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -661,6 +669,43 @@ export class DatabaseStorage implements IStorage {
         and(
           eq(notifications.id, id),
           eq(notifications.userId, userId)
+        )
+      )
+      .returning();
+    return result.length > 0;
+  }
+
+  // Push subscription operations
+  async createPushSubscription(subscription: InsertPushSubscription): Promise<PushSubscription> {
+    const [result] = await db
+      .insert(pushSubscriptions)
+      .values(subscription)
+      .onConflictDoUpdate({
+        target: pushSubscriptions.endpoint,
+        set: {
+          p256dh: subscription.p256dh,
+          auth: subscription.auth,
+          userAgent: subscription.userAgent,
+        },
+      })
+      .returning();
+    return result;
+  }
+
+  async getUserPushSubscriptions(userId: string): Promise<PushSubscription[]> {
+    return await db
+      .select()
+      .from(pushSubscriptions)
+      .where(eq(pushSubscriptions.userId, userId));
+  }
+
+  async deletePushSubscription(endpoint: string, userId: string): Promise<boolean> {
+    const result = await db
+      .delete(pushSubscriptions)
+      .where(
+        and(
+          eq(pushSubscriptions.endpoint, endpoint),
+          eq(pushSubscriptions.userId, userId)
         )
       )
       .returning();

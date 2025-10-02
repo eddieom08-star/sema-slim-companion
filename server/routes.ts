@@ -744,6 +744,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Push subscription routes
+  app.post('/api/push-subscription', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.oidc.user.sub;
+      const { subscription } = req.body;
+
+      if (!subscription || !subscription.endpoint || !subscription.keys) {
+        return res.status(400).json({ message: "Invalid subscription data" });
+      }
+
+      const pushSubscription = await storage.createPushSubscription({
+        userId,
+        endpoint: subscription.endpoint,
+        p256dh: subscription.keys.p256dh,
+        auth: subscription.keys.auth,
+        userAgent: req.headers['user-agent'] || null,
+      });
+
+      res.json(pushSubscription);
+    } catch (error) {
+      console.error("Error creating push subscription:", error);
+      res.status(500).json({ message: "Failed to create push subscription" });
+    }
+  });
+
+  app.get('/api/push-subscriptions', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.oidc.user.sub;
+      const subscriptions = await storage.getUserPushSubscriptions(userId);
+      res.json(subscriptions);
+    } catch (error) {
+      console.error("Error fetching push subscriptions:", error);
+      res.status(500).json({ message: "Failed to fetch push subscriptions" });
+    }
+  });
+
+  app.delete('/api/push-subscription', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.oidc.user.sub;
+      const { endpoint } = req.body;
+
+      if (!endpoint) {
+        return res.status(400).json({ message: "Endpoint is required" });
+      }
+
+      const deleted = await storage.deletePushSubscription(endpoint, userId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Subscription not found" });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting push subscription:", error);
+      res.status(500).json({ message: "Failed to delete push subscription" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

@@ -254,6 +254,17 @@ export const notifications = pgTable("notifications", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Push subscriptions for Web Push API
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  endpoint: text("endpoint").notNull().unique(),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Export types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -296,6 +307,9 @@ export type PointTransaction = typeof pointTransactions.$inferSelect;
 
 export type InsertNotification = typeof notifications.$inferInsert;
 export type Notification = typeof notifications.$inferSelect;
+
+export type InsertPushSubscription = typeof pushSubscriptions.$inferInsert;
+export type PushSubscription = typeof pushSubscriptions.$inferSelect;
 
 // Zod schemas for validation
 export const insertMedicationSchema = createInsertSchema(medications).omit({
@@ -349,6 +363,11 @@ export const insertPointTransactionSchema = createInsertSchema(pointTransactions
 });
 
 export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPushSubscriptionSchema = createInsertSchema(pushSubscriptions).omit({
   id: true,
   createdAt: true,
 });

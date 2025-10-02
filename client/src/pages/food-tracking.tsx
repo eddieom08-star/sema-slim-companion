@@ -14,7 +14,7 @@ import { Brain, Zap, Pizza, IceCream, Cookie } from "lucide-react";
 export default function FoodTracking() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [hungerLevel, setHungerLevel] = useState(5);
-  const [fullnessLevel, setFullnessLevel] = useState(5);
+  const [fullnessLevel, setFullnessLevel] = useState(0);
   const [cravingIntensity, setCravingIntensity] = useState(0);
   const [cravingType, setCravingType] = useState("");
   const { toast } = useToast();
@@ -81,7 +81,7 @@ export default function FoodTracking() {
       });
       // Reset form
       setHungerLevel(5);
-      setFullnessLevel(5);
+      setFullnessLevel(0);
       setCravingIntensity(0);
       setCravingType("");
     },
@@ -221,7 +221,7 @@ export default function FoodTracking() {
                   <Slider
                     value={[hungerLevel]}
                     onValueChange={(value) => setHungerLevel(value[0])}
-                    min={0}
+                    min={1}
                     max={10}
                     step={1}
                     className="w-full"

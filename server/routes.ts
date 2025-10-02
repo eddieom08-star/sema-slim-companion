@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth0 } from "./auth0";
 import { setupDevAuth, isAuthenticated, DEV_MODE } from "./devAuth";
+import { logger } from "./logger";
 import {
   insertMedicationSchema,
   insertMedicationLogSchema,
@@ -15,6 +16,27 @@ import {
   insertFoodDatabaseSchema
 } from "@shared/schema";
 
+// Fetch with timeout wrapper to prevent hanging requests
+async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs: number = 5000): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error(`Request timeout after ${timeoutMs}ms`);
+    }
+    throw error;
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication (Dev mode or Auth0)
   if (DEV_MODE) {
@@ -24,6 +46,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log('🔐 Running in AUTH0 mode');
     setupAuth0(app);
   }
+
+  // Health check endpoints (no auth required)
+  app.get('/health', async (_req, res) => {
+    res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
+  app.get('/api/health', async (_req, res) => {
+    try {
+      // Check database connection with retry
+      const { pool, withRetry } = await import('./db');
+      await withRetry(() => pool.query('SELECT 1'), 2, 500);
+      
+      res.status(200).json({
+        status: 'healthy',
+        database: 'connected',
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      logger.error('Health check failed', error as Error);
+      res.status(503).json({
+        status: 'unhealthy',
+        database: 'disconnected',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString(),
+      });
+    }
+  });
+
+  app.get('/api/readiness', async (_req, res) => {
+    try {
+      const { pool, withRetry } = await import('./db');
+      await withRetry(() => pool.query('SELECT 1'), 2, 500);
+      res.status(200).json({ ready: true });
+    } catch (error) {
+      logger.error('Readiness check failed', error as Error);
+      res.status(503).json({ ready: false });
+    }
+  });
 
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
@@ -240,11 +300,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Otherwise, supplement with Open Food Facts API
       const searchUrl = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=${searchLimit - localResults.length}`;
       
-      const response = await fetch(searchUrl, {
+      const response = await fetchWithTimeout(searchUrl, {
         headers: {
           'User-Agent': 'SemaSlim/1.0 (Weight Management App)'
         }
-      });
+      }, 8000); // 8 second timeout for search
 
       if (!response.ok) {
         // If API fails, just return local results
@@ -315,11 +375,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // If not found locally, search Open Food Facts
       const offUrl = `https://world.openfoodfacts.org/api/v2/product/${barcode}.json`;
       
-      const response = await fetch(offUrl, {
+      const response = await fetchWithTimeout(offUrl, {
         headers: {
           'User-Agent': 'SemaSlim/1.0 (Weight Management App)'
         }
-      });
+      }, 8000); // 8 second timeout for barcode lookup
 
       if (!response.ok) {
         return res.status(404).json({ message: "Product not found" });

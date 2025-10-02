@@ -81,6 +81,29 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  if (request.mode === 'navigate' || request.destination === 'document') {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response.status === 200) {
+            const responseToCache = response.clone();
+            caches.open(RUNTIME_CACHE).then((cache) => {
+              cache.put(request, responseToCache);
+            });
+          }
+          return response;
+        })
+        .catch(() => {
+          return caches.open(CACHE_NAME).then((staticCache) => {
+            return staticCache.match('/index.html').then((indexResponse) => {
+              return indexResponse || new Response('Offline', { status: 503 });
+            });
+          });
+        })
+    );
+    return;
+  }
+
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       if (cachedResponse) {
@@ -94,9 +117,6 @@ self.addEventListener('fetch', (event) => {
           }
           return response;
         }).catch(() => {
-          if (request.destination === 'document') {
-            return cache.match('/index.html');
-          }
           return new Response('Offline', { status: 503 });
         });
       });

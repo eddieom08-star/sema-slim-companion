@@ -60,11 +60,15 @@ export default function Navigation() {
             </Button>
             
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                <span className="text-xs font-medium text-primary-foreground">
-                  {(user as any)?.firstName?.[0] || (user as any)?.email?.[0] || 'U'}
-                </span>
-              </div>
+              <Link href="/profile">
+                <a>
+                  <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity" data-testid="link-profile">
+                    <span className="text-xs font-medium text-primary-foreground">
+                      {(user as any)?.firstName?.[0] || (user as any)?.email?.[0] || 'U'}
+                    </span>
+                  </div>
+                </a>
+              </Link>
               
               <Button
                 variant="ghost"

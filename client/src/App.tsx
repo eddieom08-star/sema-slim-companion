@@ -15,6 +15,7 @@ import Progress from "@/pages/progress";
 import Profile from "@/pages/profile";
 import { PWAInstallPrompt } from "@/components/pwa-install-prompt";
 import { OfflineIndicator } from "@/components/offline-indicator";
+import { NetworkAwareIndicator } from "@/components/network-aware";
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -67,6 +68,7 @@ function App() {
       <TooltipProvider>
         <Toaster />
         <OfflineIndicator />
+        <NetworkAwareIndicator />
         <PWAInstallPrompt />
         <Router />
       </TooltipProvider>

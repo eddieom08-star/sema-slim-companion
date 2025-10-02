@@ -288,7 +288,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fiber: food.fiber,
         sugar: food.sugar,
         sodium: food.sodium,
-        imageUrl: food.imageUrl,
+        imageUrl: null,
         source: 'local',
       }));
 

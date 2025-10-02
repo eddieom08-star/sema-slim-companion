@@ -80,37 +80,88 @@ export default function Landing() {
               </div>
             </div>
             
-            <div className="relative">
-              <div className="mx-auto w-80 h-160 bg-gray-900 rounded-3xl p-2 shadow-2xl">
-                <div className="w-full h-full bg-card rounded-2xl overflow-hidden">
-                  <div className="p-6 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-semibold text-foreground">Today's Overview</h3>
-                      <div className="w-6 h-6 bg-secondary rounded-full"></div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-muted rounded-lg p-3">
-                        <div className="text-xs text-muted-foreground">Calories</div>
-                        <div className="text-lg font-bold text-foreground">1,247</div>
-                        <div className="text-xs text-secondary">-453 remaining</div>
-                      </div>
-                      <div className="bg-muted rounded-lg p-3">
-                        <div className="text-xs text-muted-foreground">Weight</div>
-                        <div className="text-lg font-bold text-foreground">162.4 lbs</div>
-                        <div className="text-xs text-secondary">-2.1 this week</div>
+            <div className="relative flex justify-center lg:justify-end">
+              <div className="relative mx-auto w-[320px]" data-testid="phone-mockup">
+                {/* Phone Frame */}
+                <div className="relative bg-gray-900 rounded-[3rem] p-3 shadow-2xl">
+                  {/* Phone Notch/Dynamic Island */}
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-7 bg-gray-900 rounded-b-3xl z-10"></div>
+                  
+                  {/* Phone Screen */}
+                  <div className="relative w-full h-[600px] bg-card rounded-[2.5rem] overflow-hidden">
+                    {/* Status Bar */}
+                    <div className="absolute top-0 left-0 right-0 h-12 flex items-center justify-between px-8 text-xs text-muted-foreground z-20">
+                      <span className="font-semibold">9:41</span>
+                      <div className="flex items-center space-x-1">
+                        <i className="fas fa-signal text-xs"></i>
+                        <i className="fas fa-wifi text-xs"></i>
+                        <i className="fas fa-battery-three-quarters text-xs"></i>
                       </div>
                     </div>
-                    
-                    <div className="bg-accent/10 rounded-lg p-4">
-                      <div className="flex items-center space-x-2">
-                        <i className="fas fa-syringe text-accent"></i>
-                        <span className="text-sm font-medium">Medication Reminder</span>
+
+                    {/* App Content */}
+                    <div className="pt-12 p-6 space-y-4 h-full overflow-hidden">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-semibold text-foreground">Today's Overview</h3>
+                        <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+                          <i className="fas fa-user text-primary-foreground text-sm"></i>
+                        </div>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">Ozempic injection due in 2 hours</p>
+                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-muted rounded-lg p-3">
+                          <div className="text-xs text-muted-foreground">Calories</div>
+                          <div className="text-lg font-bold text-foreground">1,247</div>
+                          <div className="text-xs text-secondary">-453 remaining</div>
+                        </div>
+                        <div className="bg-muted rounded-lg p-3">
+                          <div className="text-xs text-muted-foreground">Weight</div>
+                          <div className="text-lg font-bold text-foreground">162.4 lbs</div>
+                          <div className="text-xs text-secondary">-2.1 this week</div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-accent/10 rounded-lg p-4">
+                        <div className="flex items-center space-x-2">
+                          <i className="fas fa-syringe text-accent"></i>
+                          <span className="text-sm font-medium">Medication Reminder</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">Ozempic injection due in 2 hours</p>
+                      </div>
+
+                      {/* Additional preview content */}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="font-medium text-foreground">Recent Meals</span>
+                          <span className="text-xs text-primary">View All</span>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="bg-muted/50 rounded-lg p-3 flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium text-foreground">Grilled Chicken Salad</p>
+                              <p className="text-xs text-muted-foreground">Lunch • 420 cal</p>
+                            </div>
+                            <i className="fas fa-utensils text-secondary"></i>
+                          </div>
+                          <div className="bg-muted/50 rounded-lg p-3 flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium text-foreground">Greek Yogurt</p>
+                              <p className="text-xs text-muted-foreground">Snack • 150 cal</p>
+                            </div>
+                            <i className="fas fa-utensils text-secondary"></i>
+                          </div>
+                        </div>
+                      </div>
                     </div>
+
+                    {/* Home Indicator */}
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-gray-400 rounded-full"></div>
                   </div>
                 </div>
+                
+                {/* Floating Elements for Visual Appeal */}
+                <div className="absolute -top-4 -right-4 w-20 h-20 bg-accent/20 rounded-full blur-2xl animate-pulse"></div>
+                <div className="absolute -bottom-4 -left-4 w-24 h-24 bg-primary/20 rounded-full blur-2xl animate-pulse delay-1000"></div>
               </div>
             </div>
           </div>

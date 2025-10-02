@@ -154,40 +154,40 @@ export interface IStorage {
   deletePushSubscription(endpoint: string, userId: string): Promise<boolean>;
 
   // Recipe operations
-  createRecipe(recipe: any): Promise<any>;
-  getRecipe(id: string): Promise<any>;
-  getUserRecipes(userId: string): Promise<any[]>;
-  getPublicRecipes(limit?: number, filters?: any): Promise<any[]>;
-  updateRecipe(id: string, data: any): Promise<any>;
+  createRecipe(recipe: InsertRecipe): Promise<Recipe>;
+  getRecipe(id: string): Promise<Recipe | undefined>;
+  getUserRecipes(userId: string): Promise<Recipe[]>;
+  getPublicRecipes(limit?: number, filters?: { isGlp1Friendly?: boolean; isHighProtein?: boolean; isLowCarb?: boolean }): Promise<Recipe[]>;
+  updateRecipe(id: string, data: Partial<Recipe>): Promise<Recipe>;
   deleteRecipe(id: string): Promise<void>;
-  searchRecipes(query: string, filters?: any): Promise<any[]>;
+  searchRecipes(query: string, filters?: { isGlp1Friendly?: boolean; isHighProtein?: boolean; isLowCarb?: boolean }): Promise<Recipe[]>;
   toggleRecipeFavorite(userId: string, recipeId: string): Promise<void>;
-  getUserFavoriteRecipes(userId: string): Promise<any[]>;
+  getUserFavoriteRecipes(userId: string): Promise<Recipe[]>;
 
   // Meal plan operations
-  createMealPlan(mealPlan: any): Promise<any>;
-  getUserMealPlans(userId: string): Promise<any[]>;
-  getActiveMealPlan(userId: string): Promise<any | undefined>;
-  updateMealPlan(id: string, data: any): Promise<any>;
+  createMealPlan(mealPlan: InsertMealPlan): Promise<MealPlan>;
+  getUserMealPlans(userId: string): Promise<MealPlan[]>;
+  getActiveMealPlan(userId: string): Promise<MealPlan | undefined>;
+  updateMealPlan(id: string, data: Partial<MealPlan>): Promise<MealPlan>;
   deleteMealPlan(id: string): Promise<void>;
 
   // Meal plan entry operations
-  createMealPlanEntry(entry: any): Promise<any>;
-  getMealPlanEntries(mealPlanId: string): Promise<any[]>;
-  getMealPlanEntriesByDate(mealPlanId: string, date: Date): Promise<any[]>;
-  updateMealPlanEntry(id: string, data: any): Promise<any>;
+  createMealPlanEntry(entry: InsertMealPlanEntry): Promise<MealPlanEntry>;
+  getMealPlanEntries(mealPlanId: string): Promise<MealPlanEntry[]>;
+  getMealPlanEntriesByDate(mealPlanId: string, date: Date): Promise<MealPlanEntry[]>;
+  updateMealPlanEntry(id: string, data: Partial<MealPlanEntry>): Promise<MealPlanEntry>;
   deleteMealPlanEntry(id: string): Promise<void>;
 
   // Meal prep operations
-  createMealPrepSchedule(schedule: any): Promise<any>;
-  getUserMealPrepSchedules(userId: string): Promise<any[]>;
-  updateMealPrepSchedule(id: string, data: any): Promise<any>;
+  createMealPrepSchedule(schedule: InsertMealPrepSchedule): Promise<MealPrepSchedule>;
+  getUserMealPrepSchedules(userId: string): Promise<MealPrepSchedule[]>;
+  updateMealPrepSchedule(id: string, data: Partial<MealPrepSchedule>): Promise<MealPrepSchedule>;
   deleteMealPrepSchedule(id: string): Promise<void>;
 
   // Nutritional recommendation operations
-  getUserRecommendations(userId: string): Promise<any[]>;
-  createRecommendation(recommendation: any): Promise<any>;
-  updateRecommendation(id: string, data: any): Promise<any>;
+  getUserRecommendations(userId: string): Promise<NutritionalRecommendation[]>;
+  createRecommendation(recommendation: InsertNutritionalRecommendation): Promise<NutritionalRecommendation>;
+  updateRecommendation(id: string, data: Partial<NutritionalRecommendation>): Promise<NutritionalRecommendation>;
 }
 
 export class DatabaseStorage implements IStorage {

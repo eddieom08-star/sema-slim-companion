@@ -13,7 +13,12 @@ import {
   updateUserProfileSchema,
   insertDoseEscalationSchema,
   insertHungerLogSchema,
-  insertFoodDatabaseSchema
+  insertFoodDatabaseSchema,
+  insertRecipeSchema,
+  insertMealPlanSchema,
+  insertMealPlanEntrySchema,
+  insertMealPrepScheduleSchema,
+  insertNutritionalRecommendationSchema
 } from "@shared/schema";
 
 // Fetch with timeout wrapper to prevent hanging requests
@@ -805,10 +810,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/recipes', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.oidc.user.sub;
-      const recipeData = { ...req.body, userId };
-      const recipe = await storage.createRecipe(recipeData);
+      const validatedData = insertRecipeSchema.parse({ ...req.body, userId });
+      const recipe = await storage.createRecipe(validatedData);
       res.status(201).json(recipe);
     } catch (error) {
+      if (error instanceof Error && 'issues' in error) {
+        return res.status(400).json({ message: "Invalid recipe data", errors: (error as any).issues });
+      }
       console.error("Error creating recipe:", error);
       res.status(500).json({ message: "Failed to create recipe" });
     }
@@ -914,10 +922,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/meal-plans', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.oidc.user.sub;
-      const mealPlanData = { ...req.body, userId };
-      const mealPlan = await storage.createMealPlan(mealPlanData);
+      const validatedData = insertMealPlanSchema.parse({ ...req.body, userId });
+      const mealPlan = await storage.createMealPlan(validatedData);
       res.status(201).json(mealPlan);
     } catch (error) {
+      if (error instanceof Error && 'issues' in error) {
+        return res.status(400).json({ message: "Invalid meal plan data", errors: (error as any).issues });
+      }
       console.error("Error creating meal plan:", error);
       res.status(500).json({ message: "Failed to create meal plan" });
     }
@@ -970,9 +981,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Meal plan entry routes
   app.post('/api/meal-plan-entries', isAuthenticated, async (req: any, res) => {
     try {
-      const entry = await storage.createMealPlanEntry(req.body);
+      const validatedData = insertMealPlanEntrySchema.parse(req.body);
+      const entry = await storage.createMealPlanEntry(validatedData);
       res.status(201).json(entry);
     } catch (error) {
+      if (error instanceof Error && 'issues' in error) {
+        return res.status(400).json({ message: "Invalid meal plan entry data", errors: (error as any).issues });
+      }
       console.error("Error creating meal plan entry:", error);
       res.status(500).json({ message: "Failed to create meal plan entry" });
     }
@@ -1015,10 +1030,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/meal-prep', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.oidc.user.sub;
-      const scheduleData = { ...req.body, userId };
-      const schedule = await storage.createMealPrepSchedule(scheduleData);
+      const validatedData = insertMealPrepScheduleSchema.parse({ ...req.body, userId });
+      const schedule = await storage.createMealPrepSchedule(validatedData);
       res.status(201).json(schedule);
     } catch (error) {
+      if (error instanceof Error && 'issues' in error) {
+        return res.status(400).json({ message: "Invalid meal prep schedule data", errors: (error as any).issues });
+      }
       console.error("Error creating meal prep schedule:", error);
       res.status(500).json({ message: "Failed to create meal prep schedule" });
     }
@@ -1072,10 +1090,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/recommendations', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.oidc.user.sub;
-      const recommendationData = { ...req.body, userId };
-      const recommendation = await storage.createRecommendation(recommendationData);
+      const validatedData = insertNutritionalRecommendationSchema.parse({ ...req.body, userId });
+      const recommendation = await storage.createRecommendation(validatedData);
       res.status(201).json(recommendation);
     } catch (error) {
+      if (error instanceof Error && 'issues' in error) {
+        return res.status(400).json({ message: "Invalid recommendation data", errors: (error as any).issues });
+      }
       console.error("Error creating recommendation:", error);
       res.status(500).json({ message: "Failed to create recommendation" });
     }

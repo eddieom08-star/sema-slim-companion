@@ -5,12 +5,14 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import Navigation from "@/components/ui/navigation";
 import { MedicationCard } from "@/components/medication-card";
+import { MedicationForm } from "@/components/medication-form";
 import { apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
 
 export default function Medication() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 
   const { data: medications, isLoading: medicationsLoading } = useQuery({
     queryKey: ["/api/medications"],
@@ -85,7 +87,13 @@ export default function Medication() {
 
         {/* Active Medications */}
         <div className="mb-8">
-          <h2 className="text-xl font-semibold text-foreground mb-4">Active Medications</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-foreground">Active Medications</h2>
+            <Button onClick={() => setIsAddDialogOpen(true)} data-testid="button-add-medication-header">
+              <i className="fas fa-plus mr-2"></i>
+              Add Medication
+            </Button>
+          </div>
           
           {(medications as any) && (medications as any).length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -106,7 +114,7 @@ export default function Medication() {
                 <p className="text-muted-foreground mb-4">
                   Add your GLP-1 medication to start tracking your doses and progress.
                 </p>
-                <Button data-testid="button-add-medication">
+                <Button onClick={() => setIsAddDialogOpen(true)} data-testid="button-add-medication">
                   <i className="fas fa-plus mr-2"></i>
                   Add Medication
                 </Button>
@@ -219,6 +227,8 @@ export default function Medication() {
           </Card>
         </div>
       </div>
+
+      <MedicationForm open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} />
     </div>
   );
 }

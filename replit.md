@@ -27,6 +27,9 @@ Preferred communication style: Simple, everyday language.
 - Food tracking page for logging meals and nutrition
 - Medication page for managing and logging medications
 - Progress page for visualizing weight loss and achievements
+- Profile page for viewing and editing user information
+
+**Notification System**: Slide-out notification center accessible via bell icon in navigation. Displays unread count badge, supports marking as read/unread, deleting notifications, and clicking notifications to navigate to related content. Auto-refreshes every 30 seconds.
 
 ## Backend Architecture
 
@@ -73,6 +76,7 @@ Preferred communication style: Simple, everyday language.
 - `user_achievements`: Earned achievements per user
 - `daily_streaks`: Consistency tracking for various activities
 - `user_goals`: Personal goals and targets
+- `notifications`: User notifications with type, title, message, read status, and optional action URL
 - `sessions`: Session storage for authentication
 
 **Data Validation**: Zod schemas generated from Drizzle tables using `drizzle-zod` for runtime validation on API endpoints.
@@ -154,3 +158,4 @@ Preferred communication style: Simple, everyday language.
 - CSRF protection via session-based authentication
 - Input validation on all endpoints
 - Environment variable validation at startup
+- User-scoped notification operations prevent cross-user access (mark as read, delete require userId verification)

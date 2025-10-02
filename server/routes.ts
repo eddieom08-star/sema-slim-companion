@@ -621,6 +621,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Notification routes
+  app.get('/api/notifications', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.oidc.user.sub;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      const notifications = await storage.getUserNotifications(userId, limit);
+      res.json(notifications);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+      res.status(500).json({ message: "Failed to fetch notifications" });
+    }
+  });
+
+  app.get('/api/notifications/unread', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.oidc.user.sub;
+      const notifications = await storage.getUnreadNotifications(userId);
+      res.json(notifications);
+    } catch (error) {
+      console.error("Error fetching unread notifications:", error);
+      res.status(500).json({ message: "Failed to fetch unread notifications" });
+    }
+  });
+
+  app.put('/api/notifications/:id/read', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.oidc.user.sub;
+      const notification = await storage.markNotificationAsRead(req.params.id, userId);
+      if (!notification) {
+        return res.status(404).json({ message: "Notification not found" });
+      }
+      res.json(notification);
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+      res.status(500).json({ message: "Failed to mark notification as read" });
+    }
+  });
+
+  app.put('/api/notifications/read-all', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.oidc.user.sub;
+      await storage.markAllNotificationsAsRead(userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error marking all notifications as read:", error);
+      res.status(500).json({ message: "Failed to mark all notifications as read" });
+    }
+  });
+
+  app.delete('/api/notifications/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.oidc.user.sub;
+      const deleted = await storage.deleteNotification(req.params.id, userId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Notification not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting notification:", error);
+      res.status(500).json({ message: "Failed to delete notification" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

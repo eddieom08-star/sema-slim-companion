@@ -241,6 +241,19 @@ export const pointTransactions = pgTable("point_transactions", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Notifications
+export const notifications = pgTable("notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  type: varchar("type", { length: 30 }).notNull(), // medication_reminder, achievement, streak, goal, weight_milestone
+  title: varchar("title", { length: 255 }).notNull(),
+  message: text("message").notNull(),
+  isRead: boolean("is_read").default(false),
+  actionUrl: varchar("action_url", { length: 255 }),
+  relatedId: varchar("related_id"), // id of related entity (achievement_id, medication_id, etc)
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Export types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -280,6 +293,9 @@ export type UserGamification = typeof userGamification.$inferSelect;
 
 export type InsertPointTransaction = typeof pointTransactions.$inferInsert;
 export type PointTransaction = typeof pointTransactions.$inferSelect;
+
+export type InsertNotification = typeof notifications.$inferInsert;
+export type Notification = typeof notifications.$inferSelect;
 
 // Zod schemas for validation
 export const insertMedicationSchema = createInsertSchema(medications).omit({
@@ -328,6 +344,11 @@ export const insertFoodDatabaseSchema = createInsertSchema(foodDatabase).omit({
 });
 
 export const insertPointTransactionSchema = createInsertSchema(pointTransactions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
   id: true,
   createdAt: true,
 });

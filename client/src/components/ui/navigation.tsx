@@ -1,10 +1,14 @@
+import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { NotificationCenter, useUnreadNotificationsCount } from "@/components/notification-center";
 
 export default function Navigation() {
   const [location] = useLocation();
   const { user } = useAuth();
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const unreadCount = useUnreadNotificationsCount();
 
   const handleLogout = () => {
     window.location.href = "/api/logout";
@@ -53,10 +57,16 @@ export default function Navigation() {
             <Button
               variant="ghost"
               size="sm"
-              className="p-2 rounded-lg hover:bg-muted transition-colors"
+              className="p-2 rounded-lg hover:bg-muted transition-colors relative"
+              onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
               data-testid="button-notifications"
             >
               <i className="fas fa-bell text-muted-foreground"></i>
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs font-medium w-5 h-5 rounded-full flex items-center justify-center" data-testid="badge-unread-count">
+                  {unreadCount}
+                </span>
+              )}
             </Button>
             
             <div className="flex items-center space-x-3">
@@ -103,6 +113,11 @@ export default function Navigation() {
           ))}
         </div>
       </div>
+
+      <NotificationCenter 
+        isOpen={isNotificationsOpen} 
+        onClose={() => setIsNotificationsOpen(false)} 
+      />
     </header>
   );
 }

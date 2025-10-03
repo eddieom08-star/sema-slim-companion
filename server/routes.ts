@@ -236,7 +236,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.addPoints(userId, 3, 'food_logged', 'Logged food entry');
       
       res.json(entry);
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        console.error("Validation error:", error.issues);
+        return res.status(400).json({ message: "Validation failed", errors: error.issues });
+      }
       console.error("Error creating food entry:", error);
       res.status(500).json({ message: "Failed to create food entry" });
     }

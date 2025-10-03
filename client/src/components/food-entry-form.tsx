@@ -43,7 +43,7 @@ export function FoodEntryForm() {
     mutationFn: async (data: any) => {
       await apiRequest("POST", "/api/food-entries", {
         ...data,
-        consumedAt: new Date().toISOString(),
+        consumedAt: new Date(),
       });
     },
     onSuccess: () => {
@@ -96,14 +96,14 @@ export function FoodEntryForm() {
 
     createFoodEntry.mutate({
       ...formData,
-      quantity: parseFloat(formData.quantity),
+      quantity: parseFloat(formData.quantity).toString(),
       calories: parseInt(formData.calories),
-      protein: parseFloat(formData.protein) || 0,
-      carbs: parseFloat(formData.carbs) || 0,
-      fat: parseFloat(formData.fat) || 0,
-      fiber: parseFloat(formData.fiber) || 0,
-      sugar: parseFloat(formData.sugar) || 0,
-      sodium: parseFloat(formData.sodium) || 0,
+      protein: (parseFloat(formData.protein) || 0).toString(),
+      carbs: (parseFloat(formData.carbs) || 0).toString(),
+      fat: (parseFloat(formData.fat) || 0).toString(),
+      fiber: (parseFloat(formData.fiber) || 0).toString(),
+      sugar: (parseFloat(formData.sugar) || 0).toString(),
+      sodium: (parseFloat(formData.sodium) || 0).toString(),
     });
   };
 

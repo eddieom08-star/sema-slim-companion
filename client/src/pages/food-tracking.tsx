@@ -70,7 +70,7 @@ export default function FoodTracking() {
         hungerAfter: fullnessLevel > 0 ? Math.max(11 - fullnessLevel, 1) : null,
         cravingIntensity: cravingIntensity > 0 ? cravingIntensity : null,
         cravingType: cravingType || null,
-        loggedAt: new Date().toISOString(),
+        loggedAt: new Date(),
       });
     },
     onSuccess: () => {

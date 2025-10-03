@@ -443,21 +443,29 @@ export const insertMedicationSchema = createInsertSchema(medications).omit({
 export const insertMedicationLogSchema = createInsertSchema(medicationLogs).omit({
   id: true,
   createdAt: true,
+}).extend({
+  takenAt: z.coerce.date(),
 });
 
 export const insertFoodEntrySchema = createInsertSchema(foodEntries).omit({
   id: true,
   createdAt: true,
+}).extend({
+  consumedAt: z.coerce.date(),
 });
 
 export const insertWeightLogSchema = createInsertSchema(weightLogs).omit({
   id: true,
   createdAt: true,
+}).extend({
+  loggedAt: z.coerce.date(),
 });
 
 export const insertBodyMeasurementSchema = createInsertSchema(bodyMeasurements).omit({
   id: true,
   createdAt: true,
+}).extend({
+  measuredAt: z.coerce.date(),
 });
 
 export const insertDoseEscalationSchema = createInsertSchema(doseEscalations).omit({
@@ -472,6 +480,7 @@ export const insertHungerLogSchema = createInsertSchema(hungerLogs).omit({
   hungerBefore: z.number().min(1).max(10),
   hungerAfter: z.number().min(1).max(10).nullable().optional(),
   cravingIntensity: z.number().min(1).max(10).nullable().optional(),
+  loggedAt: z.coerce.date(),
 });
 
 export const insertFoodDatabaseSchema = createInsertSchema(foodDatabase).omit({

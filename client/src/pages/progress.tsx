@@ -59,9 +59,9 @@ export default function Progress() {
     if (!weightInput) return;
 
     logWeight.mutate({
-      weight: parseFloat(weightInput),
+      weight: parseFloat(weightInput).toString(),
       notes: weightNotes,
-      loggedAt: new Date().toISOString(),
+      loggedAt: new Date(),
     });
   };
 

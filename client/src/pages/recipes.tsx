@@ -402,6 +402,9 @@ function RecipeForm({ onSubmit, isPending }: { onSubmit: (data: any) => void; is
     e.preventDefault();
     onSubmit({
       ...formData,
+      protein: formData.protein.toString(),
+      carbs: formData.carbs.toString(),
+      fat: formData.fat.toString(),
       ingredients: formData.ingredients.split('\n').filter(i => i.trim()),
       instructions: formData.instructions.split('\n').filter(i => i.trim()),
     });

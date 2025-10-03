@@ -153,7 +153,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertMedicationSchema.parse({ ...req.body, userId });
       const medication = await storage.createMedication(validatedData);
       res.json(medication);
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        console.error("Validation error:", error.issues);
+        return res.status(400).json({ message: "Validation failed", errors: error.issues });
+      }
       console.error("Error creating medication:", error);
       res.status(500).json({ message: "Failed to create medication" });
     }
@@ -204,7 +208,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.addPoints(userId, 5, 'medication_taken', 'Logged medication');
       
       res.json(log);
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        console.error("Validation error:", error.issues);
+        return res.status(400).json({ message: "Validation failed", errors: error.issues });
+      }
       console.error("Error creating medication log:", error);
       res.status(500).json({ message: "Failed to create medication log" });
     }
@@ -498,7 +506,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.addPoints(userId, 5, 'weight_logged', 'Logged weight');
       
       res.json(log);
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        console.error("Validation error:", error.issues);
+        return res.status(400).json({ message: "Validation failed", errors: error.issues });
+      }
       console.error("Error creating weight log:", error);
       res.status(500).json({ message: "Failed to create weight log" });
     }
@@ -522,7 +534,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertBodyMeasurementSchema.parse({ ...req.body, userId });
       const measurement = await storage.createBodyMeasurement(validatedData);
       res.json(measurement);
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        console.error("Validation error:", error.issues);
+        return res.status(400).json({ message: "Validation failed", errors: error.issues });
+      }
       console.error("Error creating body measurement:", error);
       res.status(500).json({ message: "Failed to create body measurement" });
     }

@@ -6,7 +6,7 @@ import { Brain } from "lucide-react";
 
 export function HungerChart() {
   const { data: hungerLogs, isLoading } = useQuery({
-    queryKey: ["/api/hunger-logs"],
+    queryKey: ["/api/hunger-logs", "chart"],
     queryFn: async () => {
       const response = await fetch("/api/hunger-logs?limit=30", {
         credentials: "include",
@@ -49,9 +49,10 @@ export function HungerChart() {
     }));
 
   const avgHunger = chartData.reduce((sum: number, d: any) => sum + (d.hunger || 0), 0) / chartData.length;
-  const avgFullness = chartData
-    .filter((d: any) => d.fullness !== null)
-    .reduce((sum: number, d: any) => sum + (d.fullness || 0), 0) / chartData.filter((d: any) => d.fullness !== null).length || 0;
+  const fullnessData = chartData.filter((d: any) => d.fullness !== null);
+  const avgFullness = fullnessData.length > 0 
+    ? fullnessData.reduce((sum: number, d: any) => sum + (d.fullness || 0), 0) / fullnessData.length 
+    : 0;
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {

@@ -7,6 +7,7 @@ import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
 import Navigation from "@/components/ui/navigation";
 import { FoodEntryForm } from "@/components/food-entry-form";
+import { HungerChart } from "@/components/hunger-chart";
 import { apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
 import { Brain, Zap, Pizza, IceCream, Cookie } from "lucide-react";
@@ -313,6 +314,21 @@ export default function FoodTracking() {
                   {logHunger.isPending ? "Saving..." : "Log Appetite"}
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Appetite Trends Chart */}
+        <div className="mb-8">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <i className="fas fa-chart-line text-primary"></i>
+                <span>Appetite History</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <HungerChart />
             </CardContent>
           </Card>
         </div>

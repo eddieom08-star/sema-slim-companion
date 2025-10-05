@@ -101,21 +101,27 @@ export function HungerChart() {
         </div>
       </div>
 
-      <div className="h-64">
+      <div className="h-72">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+          <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 35 }}>
             <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
             <XAxis 
               dataKey="date" 
               axisLine={false}
               tickLine={false}
               className="text-xs"
+              angle={-45}
+              textAnchor="end"
+              height={60}
+              interval="preserveStartEnd"
+              tick={{ fontSize: 10 }}
             />
             <YAxis 
               domain={[0, 10]}
               axisLine={false}
               tickLine={false}
               className="text-xs"
+              tick={{ fontSize: 10 }}
             />
             <Tooltip content={<CustomTooltip />} />
             <Legend 

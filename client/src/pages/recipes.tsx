@@ -7,36 +7,61 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Heart, Clock, Users, ChefHat, Plus, Filter, Star } from "lucide-react";
+import { Search, Heart, Clock, Users, ChefHat, Plus, Download, ExternalLink, Globe } from "lucide-react";
 import type { Recipe } from "@shared/schema";
+
+interface ExternalRecipe {
+  externalId: string;
+  name: string;
+  description?: string;
+  category?: string;
+  area?: string;
+  image?: string;
+  tags?: string[];
+  ingredients?: string[];
+  instructions?: string | string[];
+  youtube?: string;
+  source?: string;
+}
+
+interface Category {
+  idCategory: string;
+  strCategory: string;
+  strCategoryThumb: string;
+  strCategoryDescription: string;
+}
 
 export default function Recipes() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState("public");
-  const [filters, setFilters] = useState({
-    isGlp1Friendly: false,
-    isHighProtein: false,
-    isLowCarb: false,
-  });
+  const [activeTab, setActiveTab] = useState("browse");
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+  const [selectedExternalRecipe, setSelectedExternalRecipe] = useState<ExternalRecipe | null>(null);
 
-  // Fetch public recipes
-  const { data: publicRecipes = [], isLoading: loadingPublic } = useQuery<Recipe[]>({
-    queryKey: ['/api/recipes/public', { 
-      limit: 50,
-      isGlp1Friendly: filters.isGlp1Friendly || undefined,
-      isHighProtein: filters.isHighProtein || undefined,
-      isLowCarb: filters.isLowCarb || undefined
-    }],
-    enabled: activeTab === "public",
+  // Fetch categories
+  const { data: categories = [] } = useQuery<Category[]>({
+    queryKey: ['/api/recipes/external/categories'],
+    enabled: activeTab === "browse",
+  });
+
+  // Fetch recipes by category
+  const { data: categoryRecipes = [], isLoading: loadingCategory } = useQuery<ExternalRecipe[]>({
+    queryKey: ['/api/recipes/external/by-category', { category: selectedCategory }],
+    enabled: activeTab === "browse" && !!selectedCategory && !searchQuery,
+  });
+
+  // Search external recipes
+  const { data: externalSearchResults = [], isLoading: searchingExternal } = useQuery<ExternalRecipe[]>({
+    queryKey: ['/api/recipes/external/search', { q: searchQuery }],
+    enabled: activeTab === "browse" && searchQuery.length > 2,
   });
 
   // Fetch user recipes
@@ -51,10 +76,15 @@ export default function Recipes() {
     enabled: activeTab === "favorites",
   });
 
-  // Search recipes
-  const { data: searchResults = [], isLoading: searching } = useQuery<Recipe[]>({
-    queryKey: ['/api/recipes/search', { q: searchQuery }],
-    enabled: searchQuery.length > 2,
+  // Import recipe mutation
+  const importRecipeMutation = useMutation({
+    mutationFn: async (externalId: string) => {
+      return await apiRequest(`/api/recipes/import/${externalId}`, 'POST');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/recipes'] });
+      toast({ title: "Recipe saved to your collection!" });
+    },
   });
 
   // Toggle favorite mutation
@@ -64,8 +94,8 @@ export default function Recipes() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/recipes/favorites'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/recipes/public'] });
-      toast({ title: "Recipe favorite toggled" });
+      queryClient.invalidateQueries({ queryKey: ['/api/recipes'] });
+      toast({ title: "Favorite updated" });
     },
   });
 
@@ -81,21 +111,13 @@ export default function Recipes() {
     },
   });
 
-  const displayRecipes = searchQuery.length > 2 
-    ? searchResults 
-    : activeTab === "public" 
-      ? publicRecipes 
-      : activeTab === "favorites" 
-        ? favoriteRecipes 
-        : userRecipes;
+  const displayExternalRecipes = searchQuery.length > 2 
+    ? externalSearchResults 
+    : selectedCategory 
+      ? categoryRecipes 
+      : [];
 
-  const isLoading = searchQuery.length > 2 
-    ? searching 
-    : activeTab === "public" 
-      ? loadingPublic 
-      : activeTab === "favorites" 
-        ? loadingFavorites 
-        : loadingUser;
+  const isLoadingExternal = searchQuery.length > 2 ? searchingExternal : loadingCategory;
 
   return (
     <div className="min-h-screen bg-background">
@@ -105,7 +127,7 @@ export default function Recipes() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold" data-testid="heading-recipes">Recipe Collection</h1>
-            <p className="text-muted-foreground">Discover GLP-1 friendly recipes for your journey</p>
+            <p className="text-muted-foreground">Discover and save recipes for your journey</p>
           </div>
           <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
             <DialogTrigger asChild>
@@ -127,57 +149,105 @@ export default function Recipes() {
           </Dialog>
         </div>
 
-        {/* Search and Filters */}
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search recipes..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-              data-testid="input-search-recipes"
-            />
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            <Button
-              variant={filters.isGlp1Friendly ? "default" : "outline"}
-              size="sm"
-              onClick={() => setFilters({ ...filters, isGlp1Friendly: !filters.isGlp1Friendly })}
-              data-testid="filter-glp1-friendly"
-            >
-              <Filter className="mr-2 h-3 w-3" />
-              GLP-1 Friendly
-            </Button>
-            <Button
-              variant={filters.isHighProtein ? "default" : "outline"}
-              size="sm"
-              onClick={() => setFilters({ ...filters, isHighProtein: !filters.isHighProtein })}
-              data-testid="filter-high-protein"
-            >
-              High Protein
-            </Button>
-            <Button
-              variant={filters.isLowCarb ? "default" : "outline"}
-              size="sm"
-              onClick={() => setFilters({ ...filters, isLowCarb: !filters.isLowCarb })}
-              data-testid="filter-low-carb"
-            >
-              Low Carb
-            </Button>
-          </div>
-        </div>
-
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full md:w-auto grid-cols-3">
-            <TabsTrigger value="public" data-testid="tab-public-recipes">Public Recipes</TabsTrigger>
+            <TabsTrigger value="browse" data-testid="tab-browse-recipes">
+              <Globe className="mr-2 h-4 w-4" />
+              Browse
+            </TabsTrigger>
             <TabsTrigger value="my-recipes" data-testid="tab-my-recipes">My Recipes</TabsTrigger>
-            <TabsTrigger value="favorites" data-testid="tab-favorites">Favorites</TabsTrigger>
+            <TabsTrigger value="favorites" data-testid="tab-favorites">
+              <Heart className="mr-2 h-4 w-4" />
+              Favorites
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value={activeTab} className="mt-6">
-            {isLoading ? (
+          {/* Browse External Recipes Tab */}
+          <TabsContent value="browse" className="space-y-6">
+            {/* Search Bar */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search for recipes (e.g., 'chicken', 'pasta', 'dessert')..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  if (e.target.value.length > 0) {
+                    setSelectedCategory("");
+                  }
+                }}
+                className="pl-10"
+                data-testid="input-search-recipes"
+              />
+            </div>
+
+            {/* Categories */}
+            {!searchQuery && (
+              <div className="space-y-3">
+                <h3 className="text-sm font-medium text-muted-foreground">Browse by Category</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                  {categories.slice(0, 12).map((category) => (
+                    <Button
+                      key={category.idCategory}
+                      variant={selectedCategory === category.strCategory ? "default" : "outline"}
+                      className="h-auto py-3 px-2 flex flex-col items-center gap-2"
+                      onClick={() => setSelectedCategory(category.strCategory)}
+                      data-testid={`category-${category.strCategory.toLowerCase()}`}
+                    >
+                      <img 
+                        src={category.strCategoryThumb} 
+                        alt={category.strCategory}
+                        className="w-12 h-12 rounded-full object-cover"
+                      />
+                      <span className="text-xs">{category.strCategory}</span>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* External Recipe Grid */}
+            {isLoadingExternal ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <Card key={i} className="animate-pulse">
+                    <div className="h-48 bg-muted rounded-t-lg"></div>
+                    <CardHeader className="space-y-2">
+                      <div className="h-4 bg-muted rounded w-3/4"></div>
+                      <div className="h-3 bg-muted rounded w-1/2"></div>
+                    </CardHeader>
+                  </Card>
+                ))}
+              </div>
+            ) : displayExternalRecipes.length === 0 ? (
+              <div className="text-center py-12" data-testid="no-recipes-message">
+                <ChefHat className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-lg font-medium">
+                  {searchQuery ? "No recipes found" : "Select a category to browse recipes"}
+                </p>
+                <p className="text-muted-foreground">
+                  {searchQuery ? "Try a different search term" : "Choose from the categories above"}
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {displayExternalRecipes.map((recipe) => (
+                  <ExternalRecipeCard
+                    key={recipe.externalId}
+                    recipe={recipe}
+                    onView={() => setSelectedExternalRecipe(recipe)}
+                    onImport={() => importRecipeMutation.mutate(recipe.externalId)}
+                    isImporting={importRecipeMutation.isPending}
+                  />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* My Recipes Tab */}
+          <TabsContent value="my-recipes" className="mt-6">
+            {loadingUser ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {[1, 2, 3].map((i) => (
                   <Card key={i} className="animate-pulse">
@@ -185,23 +255,55 @@ export default function Recipes() {
                       <div className="h-4 bg-muted rounded w-3/4"></div>
                       <div className="h-3 bg-muted rounded w-1/2"></div>
                     </CardHeader>
-                    <CardContent>
-                      <div className="h-32 bg-muted rounded"></div>
-                    </CardContent>
                   </Card>
                 ))}
               </div>
-            ) : displayRecipes.length === 0 ? (
+            ) : userRecipes.length === 0 ? (
               <div className="text-center py-12" data-testid="no-recipes-message">
                 <ChefHat className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-lg font-medium">No recipes found</p>
-                <p className="text-muted-foreground">
-                  {searchQuery ? "Try adjusting your search" : "Create your first recipe to get started"}
-                </p>
+                <p className="text-lg font-medium">No recipes yet</p>
+                <p className="text-muted-foreground mb-4">Create your first recipe or import from the Browse tab</p>
+                <Button onClick={() => setCreateDialogOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Recipe
+                </Button>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {displayRecipes.map((recipe) => (
+                {userRecipes.map((recipe) => (
+                  <RecipeCard
+                    key={recipe.id}
+                    recipe={recipe}
+                    onFavorite={() => toggleFavoriteMutation.mutate(recipe.id)}
+                    onView={() => setSelectedRecipe(recipe)}
+                  />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Favorites Tab */}
+          <TabsContent value="favorites" className="mt-6">
+            {loadingFavorites ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[1, 2, 3].map((i) => (
+                  <Card key={i} className="animate-pulse">
+                    <CardHeader className="space-y-2">
+                      <div className="h-4 bg-muted rounded w-3/4"></div>
+                      <div className="h-3 bg-muted rounded w-1/2"></div>
+                    </CardHeader>
+                  </Card>
+                ))}
+              </div>
+            ) : favoriteRecipes.length === 0 ? (
+              <div className="text-center py-12" data-testid="no-recipes-message">
+                <Heart className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-lg font-medium">No favorites yet</p>
+                <p className="text-muted-foreground">Save recipes to quickly access them later</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {favoriteRecipes.map((recipe) => (
                   <RecipeCard
                     key={recipe.id}
                     recipe={recipe}
@@ -214,11 +316,27 @@ export default function Recipes() {
           </TabsContent>
         </Tabs>
 
-        {/* Recipe Detail Dialog */}
+        {/* User Recipe Detail Dialog */}
         {selectedRecipe && (
           <Dialog open={!!selectedRecipe} onOpenChange={() => setSelectedRecipe(null)}>
             <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
               <RecipeDetail recipe={selectedRecipe} />
+            </DialogContent>
+          </Dialog>
+        )}
+
+        {/* External Recipe Detail Dialog */}
+        {selectedExternalRecipe && (
+          <Dialog open={!!selectedExternalRecipe} onOpenChange={() => setSelectedExternalRecipe(null)}>
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+              <ExternalRecipeDetail 
+                recipe={selectedExternalRecipe} 
+                onImport={() => {
+                  importRecipeMutation.mutate(selectedExternalRecipe.externalId);
+                  setSelectedExternalRecipe(null);
+                }}
+                isImporting={importRecipeMutation.isPending}
+              />
             </DialogContent>
           </Dialog>
         )}
@@ -227,12 +345,60 @@ export default function Recipes() {
   );
 }
 
+function ExternalRecipeCard({ recipe, onView, onImport, isImporting }: { 
+  recipe: ExternalRecipe; 
+  onView: () => void; 
+  onImport: () => void;
+  isImporting: boolean;
+}) {
+  return (
+    <Card className="overflow-hidden hover:shadow-lg transition-shadow" data-testid={`card-external-recipe-${recipe.externalId}`}>
+      {recipe.image && (
+        <div className="relative h-48 overflow-hidden cursor-pointer" onClick={onView}>
+          <img 
+            src={recipe.image} 
+            alt={recipe.name}
+            className="w-full h-full object-cover hover:scale-105 transition-transform"
+          />
+          {recipe.area && (
+            <Badge className="absolute top-2 right-2 bg-background/80 backdrop-blur">
+              {recipe.area}
+            </Badge>
+          )}
+        </div>
+      )}
+      <CardHeader className="cursor-pointer" onClick={onView}>
+        <CardTitle className="line-clamp-1" data-testid={`text-recipe-name-${recipe.externalId}`}>
+          {recipe.name}
+        </CardTitle>
+        {recipe.category && (
+          <CardDescription className="flex items-center gap-2">
+            <ChefHat className="h-3 w-3" />
+            {recipe.category}
+          </CardDescription>
+        )}
+      </CardHeader>
+      <CardFooter>
+        <Button 
+          className="w-full" 
+          onClick={onImport}
+          disabled={isImporting}
+          data-testid={`button-import-${recipe.externalId}`}
+        >
+          <Download className="mr-2 h-4 w-4" />
+          {isImporting ? "Saving..." : "Save to My Recipes"}
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+}
+
 function RecipeCard({ recipe, onFavorite, onView }: { recipe: Recipe; onFavorite: () => void; onView: () => void }) {
   return (
     <Card className="cursor-pointer hover:shadow-lg transition-shadow" data-testid={`card-recipe-${recipe.id}`}>
       <CardHeader>
         <div className="flex justify-between items-start">
-          <div className="flex-1">
+          <div className="flex-1" onClick={onView}>
             <CardTitle className="line-clamp-1" data-testid={`text-recipe-name-${recipe.id}`}>{recipe.name}</CardTitle>
             <CardDescription className="line-clamp-2">{recipe.description}</CardDescription>
           </div>
@@ -271,12 +437,6 @@ function RecipeCard({ recipe, onFavorite, onView }: { recipe: Recipe; onFavorite
               <Users className="h-3 w-3" />
               <span>{recipe.servings} servings</span>
             </div>
-            {recipe.difficulty && (
-              <div className="flex items-center gap-1">
-                <Star className="h-3 w-3" />
-                <span className="capitalize">{recipe.difficulty}</span>
-              </div>
-            )}
           </div>
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div>
@@ -291,6 +451,93 @@ function RecipeCard({ recipe, onFavorite, onView }: { recipe: Recipe; onFavorite
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function ExternalRecipeDetail({ recipe, onImport, isImporting }: { 
+  recipe: ExternalRecipe; 
+  onImport: () => void;
+  isImporting: boolean;
+}) {
+  const instructions = typeof recipe.instructions === 'string' 
+    ? recipe.instructions.split('\r\n').filter(s => s.trim()) 
+    : recipe.instructions || [];
+
+  return (
+    <div className="space-y-6">
+      {recipe.image && (
+        <img 
+          src={recipe.image} 
+          alt={recipe.name}
+          className="w-full h-64 object-cover rounded-lg"
+        />
+      )}
+      
+      <div>
+        <h2 className="text-2xl font-bold mb-2">{recipe.name}</h2>
+        <div className="flex gap-2 flex-wrap">
+          {recipe.category && <Badge>{recipe.category}</Badge>}
+          {recipe.area && <Badge variant="outline">{recipe.area}</Badge>}
+          {recipe.tags?.map(tag => tag && (
+            <Badge key={tag} variant="secondary">{tag}</Badge>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex gap-2">
+        <Button className="flex-1" onClick={onImport} disabled={isImporting}>
+          <Download className="mr-2 h-4 w-4" />
+          {isImporting ? "Saving..." : "Save to My Recipes"}
+        </Button>
+        {recipe.youtube && (
+          <Button variant="outline" asChild>
+            <a href={recipe.youtube} target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="mr-2 h-4 w-4" />
+              Watch Video
+            </a>
+          </Button>
+        )}
+      </div>
+
+      {recipe.ingredients && recipe.ingredients.length > 0 && (
+        <div>
+          <h3 className="text-lg font-semibold mb-3">Ingredients</h3>
+          <ul className="space-y-2">
+            {recipe.ingredients.map((ingredient, index) => (
+              <li key={index} className="flex items-start gap-2">
+                <span className="text-primary mt-1">•</span>
+                <span>{ingredient}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {instructions.length > 0 && (
+        <div>
+          <h3 className="text-lg font-semibold mb-3">Instructions</h3>
+          <div className="prose prose-sm max-w-none">
+            {instructions.map((instruction, index) => (
+              <p key={index} className="mb-3">{instruction}</p>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {recipe.source && (
+        <div className="pt-4 border-t">
+          <a 
+            href={recipe.source} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-sm text-primary hover:underline flex items-center gap-1"
+          >
+            <ExternalLink className="h-3 w-3" />
+            View Original Recipe
+          </a>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -320,7 +567,7 @@ function RecipeDetail({ recipe }: { recipe: Recipe }) {
           <p className="text-xs text-muted-foreground">Servings</p>
         </div>
         <div className="text-center p-3 bg-muted rounded-lg">
-          <Star className="h-4 w-4 mx-auto mb-1" />
+          <ChefHat className="h-4 w-4 mx-auto mb-1" />
           <p className="text-sm font-medium capitalize">{recipe.difficulty || 'Medium'}</p>
           <p className="text-xs text-muted-foreground">Difficulty</p>
         </div>
@@ -603,11 +850,9 @@ function RecipeForm({ onSubmit, isPending }: { onSubmit: (data: any) => void; is
         </div>
       </div>
 
-      <DialogFooter>
-        <Button type="submit" disabled={isPending} data-testid="button-submit-recipe">
-          {isPending ? "Creating..." : "Create Recipe"}
-        </Button>
-      </DialogFooter>
+      <Button type="submit" className="w-full" disabled={isPending} data-testid="button-submit-recipe">
+        {isPending ? "Creating..." : "Create Recipe"}
+      </Button>
     </form>
   );
 }

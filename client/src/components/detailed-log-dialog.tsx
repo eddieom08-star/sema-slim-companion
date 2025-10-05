@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -27,8 +27,11 @@ const detailedLogSchema = z.object({
   dosage: z.string(),
   takenAt: z.string(),
   notes: z.string().optional(),
-  sideEffects: z.string().optional(),
-  sideEffectSeverity: z.number().min(0).max(10).optional(),
+  nausea: z.number().min(0).max(5).optional(),
+  vomiting: z.number().min(0).max(5).optional(),
+  diarrhea: z.number().min(0).max(5).optional(),
+  constipation: z.number().min(0).max(5).optional(),
+  heartburn: z.number().min(0).max(5).optional(),
 });
 
 type DetailedLogFormData = z.infer<typeof detailedLogSchema>;
@@ -50,8 +53,6 @@ export function DetailedLogDialog({
   dosage = "",
   isPending = false,
 }: DetailedLogDialogProps) {
-  const [hasSideEffects, setHasSideEffects] = useState(false);
-
   const form = useForm<DetailedLogFormData>({
     resolver: zodResolver(detailedLogSchema),
     defaultValues: {
@@ -59,8 +60,11 @@ export function DetailedLogDialog({
       dosage: "",
       takenAt: new Date().toISOString().slice(0, 16),
       notes: "",
-      sideEffects: "",
-      sideEffectSeverity: 5,
+      nausea: 0,
+      vomiting: 0,
+      diarrhea: 0,
+      constipation: 0,
+      heartburn: 0,
     },
   });
 
@@ -71,23 +75,24 @@ export function DetailedLogDialog({
         dosage,
         takenAt: new Date().toISOString().slice(0, 16),
         notes: "",
-        sideEffects: "",
-        sideEffectSeverity: 5,
+        nausea: 0,
+        vomiting: 0,
+        diarrhea: 0,
+        constipation: 0,
+        heartburn: 0,
       });
-      setHasSideEffects(false);
     }
   }, [open, medicationId, dosage, form]);
 
   const handleSubmit = (data: DetailedLogFormData) => {
-    const submitData = {
-      ...data,
-      sideEffects: hasSideEffects ? data.sideEffects : "",
-      sideEffectSeverity: hasSideEffects ? data.sideEffectSeverity : undefined,
-    };
-    onSubmit(submitData);
+    onSubmit(data);
   };
 
-  const sideEffectSeverity = form.watch("sideEffectSeverity") || 5;
+  const nauseaValue = form.watch("nausea") || 0;
+  const vomitingValue = form.watch("vomiting") || 0;
+  const diarrheaValue = form.watch("diarrhea") || 0;
+  const constipationValue = form.watch("constipation") || 0;
+  const heartburnValue = form.watch("heartburn") || 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -167,77 +172,148 @@ export function DetailedLogDialog({
               )}
             />
 
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="has-side-effects"
-                  checked={hasSideEffects}
-                  onChange={(e) => setHasSideEffects(e.target.checked)}
-                  className="w-4 h-4 rounded border-input"
-                  data-testid="checkbox-has-side-effects"
-                />
-                <label
-                  htmlFor="has-side-effects"
-                  className="text-sm font-medium cursor-pointer"
-                >
-                  I experienced side effects
-                </label>
+            <div className="space-y-4 p-4 border border-border rounded-lg bg-muted/30">
+              <div>
+                <h3 className="text-sm font-semibold mb-1">Side Effects</h3>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Track common GLP-1 side effects to share with your healthcare provider
+                </p>
               </div>
 
-              {hasSideEffects && (
-                <div className="space-y-4 p-4 border border-border rounded-lg bg-muted/30">
-                  <FormField
-                    control={form.control}
-                    name="sideEffects"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Side Effects Description</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Describe the side effects you experienced (e.g., nausea, headache, fatigue...)"
-                            {...field}
-                            data-testid="input-side-effects"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+              <FormField
+                control={form.control}
+                name="nausea"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center justify-between">
+                      <span>Nausea</span>
+                      <span className="text-sm font-medium">
+                        {nauseaValue}/5
+                      </span>
+                    </FormLabel>
+                    <FormControl>
+                      <Slider
+                        min={0}
+                        max={5}
+                        step={1}
+                        value={[field.value || 0]}
+                        onValueChange={(values) => field.onChange(values[0])}
+                        className="w-full"
+                        data-testid="slider-nausea"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                  <FormField
-                    control={form.control}
-                    name="sideEffectSeverity"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center justify-between">
-                          <span>Severity</span>
-                          <span className="text-sm font-medium">
-                            {sideEffectSeverity}/10
-                          </span>
-                        </FormLabel>
-                        <FormControl>
-                          <Slider
-                            min={1}
-                            max={10}
-                            step={1}
-                            value={[field.value || 5]}
-                            onValueChange={(values) => field.onChange(values[0])}
-                            className="w-full"
-                            data-testid="slider-severity"
-                          />
-                        </FormControl>
-                        <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                          <span>Mild</span>
-                          <span>Moderate</span>
-                          <span>Severe</span>
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              )}
+              <FormField
+                control={form.control}
+                name="vomiting"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center justify-between">
+                      <span>Vomiting</span>
+                      <span className="text-sm font-medium">
+                        {vomitingValue}/5
+                      </span>
+                    </FormLabel>
+                    <FormControl>
+                      <Slider
+                        min={0}
+                        max={5}
+                        step={1}
+                        value={[field.value || 0]}
+                        onValueChange={(values) => field.onChange(values[0])}
+                        className="w-full"
+                        data-testid="slider-vomiting"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="diarrhea"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center justify-between">
+                      <span>Diarrhea</span>
+                      <span className="text-sm font-medium">
+                        {diarrheaValue}/5
+                      </span>
+                    </FormLabel>
+                    <FormControl>
+                      <Slider
+                        min={0}
+                        max={5}
+                        step={1}
+                        value={[field.value || 0]}
+                        onValueChange={(values) => field.onChange(values[0])}
+                        className="w-full"
+                        data-testid="slider-diarrhea"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="constipation"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center justify-between">
+                      <span>Constipation</span>
+                      <span className="text-sm font-medium">
+                        {constipationValue}/5
+                      </span>
+                    </FormLabel>
+                    <FormControl>
+                      <Slider
+                        min={0}
+                        max={5}
+                        step={1}
+                        value={[field.value || 0]}
+                        onValueChange={(values) => field.onChange(values[0])}
+                        className="w-full"
+                        data-testid="slider-constipation"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="heartburn"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center justify-between">
+                      <span>Heartburn</span>
+                      <span className="text-sm font-medium">
+                        {heartburnValue}/5
+                      </span>
+                    </FormLabel>
+                    <FormControl>
+                      <Slider
+                        min={0}
+                        max={5}
+                        step={1}
+                        value={[field.value || 0]}
+                        onValueChange={(values) => field.onChange(values[0])}
+                        className="w-full"
+                        data-testid="slider-heartburn"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
             <div className="flex justify-end space-x-2">

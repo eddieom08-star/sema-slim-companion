@@ -69,8 +69,11 @@ export const medicationLogs = pgTable("medication_logs", {
   takenAt: timestamp("taken_at").notNull(),
   dosage: varchar("dosage", { length: 10 }).notNull(),
   notes: text("notes"),
-  sideEffects: text("side_effects"),
-  sideEffectSeverity: integer("side_effect_severity"), // 1-10 scale
+  nausea: integer("nausea"), // 0-5 scale
+  vomiting: integer("vomiting"), // 0-5 scale
+  diarrhea: integer("diarrhea"), // 0-5 scale
+  constipation: integer("constipation"), // 0-5 scale
+  heartburn: integer("heartburn"), // 0-5 scale
   createdAt: timestamp("created_at").defaultNow(),
 });
 

@@ -439,7 +439,6 @@ export const insertMedicationSchema = createInsertSchema(medications).omit({
   id: true,
   createdAt: true,
 }).extend({
-  startDate: z.coerce.date(),
   nextDueDate: z.coerce.date(),
 });
 

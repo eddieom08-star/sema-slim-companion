@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -55,14 +55,28 @@ export function DetailedLogDialog({
   const form = useForm<DetailedLogFormData>({
     resolver: zodResolver(detailedLogSchema),
     defaultValues: {
-      medicationId,
-      dosage,
+      medicationId: "",
+      dosage: "",
       takenAt: new Date().toISOString().slice(0, 16),
       notes: "",
       sideEffects: "",
       sideEffectSeverity: 5,
     },
   });
+
+  useEffect(() => {
+    if (open && medicationId && dosage) {
+      form.reset({
+        medicationId,
+        dosage,
+        takenAt: new Date().toISOString().slice(0, 16),
+        notes: "",
+        sideEffects: "",
+        sideEffectSeverity: 5,
+      });
+      setHasSideEffects(false);
+    }
+  }, [open, medicationId, dosage, form]);
 
   const handleSubmit = (data: DetailedLogFormData) => {
     const submitData = {
@@ -71,8 +85,6 @@ export function DetailedLogDialog({
       sideEffectSeverity: hasSideEffects ? data.sideEffectSeverity : undefined,
     };
     onSubmit(submitData);
-    form.reset();
-    setHasSideEffects(false);
   };
 
   const sideEffectSeverity = form.watch("sideEffectSeverity") || 5;
@@ -89,6 +101,18 @@ export function DetailedLogDialog({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+            <FormField
+              control={form.control}
+              name="medicationId"
+              render={({ field }) => (
+                <FormItem className="hidden">
+                  <FormControl>
+                    <Input type="hidden" {...field} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
             <FormField
               control={form.control}
               name="takenAt"

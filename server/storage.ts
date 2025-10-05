@@ -785,19 +785,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPublicRecipes(limit: number = 50, filters?: any): Promise<Recipe[]> {
-    let query = db.select().from(recipes).where(eq(recipes.isPublic, true));
+    const conditions = [eq(recipes.isPublic, true)];
     
     if (filters?.isGlp1Friendly) {
-      query = query.where(eq(recipes.isGlp1Friendly, true)) as any;
+      conditions.push(eq(recipes.isGlp1Friendly, true));
     }
     if (filters?.isHighProtein) {
-      query = query.where(eq(recipes.isHighProtein, true)) as any;
+      conditions.push(eq(recipes.isHighProtein, true));
     }
     if (filters?.isLowCarb) {
-      query = query.where(eq(recipes.isLowCarb, true)) as any;
+      conditions.push(eq(recipes.isLowCarb, true));
     }
     
-    return await query.orderBy(desc(recipes.likes)).limit(limit);
+    return await db
+      .select()
+      .from(recipes)
+      .where(and(...conditions))
+      .orderBy(desc(recipes.likes))
+      .limit(limit);
   }
 
   async updateRecipe(id: string, data: Partial<Recipe>): Promise<Recipe> {

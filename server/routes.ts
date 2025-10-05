@@ -938,6 +938,175 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // External recipe API routes (TheMealDB)
+  app.get('/api/recipes/external/search', isAuthenticated, async (req: any, res) => {
+    try {
+      const { q } = req.query;
+      if (!q) {
+        return res.status(400).json({ message: "Search query is required" });
+      }
+      
+      const response = await fetch(`https://www.themealdb.com/api/json/v1/1/search.php?s=${encodeURIComponent(q as string)}`);
+      const data = await response.json();
+      
+      if (!data.meals) {
+        return res.json([]);
+      }
+      
+      const formattedRecipes = data.meals.map((meal: any) => ({
+        externalId: meal.idMeal,
+        name: meal.strMeal,
+        description: meal.strInstructions?.substring(0, 150) + '...',
+        category: meal.strCategory,
+        area: meal.strArea,
+        image: meal.strMealThumb,
+        tags: meal.strTags?.split(',') || [],
+        ingredients: Array.from({ length: 20 }, (_, i) => i + 1)
+          .map(i => ({
+            ingredient: meal[`strIngredient${i}`],
+            measure: meal[`strMeasure${i}`]
+          }))
+          .filter(item => item.ingredient && item.ingredient.trim())
+          .map(item => `${item.measure} ${item.ingredient}`.trim()),
+        instructions: meal.strInstructions,
+        youtube: meal.strYoutube,
+        source: meal.strSource
+      }));
+      
+      res.json(formattedRecipes);
+    } catch (error) {
+      console.error("Error searching external recipes:", error);
+      res.status(500).json({ message: "Failed to search external recipes" });
+    }
+  });
+
+  app.get('/api/recipes/external/categories', isAuthenticated, async (req: any, res) => {
+    try {
+      const response = await fetch('https://www.themealdb.com/api/json/v1/1/categories.php');
+      const data = await response.json();
+      res.json(data.categories || []);
+    } catch (error) {
+      console.error("Error fetching recipe categories:", error);
+      res.status(500).json({ message: "Failed to fetch recipe categories" });
+    }
+  });
+
+  app.get('/api/recipes/external/by-category', isAuthenticated, async (req: any, res) => {
+    try {
+      const { category } = req.query;
+      if (!category) {
+        return res.status(400).json({ message: "Category is required" });
+      }
+      
+      const response = await fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?c=${encodeURIComponent(category as string)}`);
+      const data = await response.json();
+      
+      if (!data.meals) {
+        return res.json([]);
+      }
+      
+      const formattedRecipes = data.meals.map((meal: any) => ({
+        externalId: meal.idMeal,
+        name: meal.strMeal,
+        image: meal.strMealThumb
+      }));
+      
+      res.json(formattedRecipes);
+    } catch (error) {
+      console.error("Error fetching recipes by category:", error);
+      res.status(500).json({ message: "Failed to fetch recipes by category" });
+    }
+  });
+
+  app.get('/api/recipes/external/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const response = await fetch(`https://www.themealdb.com/api/json/v1/1/lookup.php?i=${id}`);
+      const data = await response.json();
+      
+      if (!data.meals || data.meals.length === 0) {
+        return res.status(404).json({ message: "Recipe not found" });
+      }
+      
+      const meal = data.meals[0];
+      const formattedRecipe = {
+        externalId: meal.idMeal,
+        name: meal.strMeal,
+        description: meal.strInstructions,
+        category: meal.strCategory,
+        area: meal.strArea,
+        image: meal.strMealThumb,
+        tags: meal.strTags?.split(',') || [],
+        ingredients: Array.from({ length: 20 }, (_, i) => i + 1)
+          .map(i => ({
+            ingredient: meal[`strIngredient${i}`],
+            measure: meal[`strMeasure${i}`]
+          }))
+          .filter(item => item.ingredient && item.ingredient.trim())
+          .map(item => `${item.measure} ${item.ingredient}`.trim()),
+        instructions: meal.strInstructions.split('\r\n').filter((s: string) => s.trim()),
+        youtube: meal.strYoutube,
+        source: meal.strSource
+      };
+      
+      res.json(formattedRecipe);
+    } catch (error) {
+      console.error("Error fetching external recipe details:", error);
+      res.status(500).json({ message: "Failed to fetch recipe details" });
+    }
+  });
+
+  app.post('/api/recipes/import/:externalId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.oidc.user.sub;
+      const { externalId } = req.params;
+      
+      const response = await fetch(`https://www.themealdb.com/api/json/v1/1/lookup.php?i=${externalId}`);
+      const data = await response.json();
+      
+      if (!data.meals || data.meals.length === 0) {
+        return res.status(404).json({ message: "Recipe not found" });
+      }
+      
+      const meal = data.meals[0];
+      const ingredients = Array.from({ length: 20 }, (_, i) => i + 1)
+        .map(i => ({
+          ingredient: meal[`strIngredient${i}`],
+          measure: meal[`strMeasure${i}`]
+        }))
+        .filter(item => item.ingredient && item.ingredient.trim())
+        .map(item => `${item.measure} ${item.ingredient}`.trim());
+      
+      const recipeData = {
+        userId,
+        name: meal.strMeal,
+        description: meal.strInstructions?.substring(0, 200) || '',
+        recipeType: 'dinner',
+        difficulty: 'medium',
+        prepTime: 15,
+        cookTime: 30,
+        servings: 4,
+        ingredients,
+        instructions: meal.strInstructions.split('\r\n').filter((s: string) => s.trim()),
+        calories: 300,
+        protein: '25',
+        carbs: '30',
+        fat: '10',
+        isGlp1Friendly: false,
+        isHighProtein: false,
+        isLowCarb: false,
+        isPublic: false
+      };
+      
+      const validatedData = insertRecipeSchema.parse(recipeData);
+      const recipe = await storage.createRecipe(validatedData);
+      res.status(201).json(recipe);
+    } catch (error) {
+      console.error("Error importing recipe:", error);
+      res.status(500).json({ message: "Failed to import recipe" });
+    }
+  });
+
   // Meal plan routes
   app.post('/api/meal-plans', isAuthenticated, async (req: any, res) => {
     try {

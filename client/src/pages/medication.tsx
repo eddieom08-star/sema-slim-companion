@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import Navigation from "@/components/ui/navigation";
 import { MedicationCard } from "@/components/medication-card";
 import { MedicationForm } from "@/components/medication-form";
+import { DetailedLogDialog } from "@/components/detailed-log-dialog";
 import { apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
 
@@ -13,6 +14,8 @@ export default function Medication() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isDetailedLogOpen, setIsDetailedLogOpen] = useState(false);
+  const [selectedMedication, setSelectedMedication] = useState<any>(null);
 
   const { data: medications, isLoading: medicationsLoading } = useQuery({
     queryKey: ["/api/medications"],
@@ -29,6 +32,7 @@ export default function Medication() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/medication-logs"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+      setIsDetailedLogOpen(false);
       toast({
         title: "Medication logged",
         description: "Your medication has been recorded successfully.",
@@ -51,6 +55,22 @@ export default function Medication() {
       notes: "",
       sideEffects: "",
       sideEffectSeverity: null,
+    });
+  };
+
+  const handleDetailedLog = (medication: any) => {
+    setSelectedMedication(medication);
+    setIsDetailedLogOpen(true);
+  };
+
+  const handleDetailedLogSubmit = (data: any) => {
+    logMedication.mutate({
+      medicationId: data.medicationId,
+      takenAt: new Date(data.takenAt).toISOString(),
+      dosage: data.dosage,
+      notes: data.notes || "",
+      sideEffects: data.sideEffects || "",
+      sideEffectSeverity: data.sideEffectSeverity || null,
     });
   };
 
@@ -102,6 +122,7 @@ export default function Medication() {
                   key={medication.id}
                   medication={medication}
                   onQuickLog={handleQuickLog}
+                  onDetailedLog={handleDetailedLog}
                   isLogging={logMedication.isPending}
                 />
               ))}
@@ -218,7 +239,23 @@ export default function Medication() {
                   ))}
                 </div>
 
-                <Button variant="outline" className="w-full mt-4" data-testid="button-log-side-effects">
+                <Button 
+                  variant="outline" 
+                  className="w-full mt-4" 
+                  onClick={() => {
+                    const firstMedication = (medications as any)?.[0];
+                    if (firstMedication) {
+                      handleDetailedLog(firstMedication);
+                    } else {
+                      toast({
+                        title: "No medication found",
+                        description: "Please add a medication first.",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                  data-testid="button-log-side-effects"
+                >
                   <i className="fas fa-plus mr-2"></i>
                   Log Side Effects
                 </Button>
@@ -229,6 +266,14 @@ export default function Medication() {
       </div>
 
       <MedicationForm open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} />
+      <DetailedLogDialog
+        open={isDetailedLogOpen}
+        onOpenChange={setIsDetailedLogOpen}
+        onSubmit={handleDetailedLogSubmit}
+        medicationId={selectedMedication?.id}
+        dosage={selectedMedication?.dosage}
+        isPending={logMedication.isPending}
+      />
     </div>
   );
 }

@@ -5,10 +5,11 @@ import { format, differenceInHours, parseISO } from "date-fns";
 interface MedicationCardProps {
   medication: any;
   onQuickLog: (medicationId: string, dosage: string) => void;
+  onDetailedLog: (medication: any) => void;
   isLogging: boolean;
 }
 
-export function MedicationCard({ medication, onQuickLog, isLogging }: MedicationCardProps) {
+export function MedicationCard({ medication, onQuickLog, onDetailedLog, isLogging }: MedicationCardProps) {
   const getTimeUntilNext = () => {
     if (!medication.nextDueDate) return null;
     
@@ -131,6 +132,7 @@ export function MedicationCard({ medication, onQuickLog, isLogging }: Medication
           <Button
             variant="outline"
             className="w-full"
+            onClick={() => onDetailedLog(medication)}
             data-testid={`button-detailed-log-${medication.id}`}
           >
             <i className="fas fa-edit mr-2"></i>

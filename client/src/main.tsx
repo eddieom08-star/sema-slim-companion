@@ -5,10 +5,10 @@ import "./index.css";
 import { registerServiceWorker, setupInstallPrompt, preloadCriticalAssets } from "@/lib/pwa";
 import { setupOfflineQueueSync } from "@/lib/offline-queue";
 
-const PUBLISHABLE_KEY = 'pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
+const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
 if (!PUBLISHABLE_KEY) {
-  throw new Error("Missing Clerk Publishable Key");
+  throw new Error("Missing Clerk Publishable Key. Please set VITE_CLERK_PUBLISHABLE_KEY environment variable.");
 }
 
 registerServiceWorker();

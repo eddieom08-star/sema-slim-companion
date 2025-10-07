@@ -141,6 +141,11 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Handle favicon requests to prevent 502 errors
+  app.get('/favicon.ico', (_req, res) => {
+    res.redirect(301, '/icons/icon-192.svg');
+  });
+
   const server = await registerRoutes(app);
 
   app.use((err: any, req: Request, res: Response, _next: NextFunction) => {

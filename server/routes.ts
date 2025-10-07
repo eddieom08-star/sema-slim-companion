@@ -1,9 +1,13 @@
-import type { Express } from "express";
+import type { Express, RequestHandler } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth0 } from "./auth0";
-import { setupDevAuth, isAuthenticated, DEV_MODE } from "./devAuth";
 import { logger } from "./logger";
+
+// Temporary authentication middleware - will be replaced with Clerk
+const isAuthenticated: RequestHandler = async (req: any, res, next) => {
+  // TODO: Replace with Clerk authentication
+  return res.status(401).json({ message: 'Authentication not configured' });
+};
 import {
   insertMedicationSchema,
   insertMedicationLogSchema,
@@ -43,15 +47,6 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutM
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Setup authentication (Dev mode or Auth0)
-  if (DEV_MODE) {
-    console.log('🔧 Running in DEV AUTH mode - using simple login');
-    setupDevAuth(app);
-  } else {
-    console.log('🔐 Running in AUTH0 mode');
-    setupAuth0(app);
-  }
-
   // Health check endpoints (no auth required)
   app.get('/health', async (_req, res) => {
     res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });

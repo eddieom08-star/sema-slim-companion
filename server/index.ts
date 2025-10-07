@@ -14,7 +14,7 @@ const app = express();
 // Trust proxy for rate limiting in Replit environment
 app.set('trust proxy', 1);
 
-// Security Headers - Helmet
+// Security Headers - Helmet  
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -22,13 +22,13 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
       styleSrcElem: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com", "data:"],
-      imgSrc: ["'self'", "data:", "https:", "blob:"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://*.clerk.accounts.dev"],
-      scriptSrcElem: ["'self'", "'unsafe-inline'", "https://*.clerk.accounts.dev"],
+      imgSrc: ["'self'", "data:", "https:", "blob:", "https://*.clerk.accounts.dev", "https://img.clerk.com"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://*.clerk.accounts.dev", "https://*.clerk.com"],
+      scriptSrcElem: ["'self'", "'unsafe-inline'", "https://*.clerk.accounts.dev", "https://*.clerk.com"],
       scriptSrcAttr: ["'unsafe-inline'"],
-      connectSrc: ["'self'", "wss:", "https:", "https://*.clerk.accounts.dev"],
+      connectSrc: ["'self'", "wss:", "https:", "https://*.clerk.accounts.dev", "https://*.clerk.com", "https://clerk.com"],
       workerSrc: ["'self'", "blob:"],
-      frameSrc: ["'self'", "https://*.clerk.accounts.dev"],
+      frameSrc: ["'self'", "https://*.clerk.accounts.dev", "https://*.clerk.com"],
     },
   },
   crossOriginEmbedderPolicy: false,

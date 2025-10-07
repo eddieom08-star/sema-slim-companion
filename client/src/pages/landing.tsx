@@ -240,20 +240,13 @@ export default function Landing() {
               </p>
             </div>
             
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <div className="flex justify-center">
               <Button 
                 onClick={handleSignup}
                 className="bg-card text-primary px-8 py-4 rounded-lg font-semibold hover:bg-card/90 transition-colors min-w-48"
                 data-testid="button-start-trial-cta"
               >
                 Start Free 14-Day Trial
-              </Button>
-              <Button 
-                variant="outline"
-                className="border-2 border-blue-600 text-blue-600 px-8 py-4 rounded-lg font-semibold hover:bg-blue-600 hover:text-white transition-colors min-w-48"
-                data-testid="button-watch-demo"
-              >
-                Watch Demo Video
               </Button>
             </div>
             

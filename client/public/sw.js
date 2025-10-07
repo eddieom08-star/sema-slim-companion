@@ -45,6 +45,11 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
+  // Skip chrome-extension and other non-http(s) schemes
+  if (!url.protocol.startsWith('http')) {
+    return;
+  }
+
   if (request.method !== 'GET') {
     return;
   }
@@ -112,7 +117,8 @@ self.addEventListener('fetch', (event) => {
 
       return caches.open(RUNTIME_CACHE).then((cache) => {
         return fetch(request).then((response) => {
-          if (response.status === 200) {
+          // Only cache successful responses from http(s) URLs
+          if (response.status === 200 && url.protocol.startsWith('http')) {
             cache.put(request, response.clone());
           }
           return response;

@@ -66,15 +66,27 @@ Preferred communication style: Simple, everyday language.
 
 ## Authentication
 
-**Provider**: Auth0 using OpenID Connect (OIDC) protocol via `express-openid-connect`.
+**Provider**: Clerk authentication for complete user management, sign-in, and sign-up flows.
 
-**Session Management**: Express-session with PostgreSQL session store (`connect-pg-simple`). Sessions persist for 7 days with secure, HTTP-only cookies.
+**Backend Integration**: 
+- `@clerk/express` SDK with `clerkMiddleware()` applied to all routes
+- `requireAuth` middleware protects API endpoints by validating Clerk session
+- User data synced from Clerk to local database on authenticated requests
+- Authentication state available via `req.auth` object containing userId, sessionId, and user data
 
-**User Storage**: Users table stores profile information synced from Auth0 OIDC claims. Supports upsert operations to handle returning users.
+**Frontend Integration**:
+- `@clerk/clerk-react` SDK with `ClerkProvider` wrapping the entire app
+- Pre-built UI components for sign-in/sign-up (`SignInButton`, `SignUpButton`, `UserButton`)
+- Modal-based authentication flow for seamless UX
+- `useAuth` hook integrates Clerk's authentication state with TanStack Query
 
-**Authorization**: Custom `isAuthenticated` middleware validates Auth0 session and populates `req.oidc.user` with claims including `sub` (user ID).
+**Session Management**: Clerk manages sessions via secure, HTTP-only cookies automatically. Sessions include JWT tokens validated on the backend.
 
-**Configuration**: Requires Auth0 tenant credentials (`AUTH0_DOMAIN`, `AUTH0_CLIENT_ID`, `AUTH0_CLIENT_SECRET`) and `SESSION_SECRET` for secure session encryption.
+**User Storage**: Users table stores profile information synced from Clerk user data. Supports upsert operations to handle returning users and profile updates.
+
+**Configuration**: Requires Clerk API credentials:
+- `CLERK_PUBLISHABLE_KEY`: Frontend key for initializing Clerk (safe to expose)
+- `CLERK_SECRET_KEY`: Backend key for validating sessions (kept secret)
 
 ## Database
 

@@ -1,16 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { SignInButton, SignUpButton } from "@clerk/clerk-react";
 
 export default function Landing() {
-  const handleLogin = () => {
-    // TODO: Implement Clerk sign-in
-    console.log('Sign in clicked');
-  };
-
-  const handleSignup = () => {
-    // TODO: Implement Clerk sign-up
-    console.log('Sign up clicked');
-  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -28,9 +20,11 @@ export default function Landing() {
               </div>
             </div>
             
-            <Button onClick={handleLogin} data-testid="button-login">
-              Sign In
-            </Button>
+            <SignInButton mode="modal">
+              <Button data-testid="button-login">
+                Sign In
+              </Button>
+            </SignInButton>
           </div>
         </div>
       </header>
@@ -51,20 +45,22 @@ export default function Landing() {
               </div>
               
               <div className="flex flex-col sm:flex-row gap-4">
-                <Button 
-                  onClick={handleSignup}
-                  className="bg-card text-primary px-8 py-4 rounded-lg font-semibold hover:bg-card/90 transition-colors"
-                  data-testid="button-start-trial"
-                >
-                  Start Free Trial
-                </Button>
-                <Button 
-                  onClick={handleSignup}
-                  className="bg-blue-600 text-white px-8 py-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-                  data-testid="button-view-demo"
-                >
-                  Try it for Free
-                </Button>
+                <SignUpButton mode="modal">
+                  <Button 
+                    className="bg-card text-primary px-8 py-4 rounded-lg font-semibold hover:bg-card/90 transition-colors"
+                    data-testid="button-start-trial"
+                  >
+                    Start Free Trial
+                  </Button>
+                </SignUpButton>
+                <SignUpButton mode="modal">
+                  <Button 
+                    className="bg-blue-600 text-white px-8 py-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                    data-testid="button-view-demo"
+                  >
+                    Try it for Free
+                  </Button>
+                </SignUpButton>
               </div>
               
               <div className="flex items-center space-x-8 pt-4">
@@ -243,13 +239,14 @@ export default function Landing() {
             </div>
             
             <div className="flex justify-center">
-              <Button 
-                onClick={handleSignup}
-                className="bg-card text-primary px-8 py-4 rounded-lg font-semibold hover:bg-card/90 transition-colors min-w-48"
-                data-testid="button-start-trial-cta"
-              >
-                Start Free 14-Day Trial
-              </Button>
+              <SignUpButton mode="modal">
+                <Button 
+                  className="bg-card text-primary px-8 py-4 rounded-lg font-semibold hover:bg-card/90 transition-colors min-w-48"
+                  data-testid="button-start-trial-cta"
+                >
+                  Start Free 14-Day Trial
+                </Button>
+              </SignUpButton>
             </div>
             
             <div className="flex items-center justify-center space-x-8 pt-4 text-sm text-primary-foreground/80">

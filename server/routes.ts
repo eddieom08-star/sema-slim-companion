@@ -1,13 +1,10 @@
-import type { Express, RequestHandler } from "express";
+import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { logger } from "./logger";
+import { clerkMiddleware, requireAuth } from "./clerkAuth";
 
-// Temporary authentication middleware - will be replaced with Clerk
-const isAuthenticated: RequestHandler = async (req: any, res, next) => {
-  // TODO: Replace with Clerk authentication
-  return res.status(401).json({ message: 'Authentication not configured' });
-};
+const isAuthenticated = requireAuth;
 import {
   insertMedicationSchema,
   insertMedicationLogSchema,
@@ -47,6 +44,9 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutM
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Apply Clerk middleware to all routes
+  app.use(clerkMiddleware());
+
   // Health check endpoints (no auth required)
   app.get('/health', async (_req, res) => {
     res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -88,7 +88,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -103,7 +103,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // User profile routes
   app.put('/api/user/profile', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       console.log("Updating profile for user:", userId, "with data:", req.body);
       const validatedData = updateUserProfileSchema.parse(req.body);
       const user = await storage.updateUserProfile(userId, validatedData);
@@ -121,7 +121,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dashboard data
   app.get('/api/dashboard', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       const dashboardData = await storage.getDashboardData(userId);
       res.json(dashboardData);
     } catch (error) {
@@ -133,7 +133,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Medication routes
   app.get('/api/medications', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       const medications = await storage.getUserMedications(userId);
       res.json(medications);
     } catch (error) {
@@ -144,7 +144,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/medications', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       const validatedData = insertMedicationSchema.parse({ ...req.body, userId });
       const medication = await storage.createMedication(validatedData);
       res.json(medication);
@@ -183,7 +183,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Medication log routes
   app.get('/api/medication-logs', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
       const logs = await storage.getUserMedicationLogs(userId, limit);
       res.json(logs);
@@ -195,7 +195,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/medication-logs', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       const validatedData = insertMedicationLogSchema.parse({ ...req.body, userId });
       const log = await storage.createMedicationLog(validatedData);
       
@@ -216,7 +216,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Food entry routes
   app.get('/api/food-entries', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       const date = req.query.date ? new Date(req.query.date as string) : undefined;
       const entries = await storage.getUserFoodEntries(userId, date);
       res.json(entries);
@@ -228,7 +228,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/food-entries', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       const validatedData = insertFoodEntrySchema.parse({ ...req.body, userId });
       const entry = await storage.createFoodEntry(validatedData);
       
@@ -478,7 +478,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Weight log routes
   app.get('/api/weight-logs', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
       const logs = await storage.getUserWeightLogs(userId, limit);
       res.json(logs);
@@ -490,7 +490,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/weight-logs', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       const validatedData = insertWeightLogSchema.parse({ ...req.body, userId });
       const log = await storage.createWeightLog(validatedData);
       
@@ -514,7 +514,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Body measurement routes
   app.get('/api/body-measurements', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       const measurements = await storage.getUserBodyMeasurements(userId);
       res.json(measurements);
     } catch (error) {
@@ -525,7 +525,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/body-measurements', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       const validatedData = insertBodyMeasurementSchema.parse({ ...req.body, userId });
       const measurement = await storage.createBodyMeasurement(validatedData);
       res.json(measurement);
@@ -552,7 +552,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/user-achievements', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       const userAchievements = await storage.getUserAchievements(userId);
       res.json(userAchievements);
     } catch (error) {
@@ -564,7 +564,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Streak routes
   app.get('/api/streaks', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       const streaks = await storage.getUserStreaks(userId);
       res.json(streaks);
     } catch (error) {
@@ -576,7 +576,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Goal routes
   app.get('/api/goals', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       const goals = await storage.getUserGoals(userId);
       res.json(goals);
     } catch (error) {
@@ -587,7 +587,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/goals', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       const goal = await storage.createUserGoal({ ...req.body, userId });
       res.json(goal);
     } catch (error) {
@@ -599,7 +599,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dose escalation routes
   app.post('/api/dose-escalations', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       
       // Verify medication belongs to user
       const { medicationId } = req.body;
@@ -623,7 +623,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/medications/:id/dose-history', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       const { id } = req.params;
       
       // Verify medication belongs to user
@@ -644,7 +644,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Hunger log routes
   app.post('/api/hunger-logs', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       const validatedData = insertHungerLogSchema.parse({ ...req.body, userId });
       const log = await storage.createHungerLog(validatedData);
       
@@ -663,7 +663,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/hunger-logs', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 30;
       const logs = await storage.getUserHungerLogs(userId, limit);
       res.json(logs);
@@ -677,7 +677,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Gamification routes
   app.get('/api/gamification', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       let gamification = await storage.getUserGamification(userId);
       if (!gamification) {
         gamification = await storage.initializeUserGamification(userId);
@@ -691,7 +691,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/point-transactions', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
       const transactions = await storage.getUserPointTransactions(userId, limit);
       res.json(transactions);
@@ -704,7 +704,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Notification routes
   app.get('/api/notifications', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
       const notifications = await storage.getUserNotifications(userId, limit);
       res.json(notifications);
@@ -716,7 +716,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/notifications/unread', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       const notifications = await storage.getUnreadNotifications(userId);
       res.json(notifications);
     } catch (error) {
@@ -727,7 +727,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/notifications/:id/read', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       const notification = await storage.markNotificationAsRead(req.params.id, userId);
       if (!notification) {
         return res.status(404).json({ message: "Notification not found" });
@@ -741,7 +741,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/notifications/read-all', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       await storage.markAllNotificationsAsRead(userId);
       res.json({ success: true });
     } catch (error) {
@@ -752,7 +752,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/notifications/:id', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       const deleted = await storage.deleteNotification(req.params.id, userId);
       if (!deleted) {
         return res.status(404).json({ message: "Notification not found" });
@@ -767,7 +767,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Push subscription routes
   app.post('/api/push-subscription', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       const { subscription } = req.body;
 
       if (!subscription || !subscription.endpoint || !subscription.keys) {
@@ -791,7 +791,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/push-subscriptions', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       const subscriptions = await storage.getUserPushSubscriptions(userId);
       res.json(subscriptions);
     } catch (error) {
@@ -802,7 +802,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/push-subscription', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       const { endpoint } = req.body;
 
       if (!endpoint) {
@@ -824,7 +824,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Recipe routes
   app.post('/api/recipes', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       const validatedData = insertRecipeSchema.parse({ ...req.body, userId });
       const recipe = await storage.createRecipe(validatedData);
       res.status(201).json(recipe);
@@ -839,7 +839,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/recipes', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       const recipes = await storage.getUserRecipes(userId);
       res.json(recipes);
     } catch (error) {
@@ -876,7 +876,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/recipes/favorites', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       const favorites = await storage.getUserFavoriteRecipes(userId);
       res.json(favorites);
     } catch (error) {
@@ -923,7 +923,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/recipes/:id/favorite', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       const { id } = req.params;
       await storage.toggleRecipeFavorite(userId, id);
       res.json({ success: true });
@@ -1053,7 +1053,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/recipes/import/:externalId', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       const { externalId } = req.params;
       
       const response = await fetch(`https://www.themealdb.com/api/json/v1/1/lookup.php?i=${externalId}`);
@@ -1105,7 +1105,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Meal plan routes
   app.post('/api/meal-plans', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       const validatedData = insertMealPlanSchema.parse({ ...req.body, userId });
       const mealPlan = await storage.createMealPlan(validatedData);
       res.status(201).json(mealPlan);
@@ -1120,7 +1120,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/meal-plans', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       const mealPlans = await storage.getUserMealPlans(userId);
       res.json(mealPlans);
     } catch (error) {
@@ -1131,7 +1131,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/meal-plans/active', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       const mealPlan = await storage.getActiveMealPlan(userId);
       res.json(mealPlan || null);
     } catch (error) {
@@ -1213,7 +1213,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Meal prep routes
   app.post('/api/meal-prep', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       const validatedData = insertMealPrepScheduleSchema.parse({ ...req.body, userId });
       const schedule = await storage.createMealPrepSchedule(validatedData);
       res.status(201).json(schedule);
@@ -1228,7 +1228,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/meal-prep', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       const schedules = await storage.getUserMealPrepSchedules(userId);
       res.json(schedules);
     } catch (error) {
@@ -1262,7 +1262,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Nutritional recommendations routes
   app.get('/api/recommendations', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       const recommendations = await storage.getUserRecommendations(userId);
       res.json(recommendations);
     } catch (error) {
@@ -1273,7 +1273,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/recommendations', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.oidc.user.sub;
+      const userId = req.auth.userId;
       const validatedData = insertNutritionalRecommendationSchema.parse({ ...req.body, userId });
       const recommendation = await storage.createRecommendation(validatedData);
       res.status(201).json(recommendation);

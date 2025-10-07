@@ -67,9 +67,6 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
-        <OfflineIndicator />
-        <NetworkAwareIndicator />
-        <PWAInstallPrompt />
         <Router />
       </TooltipProvider>
     </QueryClientProvider>

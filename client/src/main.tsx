@@ -11,16 +11,6 @@ if (!PUBLISHABLE_KEY) {
   throw new Error("Missing Clerk Publishable Key. Please set VITE_CLERK_PUBLISHABLE_KEY environment variable.");
 }
 
-registerServiceWorker();
-setupInstallPrompt();
-setupOfflineQueueSync();
-
-preloadCriticalAssets([
-  '/icons/icon-192.svg',
-  '/icons/icon-512.svg',
-  '/manifest.json',
-]);
-
 createRoot(document.getElementById("root")!).render(
   <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
     <App />

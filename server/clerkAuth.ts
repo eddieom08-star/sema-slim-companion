@@ -14,9 +14,17 @@ export const requireAuth: RequestHandler = async (req: any, res, next) => {
   try {
     const user = await clerkClient.users.getUser(auth.userId);
     
+    const primaryEmail = user.emailAddresses.find(e => e.id === user.primaryEmailAddressId);
+    const email = primaryEmail?.emailAddress || user.emailAddresses[0]?.emailAddress;
+    
+    if (!email) {
+      console.error('Clerk user has no email address:', auth.userId);
+      return res.status(401).json({ message: 'Email address required' });
+    }
+    
     await storage.upsertUser({
       id: auth.userId,
-      email: user.emailAddresses[0]?.emailAddress || '',
+      email: email,
       firstName: user.firstName || '',
       lastName: user.lastName || '',
       profileImageUrl: user.imageUrl,

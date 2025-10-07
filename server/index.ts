@@ -19,12 +19,14 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
       imgSrc: ["'self'", "data:", "https:", "blob:"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-      connectSrc: ["'self'", "wss:", "https:"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://*.clerk.accounts.dev"],
+      scriptSrcElem: ["'self'", "'unsafe-inline'", "https://*.clerk.accounts.dev"],
+      connectSrc: ["'self'", "wss:", "https:", "https://*.clerk.accounts.dev"],
       workerSrc: ["'self'", "blob:"],
+      frameSrc: ["'self'", "https://*.clerk.accounts.dev"],
     },
   },
   crossOriginEmbedderPolicy: false,

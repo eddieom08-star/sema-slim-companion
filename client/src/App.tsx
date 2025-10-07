@@ -20,8 +20,6 @@ import { NetworkAwareIndicator } from "@/components/network-aware";
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
 
-  console.log('Router state:', { isAuthenticated, isLoading, user });
-
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">

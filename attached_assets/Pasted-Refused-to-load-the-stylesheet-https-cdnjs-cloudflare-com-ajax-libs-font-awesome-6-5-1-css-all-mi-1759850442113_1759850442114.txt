@@ -1,0 +1,265 @@
+Refused to load the stylesheet 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css' because it violates the following Content Security Policy directive: "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com". Note that 'style-src-elem' was not explicitly set, so 'style-src' is used as a fallback.
+Understand this error
+TypeError: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.
+    at index.ts-dc94437b.js:1:3292
+Promise.catch
+(anonymous) @ index.ts-loader3.js:11
+(anonymous) @ index.ts-loader3.js:13Understand this error
+(index):47 Refused to execute inline event handler because it violates the following Content Security Policy directive: "script-src-attr 'none'". Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present.
+Understand this error
+client:536 WebSocket connection to 'wss://9d9eda44-7d1b-459f-8ad3-a70f3466ee71-00-2mez3okl280oa.picard.replit.dev:5000/?token=lZVENLmOupNz' failed: 
+setupWebSocket @ client:536
+(anonymous) @ client:531Understand this error
+client:536 Uncaught (in promise) SyntaxError: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/?token=lZVENLmOupNz' is invalid.
+    at setupWebSocket (client:536:19)
+    at fallback (client:509:16)
+    at WebSocket.<anonymous> (client:555:7)
+setupWebSocket @ client:536
+fallback @ client:509
+(anonymous) @ client:555Understand this error
+chunk-RPCDYKBN.js?v=60c6fbb4:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+chunk-RPCDYKBN.js?v=c6e8af0c:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+client:797 Refused to load the stylesheet 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css' because it violates the following Content Security Policy directive: "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com". Note that 'style-src-elem' was not explicitly set, so 'style-src' is used as a fallback.
+
+updateStyle @ client:797
+(anonymous) @ index.css?t=1759850372581&v=qjRrlUlaKc8U2JFGOYXzd:4Understand this error
+6Refused to load the script '<URL>' because it violates the following Content Security Policy directive: "script-src 'self' 'unsafe-inline' 'unsafe-eval'". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback.
+Understand this error
+chunk-QCHXOAYK.js?v=c6e8af0c:136 Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.
+printWarning @ chunk-QCHXOAYK.js?v=c6e8af0c:136
+error @ chunk-QCHXOAYK.js?v=c6e8af0c:120
+resolveDispatcher @ chunk-QCHXOAYK.js?v=c6e8af0c:1045
+useRef @ chunk-QCHXOAYK.js?v=c6e8af0c:1073
+TooltipProvider @ @radix-ui_react-tooltip.js?v=c6e8af0c:69
+renderWithHooks @ chunk-RPCDYKBN.js?v=60c6fbb4:11548
+mountIndeterminateComponent @ chunk-RPCDYKBN.js?v=60c6fbb4:14926
+beginWork @ chunk-RPCDYKBN.js?v=60c6fbb4:15914
+beginWork$1 @ chunk-RPCDYKBN.js?v=60c6fbb4:19753
+performUnitOfWork @ chunk-RPCDYKBN.js?v=60c6fbb4:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=60c6fbb4:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=60c6fbb4:19116
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=60c6fbb4:18678
+workLoop @ chunk-RPCDYKBN.js?v=60c6fbb4:197
+flushWork @ chunk-RPCDYKBN.js?v=60c6fbb4:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=60c6fbb4:384Understand this error
+chunk-QCHXOAYK.js?v=c6e8af0c:136 Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.
+printWarning @ chunk-QCHXOAYK.js?v=c6e8af0c:136
+error @ chunk-QCHXOAYK.js?v=c6e8af0c:120
+resolveDispatcher @ chunk-QCHXOAYK.js?v=c6e8af0c:1045
+useRef @ chunk-QCHXOAYK.js?v=c6e8af0c:1073
+TooltipProvider @ @radix-ui_react-tooltip.js?v=c6e8af0c:69
+renderWithHooks @ chunk-RPCDYKBN.js?v=60c6fbb4:11548
+mountIndeterminateComponent @ chunk-RPCDYKBN.js?v=60c6fbb4:14926
+beginWork @ chunk-RPCDYKBN.js?v=60c6fbb4:15914
+callCallback2 @ chunk-RPCDYKBN.js?v=60c6fbb4:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=60c6fbb4:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=60c6fbb4:3733
+beginWork$1 @ chunk-RPCDYKBN.js?v=60c6fbb4:19765
+performUnitOfWork @ chunk-RPCDYKBN.js?v=60c6fbb4:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=60c6fbb4:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=60c6fbb4:19116
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=60c6fbb4:18678
+workLoop @ chunk-RPCDYKBN.js?v=60c6fbb4:197
+flushWork @ chunk-RPCDYKBN.js?v=60c6fbb4:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=60c6fbb4:384Understand this error
+chunk-QCHXOAYK.js?v=c6e8af0c:1074 Uncaught TypeError: Cannot read properties of null (reading 'useRef')
+    at Object.useRef (chunk-QCHXOAYK.js?v=c6e8af0c:1074:29)
+    at TooltipProvider (@radix-ui_react-tooltip.js?v=c6e8af0c:69:34)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=60c6fbb4:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js?v=60c6fbb4:14926:21)
+    at beginWork (chunk-RPCDYKBN.js?v=60c6fbb4:15914:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js?v=60c6fbb4:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js?v=60c6fbb4:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js?v=60c6fbb4:3733:39)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=60c6fbb4:19765:15)
+    at performUnitOfWork (chunk-RPCDYKBN.js?v=60c6fbb4:19198:20)
+useRef @ chunk-QCHXOAYK.js?v=c6e8af0c:1074
+TooltipProvider @ @radix-ui_react-tooltip.js?v=c6e8af0c:69
+renderWithHooks @ chunk-RPCDYKBN.js?v=60c6fbb4:11548
+mountIndeterminateComponent @ chunk-RPCDYKBN.js?v=60c6fbb4:14926
+beginWork @ chunk-RPCDYKBN.js?v=60c6fbb4:15914
+callCallback2 @ chunk-RPCDYKBN.js?v=60c6fbb4:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=60c6fbb4:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=60c6fbb4:3733
+beginWork$1 @ chunk-RPCDYKBN.js?v=60c6fbb4:19765
+performUnitOfWork @ chunk-RPCDYKBN.js?v=60c6fbb4:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=60c6fbb4:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=60c6fbb4:19116
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=60c6fbb4:18678
+workLoop @ chunk-RPCDYKBN.js?v=60c6fbb4:197
+flushWork @ chunk-RPCDYKBN.js?v=60c6fbb4:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=60c6fbb4:384Understand this error
+chunk-QCHXOAYK.js?v=c6e8af0c:136 Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.
+printWarning @ chunk-QCHXOAYK.js?v=c6e8af0c:136
+error @ chunk-QCHXOAYK.js?v=c6e8af0c:120
+resolveDispatcher @ chunk-QCHXOAYK.js?v=c6e8af0c:1045
+useRef @ chunk-QCHXOAYK.js?v=c6e8af0c:1073
+TooltipProvider @ @radix-ui_react-tooltip.js?v=c6e8af0c:69
+renderWithHooks @ chunk-RPCDYKBN.js?v=60c6fbb4:11548
+mountIndeterminateComponent @ chunk-RPCDYKBN.js?v=60c6fbb4:14926
+beginWork @ chunk-RPCDYKBN.js?v=60c6fbb4:15914
+beginWork$1 @ chunk-RPCDYKBN.js?v=60c6fbb4:19753
+performUnitOfWork @ chunk-RPCDYKBN.js?v=60c6fbb4:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=60c6fbb4:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=60c6fbb4:19116
+recoverFromConcurrentError @ chunk-RPCDYKBN.js?v=60c6fbb4:18736
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=60c6fbb4:18684
+workLoop @ chunk-RPCDYKBN.js?v=60c6fbb4:197
+flushWork @ chunk-RPCDYKBN.js?v=60c6fbb4:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=60c6fbb4:384Understand this error
+chunk-QCHXOAYK.js?v=c6e8af0c:136 Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.
+printWarning @ chunk-QCHXOAYK.js?v=c6e8af0c:136
+error @ chunk-QCHXOAYK.js?v=c6e8af0c:120
+resolveDispatcher @ chunk-QCHXOAYK.js?v=c6e8af0c:1045
+useRef @ chunk-QCHXOAYK.js?v=c6e8af0c:1073
+TooltipProvider @ @radix-ui_react-tooltip.js?v=c6e8af0c:69
+renderWithHooks @ chunk-RPCDYKBN.js?v=60c6fbb4:11548
+mountIndeterminateComponent @ chunk-RPCDYKBN.js?v=60c6fbb4:14926
+beginWork @ chunk-RPCDYKBN.js?v=60c6fbb4:15914
+callCallback2 @ chunk-RPCDYKBN.js?v=60c6fbb4:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=60c6fbb4:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=60c6fbb4:3733
+beginWork$1 @ chunk-RPCDYKBN.js?v=60c6fbb4:19765
+performUnitOfWork @ chunk-RPCDYKBN.js?v=60c6fbb4:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=60c6fbb4:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=60c6fbb4:19116
+recoverFromConcurrentError @ chunk-RPCDYKBN.js?v=60c6fbb4:18736
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=60c6fbb4:18684
+workLoop @ chunk-RPCDYKBN.js?v=60c6fbb4:197
+flushWork @ chunk-RPCDYKBN.js?v=60c6fbb4:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=60c6fbb4:384Understand this error
+chunk-QCHXOAYK.js?v=c6e8af0c:1074 Uncaught TypeError: Cannot read properties of null (reading 'useRef')
+    at Object.useRef (chunk-QCHXOAYK.js?v=c6e8af0c:1074:29)
+    at TooltipProvider (@radix-ui_react-tooltip.js?v=c6e8af0c:69:34)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=60c6fbb4:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js?v=60c6fbb4:14926:21)
+    at beginWork (chunk-RPCDYKBN.js?v=60c6fbb4:15914:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js?v=60c6fbb4:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js?v=60c6fbb4:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js?v=60c6fbb4:3733:39)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=60c6fbb4:19765:15)
+    at performUnitOfWork (chunk-RPCDYKBN.js?v=60c6fbb4:19198:20)
+useRef @ chunk-QCHXOAYK.js?v=c6e8af0c:1074
+TooltipProvider @ @radix-ui_react-tooltip.js?v=c6e8af0c:69
+renderWithHooks @ chunk-RPCDYKBN.js?v=60c6fbb4:11548
+mountIndeterminateComponent @ chunk-RPCDYKBN.js?v=60c6fbb4:14926
+beginWork @ chunk-RPCDYKBN.js?v=60c6fbb4:15914
+callCallback2 @ chunk-RPCDYKBN.js?v=60c6fbb4:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=60c6fbb4:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=60c6fbb4:3733
+beginWork$1 @ chunk-RPCDYKBN.js?v=60c6fbb4:19765
+performUnitOfWork @ chunk-RPCDYKBN.js?v=60c6fbb4:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=60c6fbb4:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=60c6fbb4:19116
+recoverFromConcurrentError @ chunk-RPCDYKBN.js?v=60c6fbb4:18736
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=60c6fbb4:18684
+workLoop @ chunk-RPCDYKBN.js?v=60c6fbb4:197
+flushWork @ chunk-RPCDYKBN.js?v=60c6fbb4:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=60c6fbb4:384Understand this error
+chunk-RPCDYKBN.js?v=60c6fbb4:14032 The above error occurred in the <TooltipProvider> component:
+
+    at TooltipProvider (https://9d9eda44-7d1b-459f-8ad3-a70f3466ee71-00-2mez3okl280oa.picard.replit.dev:5000/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=c6e8af0c:63:5)
+    at QueryClientProvider (https://9d9eda44-7d1b-459f-8ad3-a70f3466ee71-00-2mez3okl280oa.picard.replit.dev:5000/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=60c6fbb4:2805:3)
+    at App
+    at __experimental_CheckoutProvider (https://9d9eda44-7d1b-459f-8ad3-a70f3466ee71-00-2mez3okl280oa.picard.replit.dev:5000/@fs/home/runner/workspace/node_modules/.vite/deps/@clerk_clerk-react.js?v=60c6fbb4:2165:42)
+    at SWRConfig (https://9d9eda44-7d1b-459f-8ad3-a70f3466ee71-00-2mez3okl280oa.picard.replit.dev:5000/@fs/home/runner/workspace/node_modules/.vite/deps/@clerk_clerk-react.js?v=60c6fbb4:1033:11)
+    at OrganizationProvider (https://9d9eda44-7d1b-459f-8ad3-a70f3466ee71-00-2mez3okl280oa.picard.replit.dev:5000/@fs/home/runner/workspace/node_modules/.vite/deps/@clerk_clerk-react.js?v=60c6fbb4:2170:3)
+    at ClerkContextProvider (https://9d9eda44-7d1b-459f-8ad3-a70f3466ee71-00-2mez3okl280oa.picard.replit.dev:5000/@fs/home/runner/workspace/node_modules/.vite/deps/@clerk_clerk-react.js?v=60c6fbb4:6947:11)
+    at ClerkProviderBase (https://9d9eda44-7d1b-459f-8ad3-a70f3466ee71-00-2mez3okl280oa.picard.replit.dev:5000/@fs/home/runner/workspace/node_modules/.vite/deps/@clerk_clerk-react.js?v=60c6fbb4:7037:11)
+    at Hoc (https://9d9eda44-7d1b-459f-8ad3-a70f3466ee71-00-2mez3okl280oa.picard.replit.dev:5000/@fs/home/runner/workspace/node_modules/.vite/deps/@clerk_clerk-react.js?v=60c6fbb4:3959:5)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+logCapturedError @ chunk-RPCDYKBN.js?v=60c6fbb4:14032
+update.callback @ chunk-RPCDYKBN.js?v=60c6fbb4:14052
+callCallback @ chunk-RPCDYKBN.js?v=60c6fbb4:11248
+commitUpdateQueue @ chunk-RPCDYKBN.js?v=60c6fbb4:11265
+commitLayoutEffectOnFiber @ chunk-RPCDYKBN.js?v=60c6fbb4:17093
+commitLayoutMountEffects_complete @ chunk-RPCDYKBN.js?v=60c6fbb4:17980
+commitLayoutEffects_begin @ chunk-RPCDYKBN.js?v=60c6fbb4:17969
+commitLayoutEffects @ chunk-RPCDYKBN.js?v=60c6fbb4:17920
+commitRootImpl @ chunk-RPCDYKBN.js?v=60c6fbb4:19353
+commitRoot @ chunk-RPCDYKBN.js?v=60c6fbb4:19277
+finishConcurrentRender @ chunk-RPCDYKBN.js?v=60c6fbb4:18760
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=60c6fbb4:18718
+workLoop @ chunk-RPCDYKBN.js?v=60c6fbb4:197
+flushWork @ chunk-RPCDYKBN.js?v=60c6fbb4:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=60c6fbb4:384Understand this error
+chunk-RPCDYKBN.js?v=60c6fbb4:19413 Uncaught TypeError: Cannot read properties of null (reading 'useRef')
+    at Object.useRef (chunk-QCHXOAYK.js?v=c6e8af0c:1074:29)
+    at TooltipProvider (@radix-ui_react-tooltip.js?v=c6e8af0c:69:34)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=60c6fbb4:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js?v=60c6fbb4:14926:21)
+    at beginWork (chunk-RPCDYKBN.js?v=60c6fbb4:15914:22)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=60c6fbb4:19753:22)
+    at performUnitOfWork (chunk-RPCDYKBN.js?v=60c6fbb4:19198:20)
+    at workLoopSync (chunk-RPCDYKBN.js?v=60c6fbb4:19137:13)
+    at renderRootSync (chunk-RPCDYKBN.js?v=60c6fbb4:19116:15)
+    at recoverFromConcurrentError (chunk-RPCDYKBN.js?v=60c6fbb4:18736:28)
+useRef @ chunk-QCHXOAYK.js?v=c6e8af0c:1074
+TooltipProvider @ @radix-ui_react-tooltip.js?v=c6e8af0c:69
+renderWithHooks @ chunk-RPCDYKBN.js?v=60c6fbb4:11548
+mountIndeterminateComponent @ chunk-RPCDYKBN.js?v=60c6fbb4:14926
+beginWork @ chunk-RPCDYKBN.js?v=60c6fbb4:15914
+beginWork$1 @ chunk-RPCDYKBN.js?v=60c6fbb4:19753
+performUnitOfWork @ chunk-RPCDYKBN.js?v=60c6fbb4:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=60c6fbb4:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=60c6fbb4:19116
+recoverFromConcurrentError @ chunk-RPCDYKBN.js?v=60c6fbb4:18736
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=60c6fbb4:18684
+workLoop @ chunk-RPCDYKBN.js?v=60c6fbb4:197
+flushWork @ chunk-RPCDYKBN.js?v=60c6fbb4:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=60c6fbb4:384Understand this error
+pwa.ts:11 Service Worker registered successfully: https://9d9eda44-7d1b-459f-8ad3-a70f3466ee71-00-2mez3okl280oa.picard.replit.dev:5000/
+sw.js:116 Uncaught (in promise) TypeError: Failed to execute 'put' on 'Cache': Request scheme 'chrome-extension' is unsupported
+    at sw.js:116:19
+(anonymous) @ sw.js:116
+Promise.then
+(anonymous) @ sw.js:114
+Promise.then
+(anonymous) @ sw.js:113
+Promise.then
+(anonymous) @ sw.js:108Understand this error
+(index):1 The resource https://9d9eda44-7d1b-459f-8ad3-a70f3466ee71-00-2mez3okl280oa.picard.replit.dev:5000/icons/icon-192.svg was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.Understand this warning
+@clerk_clerk-react.js?v=60c6fbb4:5087 Uncaught (in promise) ClerkRuntimeError: 🔒 Clerk: Failed to load Clerk, failed to load script: https://complete-bullfrog-71.clerk.accounts.dev/npm/@clerk/clerk-js@5/dist/clerk.browser.js
+
+(code="failed_to_load_clerk_js")
+
+    at @clerk_clerk-react.js?v=60c6fbb4:5087:11Caused by: Error: failed to load script: https://complete-bullfrog-71.clerk.accounts.dev/npm/@clerk/clerk-js@5/dist/clerk.browser.js
+    at HTMLScriptElement.<anonymous> (@clerk_clerk-react.js?v=60c6fbb4:5000:31)
+(anonymous) @ @clerk_clerk-react.js?v=60c6fbb4:5087
+Promise.catch
+loadClerkJsScript @ @clerk_clerk-react.js?v=60c6fbb4:5086
+loadClerkJS @ @clerk_clerk-react.js?v=60c6fbb4:6834
+_IsomorphicClerk2 @ @clerk_clerk-react.js?v=60c6fbb4:6719
+getOrCreateInstance @ @clerk_clerk-react.js?v=60c6fbb4:6745
+useLoadedIsomorphicClerk @ @clerk_clerk-react.js?v=60c6fbb4:7017
+ClerkContextProvider @ @clerk_clerk-react.js?v=60c6fbb4:6948
+renderWithHooks @ chunk-RPCDYKBN.js?v=60c6fbb4:11548
+mountIndeterminateComponent @ chunk-RPCDYKBN.js?v=60c6fbb4:14926
+beginWork @ chunk-RPCDYKBN.js?v=60c6fbb4:15914
+beginWork$1 @ chunk-RPCDYKBN.js?v=60c6fbb4:19753
+performUnitOfWork @ chunk-RPCDYKBN.js?v=60c6fbb4:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=60c6fbb4:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=60c6fbb4:19116
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=60c6fbb4:18678
+workLoop @ chunk-RPCDYKBN.js?v=60c6fbb4:197
+flushWork @ chunk-RPCDYKBN.js?v=60c6fbb4:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=60c6fbb4:384Understand this error
+(index):1 The resource https://9d9eda44-7d1b-459f-8ad3-a70f3466ee71-00-2mez3okl280oa.picard.replit.dev:5000/icons/icon-192.svg was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.

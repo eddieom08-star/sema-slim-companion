@@ -20,10 +20,12 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
+      styleSrcElem: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com", "data:"],
       imgSrc: ["'self'", "data:", "https:", "blob:"],
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://*.clerk.accounts.dev"],
       scriptSrcElem: ["'self'", "'unsafe-inline'", "https://*.clerk.accounts.dev"],
+      scriptSrcAttr: ["'unsafe-inline'"],
       connectSrc: ["'self'", "wss:", "https:", "https://*.clerk.accounts.dev"],
       workerSrc: ["'self'", "blob:"],
       frameSrc: ["'self'", "https://*.clerk.accounts.dev"],

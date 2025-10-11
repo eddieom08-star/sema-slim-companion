@@ -1,0 +1,27 @@
+{
+  "name": "SemaSlim",
+  "displayName": "SemaSlim - GLP-1 Companion",
+  "version": "1.0.0",
+  "description": "Your GLP-1 weight management companion",
+  "slug": "semaslim",
+  "orientation": "portrait",
+  "icon": "./assets/icon.png",
+  "userInterfaceStyle": "automatic",
+  "splash": {
+    "image": "./assets/splash.png",
+    "resizeMode": "contain",
+    "backgroundColor": "#ffffff"
+  },
+  "platforms": ["ios", "android"],
+  "ios": {
+    "supportsTablet": true,
+    "bundleIdentifier": "com.semaslim.app"
+  },
+  "android": {
+    "adaptiveIcon": {
+      "foregroundImage": "./assets/adaptive-icon.png",
+      "backgroundColor": "#ffffff"
+    },
+    "package": "com.semaslim.app"
+  }
+}

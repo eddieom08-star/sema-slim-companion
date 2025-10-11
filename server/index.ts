@@ -9,9 +9,19 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { logger } from "./logger";
 
+// Create and export the app factory for serverless environments
+export async function createServer() {
+  const app = express();
+
+  // Trust proxy for rate limiting in Replit/Vercel environment
+  app.set('trust proxy', 1);
+
+  return app;
+}
+
 const app = express();
 
-// Trust proxy for rate limiting in Replit environment
+// Trust proxy for rate limiting in Replit/Vercel environment
 app.set('trust proxy', 1);
 
 // Security Headers - Helmet  
@@ -44,12 +54,13 @@ app.use(cors({
       return;
     }
     
-    // Allow localhost and Replit domains in development
-    if (process.env.NODE_ENV === 'development' || 
-        allowedOrigins.includes(origin) || 
-        origin.includes('localhost') || 
-        origin.endsWith('.replit.app') || 
-        origin.endsWith('.replit.dev')) {
+    // Allow localhost, Replit, and Vercel domains
+    if (process.env.NODE_ENV === 'development' ||
+        allowedOrigins.includes(origin) ||
+        origin.includes('localhost') ||
+        origin.endsWith('.replit.app') ||
+        origin.endsWith('.replit.dev') ||
+        origin.endsWith('.vercel.app')) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));

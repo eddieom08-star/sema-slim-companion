@@ -1,15 +1,26 @@
 // Mobile initialization for Capacitor
-import { Capacitor } from '@capacitor/core';
-import { StatusBar, Style } from '@capacitor/status-bar';
-import { SplashScreen } from '@capacitor/splash-screen';
-import { Keyboard } from '@capacitor/keyboard';
+// Use dynamic imports to avoid bundling mobile-only dependencies in web builds
 
 export async function initializeMobile() {
-  if (!Capacitor.isNativePlatform()) {
-    return; // Skip if running in browser
-  }
-
   try {
+    // Check if Capacitor is available
+    const { Capacitor } = await import('@capacitor/core');
+
+    if (!Capacitor.isNativePlatform()) {
+      return; // Skip if running in browser
+    }
+
+    // Dynamically import mobile plugins only when needed
+    const [
+      { StatusBar, Style },
+      { SplashScreen },
+      { Keyboard }
+    ] = await Promise.all([
+      import('@capacitor/status-bar'),
+      import('@capacitor/splash-screen'),
+      import('@capacitor/keyboard')
+    ]);
+
     // Configure status bar
     await StatusBar.setStyle({ style: Style.Light });
     if (Capacitor.getPlatform() === 'android') {
@@ -24,16 +35,27 @@ export async function initializeMobile() {
 
     console.log('Mobile platform initialized:', Capacitor.getPlatform());
   } catch (error) {
-    console.error('Error initializing mobile platform:', error);
+    // Silently fail if Capacitor is not available (web environment)
+    console.debug('Mobile initialization skipped:', error);
   }
 }
 
 // Helper function to check if running on mobile
-export function isMobile(): boolean {
-  return Capacitor.isNativePlatform();
+export async function isMobile(): Promise<boolean> {
+  try {
+    const { Capacitor } = await import('@capacitor/core');
+    return Capacitor.isNativePlatform();
+  } catch {
+    return false;
+  }
 }
 
 // Get platform type
-export function getPlatform(): 'ios' | 'android' | 'web' {
-  return Capacitor.getPlatform() as 'ios' | 'android' | 'web';
+export async function getPlatform(): Promise<'ios' | 'android' | 'web'> {
+  try {
+    const { Capacitor } = await import('@capacitor/core');
+    return Capacitor.getPlatform() as 'ios' | 'android' | 'web';
+  } catch {
+    return 'web';
+  }
 }

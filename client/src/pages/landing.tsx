@@ -1,8 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { SignInButton, SignUpButton } from "@clerk/clerk-react";
+import { SignInButton, SignUpButton, useUser } from "@clerk/clerk-react";
+import { useNavigate } from "wouter";
 
 export default function Landing() {
+  const { isSignedIn } = useUser();
+  const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-background">
@@ -19,12 +22,18 @@ export default function Landing() {
                 <p className="text-xs text-muted-foreground">GLP-1 Weight Management</p>
               </div>
             </div>
-            
-            <SignInButton mode="modal">
-              <Button data-testid="button-login">
-                Sign In
+
+            {isSignedIn ? (
+              <Button onClick={() => navigate("/dashboard")} data-testid="button-dashboard">
+                Go to Dashboard
               </Button>
-            </SignInButton>
+            ) : (
+              <SignInButton mode="modal">
+                <Button data-testid="button-login">
+                  Sign In
+                </Button>
+              </SignInButton>
+            )}
           </div>
         </div>
       </header>

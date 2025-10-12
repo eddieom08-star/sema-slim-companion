@@ -12,9 +12,9 @@ export function useAuth() {
     refetch
   } = useQuery({
     queryKey: ["/api/auth/user"],
-    retry: 3,  // Retry failed requests up to 3 times
+    retry: isSignedIn ? 3 : 0,  // Only retry if signed in, otherwise don't retry 401s
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
-    enabled: isSignedIn,
+    enabled: isSignedIn && clerkLoaded,  // Only fetch when signed in AND Clerk is loaded
     staleTime: 5 * 60 * 1000,  // Cache for 5 minutes
     gcTime: 10 * 60 * 1000,    // Keep in cache for 10 minutes
   });

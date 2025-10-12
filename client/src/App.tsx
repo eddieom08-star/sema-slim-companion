@@ -21,6 +21,7 @@ import { NetworkAwareIndicator } from "@/components/network-aware";
 
 function Router() {
   const { isAuthenticated, isLoading, user, error } = useAuth();
+  const { isSignedIn, isLoaded: clerkLoaded } = useClerkAuth();
 
   if (isLoading) {
     return (
@@ -33,8 +34,9 @@ function Router() {
     );
   }
 
-  // Handle authentication errors
-  if (error) {
+  // Only show authentication error if user IS signed in with Clerk but getting errors
+  // Don't show error for 401s when user is not signed in (that's expected)
+  if (error && clerkLoaded && isSignedIn) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <div className="text-center space-y-4 max-w-md">

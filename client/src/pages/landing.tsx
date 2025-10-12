@@ -2,18 +2,19 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { SignInButton, SignUpButton, useUser } from "@clerk/clerk-react";
 import { useLocation } from "wouter";
-import { useEffect } from "react";
 
+/**
+ * Landing Page - Marketing site for unauthenticated users
+ *
+ * PHASE 2 CLEANUP:
+ * - Removed auto-redirect useEffect (was causing race condition)
+ * - No longer checks auth state for routing
+ * - App.tsx handles all routing decisions
+ * - This page is purely presentational
+ */
 export default function Landing() {
   const { isSignedIn, isLoaded } = useUser();
   const [, setLocation] = useLocation();
-
-  // Auto-redirect to dashboard if already signed in
-  useEffect(() => {
-    if (isLoaded && isSignedIn) {
-      setLocation("/dashboard");
-    }
-  }, [isLoaded, isSignedIn, setLocation]);
 
   return (
     <div className="min-h-screen bg-background">

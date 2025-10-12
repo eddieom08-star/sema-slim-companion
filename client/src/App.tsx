@@ -34,9 +34,12 @@ function Router() {
     );
   }
 
-  // Only show authentication error if user IS signed in with Clerk but getting errors
-  // Don't show error for 401s when user is not signed in (that's expected)
-  if (error && clerkLoaded && isSignedIn) {
+  // Only show authentication error if:
+  // 1. There's an error AND
+  // 2. Clerk shows user as signed in AND
+  // 3. We don't have user data yet (if we have user data, auth is working)
+  // This prevents showing error during brief race conditions after sign-in
+  if (error && clerkLoaded && isSignedIn && !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <div className="text-center space-y-4 max-w-md">

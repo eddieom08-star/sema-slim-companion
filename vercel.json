@@ -1,7 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "npx vite build && npx esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
-  "installCommand": "npm install --include=dev",
+  "buildCommand": "npm run build",
   "functions": {
     "api/serverless.js": {
       "memory": 1024,

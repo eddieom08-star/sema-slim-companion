@@ -233,13 +233,15 @@ app.use((req, res, next) => {
   next();
 });
 
-(async () => {
-  // Handle favicon requests to prevent 502 errors
-  app.get('/favicon.ico', (_req, res) => {
-    res.redirect(301, '/icons/icon-192.svg');
-  });
+// Only start the server if not in serverless mode (Vercel/Lambda)
+if (process.env.VERCEL !== '1' && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
+  (async () => {
+    // Handle favicon requests to prevent 502 errors
+    app.get('/favicon.ico', (_req, res) => {
+      res.redirect(301, '/icons/icon-192.svg');
+    });
 
-  const server = await registerRoutes(app);
+    const server = await registerRoutes(app);
 
   app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -318,4 +320,5 @@ app.use((req, res, next) => {
     logger.error('Unhandled Promise Rejection', reason as Error, { promise: String(promise) });
     // Log but don't exit - let the process manager handle restarts if needed
   });
-})();
+  })();
+}

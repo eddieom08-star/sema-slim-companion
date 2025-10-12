@@ -1,11 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { SignInButton, SignUpButton, useUser } from "@clerk/clerk-react";
-import { useNavigate } from "wouter";
+import { useLocation } from "wouter";
 
 export default function Landing() {
   const { isSignedIn } = useUser();
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
 
   return (
     <div className="min-h-screen bg-background">
@@ -24,7 +24,7 @@ export default function Landing() {
             </div>
 
             {isSignedIn ? (
-              <Button onClick={() => navigate("/dashboard")} data-testid="button-dashboard">
+              <Button onClick={() => setLocation("/dashboard")} data-testid="button-dashboard">
                 Go to Dashboard
               </Button>
             ) : (

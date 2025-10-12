@@ -70,7 +70,15 @@ export async function setupVite(app: Express, server: Server) {
 export function serveStatic(app: Express) {
   const distPath = path.resolve(import.meta.dirname, "public");
 
+  // In serverless environments (Vercel/Lambda), static files are served by the platform's CDN
+  // So we don't need to serve them from the Express app - just serve index.html as fallback
   if (!fs.existsSync(distPath)) {
+    if (process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+      console.log('Running in serverless mode - static files served by platform CDN');
+      // In serverless mode, all requests should be handled by API routes
+      // The platform (Vercel/Lambda) handles static file serving
+      return;
+    }
     throw new Error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`,
     );

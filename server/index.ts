@@ -6,8 +6,13 @@ import { xss } from "express-xss-sanitizer";
 import hpp from "hpp";
 import cors from "cors";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
 import { logger } from "./logger";
+
+// Lazy import vite module to avoid bundling rollup in production
+async function getViteModule() {
+  const viteModule = await import("./vite");
+  return viteModule;
+}
 
 // Create and export the app factory for serverless environments
 export async function createServer() {
@@ -83,8 +88,13 @@ export async function createServer() {
   // Register routes
   await registerRoutes(serverApp);
 
-  // Serve static files in production
-  serveStatic(serverApp);
+  // In serverless environments, static files are served by the platform (Vercel CDN, etc.)
+  // We don't need to serve them from the Express app
+  // Skip loading vite module entirely to avoid bundling rollup
+  if (process.env.VERCEL !== '1' && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    const { serveStatic } = await getViteModule();
+    serveStatic(serverApp);
+  }
 
   // Error handler
   serverApp.use((err: any, req: Request, res: Response, _next: NextFunction) => {
@@ -226,7 +236,8 @@ app.use((req, res, next) => {
         logLine = logLine.slice(0, 79) + "…";
       }
 
-      log(logLine);
+      // Use console.log directly instead of log from vite module
+      console.log(logLine);
     }
   });
 
@@ -253,28 +264,31 @@ if (process.env.VERCEL !== '1' && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
       const server = await registerRoutes(app);
       logger.info('Routes registered successfully');
 
-  app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+      app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
+        const status = err.status || err.statusCode || 500;
+        const message = err.message || "Internal Server Error";
 
-    logger.error("Request error", err, {
-      method: req.method,
-      path: req.path,
-      status,
-      userId: (req as any).oidc?.user?.sub,
-    });
+        logger.error("Request error", err, {
+          method: req.method,
+          path: req.path,
+          status,
+          userId: (req as any).oidc?.user?.sub,
+        });
 
-    res.status(status).json({ message });
-  });
+        res.status(status).json({ message });
+      });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
-  }
+      // Lazy load vite module only when needed
+      const { setupVite, serveStatic } = await getViteModule();
+
+      // importantly only setup vite in development and after
+      // setting up all the other routes so the catch-all route
+      // doesn't interfere with the other routes
+      if (app.get("env") === "development") {
+        await setupVite(app, server);
+      } else {
+        serveStatic(app);
+      }
 
       // ALWAYS serve the app on the port specified in the environment variable PORT
       // Other ports are firewalled. Default to 5000 if not specified.
@@ -285,7 +299,7 @@ if (process.env.VERCEL !== '1' && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
 
       server.listen(port, "0.0.0.0", () => {
         logger.info(`Server started successfully on port ${port}`);
-        log(`serving on port ${port}`);
+        console.log(`serving on port ${port}`);
       });
 
       // Handle server listen errors

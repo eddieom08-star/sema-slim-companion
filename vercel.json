@@ -1,11 +1,16 @@
 {
-  "buildCommand": "npm run vercel-build",
-  "outputDirectory": "dist/public",
-  "framework": null,
+  "version": 2,
+  "buildCommand": "npm run build",
+  "functions": {
+    "api/serverless.js": {
+      "memory": 1024,
+      "maxDuration": 10
+    }
+  },
   "rewrites": [
     {
       "source": "/(.*)",
-      "destination": "/index.html"
+      "destination": "/api/serverless"
     }
   ],
   "headers": [

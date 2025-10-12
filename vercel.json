@@ -9,8 +9,16 @@
   },
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/api/:path*",
       "destination": "/api/serverless"
+    },
+    {
+      "source": "/health",
+      "destination": "/api/serverless"
+    },
+    {
+      "source": "/:path*",
+      "destination": "/index.html"
     }
   ],
   "headers": [

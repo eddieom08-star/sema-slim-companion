@@ -1,8 +1,15 @@
 # Deployment Success Summary
 
-## ✅ ALL DEPLOYMENTS OPERATIONAL
+## ⚠️ DEPLOYMENTS OPERATIONAL WITH KNOWN ISSUE
 
-Both Vercel and Render deployments are now **fully functional** as of October 12, 2025.
+Both Vercel and Render deployments are now **deployed and running** as of October 12, 2025.
+
+**Known Issue:** Currently using **Clerk development keys** (`pk_test_...`) which causes:
+- 401 Unauthorized errors on `/api/auth/user`
+- Authentication failures for some users
+- Usage limits in production
+
+**Action Required:** Update to Clerk production keys (`pk_live_...`). See **CLERK_PRODUCTION_SETUP.md** for instructions.
 
 ---
 
@@ -134,6 +141,30 @@ Both Vercel and Render deployments are now **fully functional** as of October 12
 - Fixed local env file as well
 
 **Status:** ✅ Fixed and deployed
+
+---
+
+## Known Issues (Action Required)
+
+### Issue 4: Clerk Development Keys in Production
+**Problem:** Application using development keys (`pk_test_...`) causing 401 errors and authentication failures
+
+**Symptoms:**
+```
+GET /api/auth/user 401 (Unauthorized)
+Clerk: Clerk has been loaded with development keys...
+```
+
+**Root Cause:** Clerk development keys deployed to production instead of production keys (`pk_live_...`)
+
+**Fix Required:**
+1. Get production keys from Clerk dashboard
+2. Update environment variables on Vercel and Render
+3. Redeploy both platforms
+
+**Documentation:** See `CLERK_PRODUCTION_SETUP.md` for complete setup guide
+
+**Status:** ⚠️ Action Required
 
 ---
 
@@ -312,13 +343,13 @@ If you encounter any issues:
 
 ## Summary
 
-✅ **Vercel Deployment:** Fully operational at https://sema-slim-companion.vercel.app
-✅ **Render Deployment:** Fully operational at https://sema-slim-companion.onrender.com
+✅ **Vercel Deployment:** Deployed at https://sema-slim-companion.vercel.app
+✅ **Render Deployment:** Deployed at https://sema-slim-companion.onrender.com
 ✅ **Database:** Connected and operational (Neon PostgreSQL)
-✅ **Authentication:** Working (Clerk)
-✅ **All Environment Variables:** Configured correctly
+⚠️ **Authentication:** Partially working - using development keys
+⚠️ **Action Required:** Update to Clerk production keys (see CLERK_PRODUCTION_SETUP.md)
 
-**Both platforms are production-ready and serving users successfully.**
+**Note:** Deployments are functional but require Clerk production keys update for full authentication support.
 
 ---
 

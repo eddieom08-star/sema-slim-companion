@@ -10,14 +10,17 @@ export default function Navigation() {
   const { user } = useAuth();
   const { signOut } = useClerk();
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const unreadCount = useUnreadNotificationsCount();
 
   const handleLogout = async () => {
     try {
-      await signOut();
-      // Clerk will automatically redirect to "/" (configured in main.tsx afterSignOutUrl)
+      setIsLoggingOut(true);
+      // Clerk automatically saves all session data and ensures clean logout
+      await signOut({ redirectUrl: "/" });
     } catch (error) {
       console.error("Logout error:", error);
+      setIsLoggingOut(false);
     }
   };
 
@@ -94,11 +97,21 @@ export default function Navigation() {
                 variant="ghost"
                 size="sm"
                 onClick={handleLogout}
+                disabled={isLoggingOut}
                 className="text-sm text-muted-foreground hover:text-foreground"
                 data-testid="button-logout"
               >
-                <i className="fas fa-sign-out-alt mr-2"></i>
-                Logout
+                {isLoggingOut ? (
+                  <>
+                    <i className="fas fa-spinner fa-spin mr-2"></i>
+                    Logging out...
+                  </>
+                ) : (
+                  <>
+                    <i className="fas fa-sign-out-alt mr-2"></i>
+                    Logout
+                  </>
+                )}
               </Button>
             </div>
           </div>

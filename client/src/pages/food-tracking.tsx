@@ -133,8 +133,8 @@ export default function FoodTracking() {
               </div>
               <div className="text-sm text-muted-foreground mb-2">Calories</div>
               <div className="w-full bg-muted rounded-full h-2">
-                <div 
-                  className="bg-primary h-2 rounded-full" 
+                <div
+                  className="bg-primary h-2 rounded-full"
                   style={{ width: `${Math.min((todaysCalories / calorieTarget) * 100, 100)}%` }}
                 ></div>
               </div>
@@ -151,8 +151,8 @@ export default function FoodTracking() {
               </div>
               <div className="text-sm text-muted-foreground mb-2">Protein</div>
               <div className="w-full bg-muted rounded-full h-2">
-                <div 
-                  className="bg-secondary h-2 rounded-full" 
+                <div
+                  className="bg-secondary h-2 rounded-full"
                   style={{ width: `${Math.min((todaysProtein / proteinTarget) * 100, 100)}%` }}
                 ></div>
               </div>
@@ -169,8 +169,8 @@ export default function FoodTracking() {
               </div>
               <div className="text-sm text-muted-foreground mb-2">Carbs</div>
               <div className="w-full bg-muted rounded-full h-2">
-                <div 
-                  className="bg-accent h-2 rounded-full" 
+                <div
+                  className="bg-accent h-2 rounded-full"
                   style={{ width: `${Math.min((todaysCarbs / carbsTarget) * 100, 100)}%` }}
                 ></div>
               </div>
@@ -187,8 +187,8 @@ export default function FoodTracking() {
               </div>
               <div className="text-sm text-muted-foreground mb-2">Fat</div>
               <div className="w-full bg-muted rounded-full h-2">
-                <div 
-                  className="bg-destructive h-2 rounded-full" 
+                <div
+                  className="bg-destructive h-2 rounded-full"
                   style={{ width: `${Math.min((todaysFat / fatTarget) * 100, 100)}%` }}
                 ></div>
               </div>
@@ -199,7 +199,97 @@ export default function FoodTracking() {
           </Card>
         </div>
 
-        {/* Hunger & Appetite Tracking */}
+        {/* Add Food Form - Moved to second section */}
+        <div className="mb-8">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <i className="fas fa-plus text-secondary"></i>
+                <span>Add Food</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <FoodEntryForm />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Food Log */}
+        <div className="mb-8">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <i className="fas fa-calendar text-primary"></i>
+                  <span>Food Log</span>
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {format(selectedDate, 'MMMM d, yyyy')}
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="breakfast" className="w-full">
+                <TabsList className="grid w-full grid-cols-4">
+                  {mealTypes.map(meal => (
+                    <TabsTrigger key={meal} value={meal} className="capitalize">
+                      {meal}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+
+                {mealTypes.map(meal => (
+                  <TabsContent key={meal} value={meal} className="mt-6">
+                    <div className="space-y-4" data-testid={`meal-entries-${meal}`}>
+                      {getFoodEntriesByMeal(meal).map((entry: any) => (
+                        <div key={entry.id} className="flex items-center justify-between p-4 border border-border rounded-lg">
+                          <div className="flex-1">
+                            <h4 className="font-medium text-foreground">{entry.foodName}</h4>
+                            {entry.brand && (
+                              <p className="text-sm text-muted-foreground">{entry.brand}</p>
+                            )}
+                            <p className="text-sm text-muted-foreground">
+                              {entry.quantity} {entry.unit} • {entry.calories} cal
+                            </p>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <div className="text-right text-sm">
+                              <p className="font-medium">{entry.calories} cal</p>
+                              <p className="text-muted-foreground">
+                                P: {Number(entry.protein).toFixed(1)}g •
+                                C: {Number(entry.carbs).toFixed(1)}g •
+                                F: {Number(entry.fat).toFixed(1)}g
+                              </p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => deleteFoodEntry.mutate(entry.id)}
+                              disabled={deleteFoodEntry.isPending}
+                              data-testid={`button-delete-${entry.id}`}
+                            >
+                              <i className="fas fa-trash text-destructive"></i>
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+
+                      {getFoodEntriesByMeal(meal).length === 0 && (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <i className="fas fa-utensils text-2xl mb-2"></i>
+                          <p>No {meal} entries yet</p>
+                          <p className="text-sm">Add your first {meal} item!</p>
+                        </div>
+                      )}
+                    </div>
+                  </TabsContent>
+                ))}
+              </Tabs>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Hunger & Appetite Tracking - Moved lower down */}
         <div className="mb-8">
           <Card>
             <CardHeader>
@@ -306,7 +396,7 @@ export default function FoodTracking() {
                   <Zap className="w-4 h-4 inline mr-1" />
                   Last logged: {hungerLogs?.[0] ? format(new Date(hungerLogs[0].loggedAt), 'h:mm a') : 'Never'}
                 </div>
-                <Button 
+                <Button
                   onClick={() => logHunger.mutate()}
                   disabled={logHunger.isPending}
                   data-testid="button-log-hunger"
@@ -331,98 +421,6 @@ export default function FoodTracking() {
               <HungerChart />
             </CardContent>
           </Card>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Food Log */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <i className="fas fa-calendar text-primary"></i>
-                    <span>Food Log</span>
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {format(selectedDate, 'MMMM d, yyyy')}
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Tabs defaultValue="breakfast" className="w-full">
-                  <TabsList className="grid w-full grid-cols-4">
-                    {mealTypes.map(meal => (
-                      <TabsTrigger key={meal} value={meal} className="capitalize">
-                        {meal}
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-                  
-                  {mealTypes.map(meal => (
-                    <TabsContent key={meal} value={meal} className="mt-6">
-                      <div className="space-y-4" data-testid={`meal-entries-${meal}`}>
-                        {getFoodEntriesByMeal(meal).map((entry: any) => (
-                          <div key={entry.id} className="flex items-center justify-between p-4 border border-border rounded-lg">
-                            <div className="flex-1">
-                              <h4 className="font-medium text-foreground">{entry.foodName}</h4>
-                              {entry.brand && (
-                                <p className="text-sm text-muted-foreground">{entry.brand}</p>
-                              )}
-                              <p className="text-sm text-muted-foreground">
-                                {entry.quantity} {entry.unit} • {entry.calories} cal
-                              </p>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <div className="text-right text-sm">
-                                <p className="font-medium">{entry.calories} cal</p>
-                                <p className="text-muted-foreground">
-                                  P: {Number(entry.protein).toFixed(1)}g • 
-                                  C: {Number(entry.carbs).toFixed(1)}g • 
-                                  F: {Number(entry.fat).toFixed(1)}g
-                                </p>
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => deleteFoodEntry.mutate(entry.id)}
-                                disabled={deleteFoodEntry.isPending}
-                                data-testid={`button-delete-${entry.id}`}
-                              >
-                                <i className="fas fa-trash text-destructive"></i>
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                        
-                        {getFoodEntriesByMeal(meal).length === 0 && (
-                          <div className="text-center py-8 text-muted-foreground">
-                            <i className="fas fa-utensils text-2xl mb-2"></i>
-                            <p>No {meal} entries yet</p>
-                            <p className="text-sm">Add your first {meal} item!</p>
-                          </div>
-                        )}
-                      </div>
-                    </TabsContent>
-                  ))}
-                </Tabs>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Add Food Form */}
-          <div>
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <i className="fas fa-plus text-secondary"></i>
-                  <span>Add Food</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <FoodEntryForm />
-              </CardContent>
-            </Card>
-          </div>
         </div>
       </div>
     </div>

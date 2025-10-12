@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import Navigation from "@/components/ui/navigation";
 import { MedicationCard } from "@/components/medication-card";
 import { MedicationForm } from "@/components/medication-form";
@@ -16,6 +17,8 @@ export default function Medication() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isDetailedLogOpen, setIsDetailedLogOpen] = useState(false);
   const [selectedMedication, setSelectedMedication] = useState<any>(null);
+  const [selectedLog, setSelectedLog] = useState<any>(null);
+  const [isViewLogDialogOpen, setIsViewLogDialogOpen] = useState(false);
 
   const { data: medications, isLoading: medicationsLoading } = useQuery({
     queryKey: ["/api/medications"],
@@ -53,8 +56,11 @@ export default function Medication() {
       takenAt: new Date().toISOString(),
       dosage,
       notes: "",
-      sideEffects: "",
-      sideEffectSeverity: null,
+      nausea: 0,
+      vomiting: 0,
+      diarrhea: 0,
+      constipation: 0,
+      heartburn: 0,
     });
   };
 
@@ -69,8 +75,11 @@ export default function Medication() {
       takenAt: new Date(data.takenAt).toISOString(),
       dosage: data.dosage,
       notes: data.notes || "",
-      sideEffects: data.sideEffects || "",
-      sideEffectSeverity: data.sideEffectSeverity || null,
+      nausea: data.nausea || 0,
+      vomiting: data.vomiting || 0,
+      diarrhea: data.diarrhea || 0,
+      constipation: data.constipation || 0,
+      heartburn: data.heartburn || 0,
     });
   };
 
@@ -157,7 +166,14 @@ export default function Medication() {
               <div className="space-y-4" data-testid="recent-medication-logs">
                 {(medicationLogs as any) && (medicationLogs as any).length > 0 ? (
                   (medicationLogs as any).slice(0, 5).map((log: any) => (
-                    <div key={log.id} className="flex items-center justify-between p-4 border border-border rounded-lg">
+                    <div
+                      key={log.id}
+                      className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                      onClick={() => {
+                        setSelectedLog(log);
+                        setIsViewLogDialogOpen(true);
+                      }}
+                    >
                       <div className="flex-1">
                         <div className="flex items-center space-x-2 mb-1">
                           <i className="fas fa-syringe text-accent text-sm"></i>
@@ -171,20 +187,22 @@ export default function Medication() {
                         <p className="text-sm text-muted-foreground">
                           {format(new Date(log.takenAt), 'MMM d, yyyy h:mm a')}
                         </p>
-                        {log.sideEffects && (
+                        {(log.nausea > 0 || log.vomiting > 0 || log.diarrhea > 0 || log.constipation > 0 || log.heartburn > 0) && (
                           <p className="text-xs text-destructive mt-1">
-                            Side effects: {log.sideEffects}
+                            <i className="fas fa-exclamation-triangle mr-1"></i>
+                            Side effects recorded
+                          </p>
+                        )}
+                        {log.notes && (
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
+                            <i className="fas fa-sticky-note mr-1"></i>
+                            {log.notes}
                           </p>
                         )}
                       </div>
-                      {log.sideEffectSeverity && (
-                        <div className="text-right">
-                          <div className="text-sm font-medium text-foreground">
-                            {log.sideEffectSeverity}/10
-                          </div>
-                          <div className="text-xs text-muted-foreground">Severity</div>
-                        </div>
-                      )}
+                      <div className="flex items-center space-x-3">
+                        <i className="fas fa-chevron-right text-muted-foreground text-sm"></i>
+                      </div>
                     </div>
                   ))
                 ) : (
@@ -274,6 +292,107 @@ export default function Medication() {
         dosage={selectedMedication?.dosage}
         isPending={logMedication.isPending}
       />
+
+      {/* View Log Dialog */}
+      <Dialog open={isViewLogDialogOpen} onOpenChange={setIsViewLogDialogOpen}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Medication Log Details</DialogTitle>
+          </DialogHeader>
+          {selectedLog && (
+            <div className="space-y-4">
+              {/* Dosage and Medication Type */}
+              <div className="border border-border rounded-lg p-4">
+                <div className="flex items-center space-x-2 mb-2">
+                  <i className="fas fa-syringe text-primary"></i>
+                  <span className="font-semibold text-foreground">Dosage</span>
+                </div>
+                <p className="text-lg font-bold text-foreground">{selectedLog.dosage}</p>
+                {selectedLog.medicationType && (
+                  <p className="text-sm text-muted-foreground capitalize mt-1">
+                    {selectedLog.medicationType}
+                  </p>
+                )}
+              </div>
+
+              {/* Date and Time */}
+              <div className="border border-border rounded-lg p-4">
+                <div className="flex items-center space-x-2 mb-2">
+                  <i className="fas fa-calendar text-secondary"></i>
+                  <span className="font-semibold text-foreground">Taken At</span>
+                </div>
+                <p className="text-sm text-foreground">
+                  {format(new Date(selectedLog.takenAt), 'EEEE, MMMM d, yyyy')}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {format(new Date(selectedLog.takenAt), 'h:mm a')}
+                </p>
+              </div>
+
+              {/* Notes */}
+              {selectedLog.notes && (
+                <div className="border border-border rounded-lg p-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <i className="fas fa-sticky-note text-accent"></i>
+                    <span className="font-semibold text-foreground">Notes</span>
+                  </div>
+                  <p className="text-sm text-foreground whitespace-pre-wrap">{selectedLog.notes}</p>
+                </div>
+              )}
+
+              {/* Side Effect Ratings */}
+              {(selectedLog.nausea > 0 || selectedLog.vomiting > 0 || selectedLog.diarrhea > 0 || selectedLog.constipation > 0 || selectedLog.heartburn > 0) && (
+                <div className="border border-destructive/20 bg-destructive/5 rounded-lg p-4">
+                  <div className="flex items-center space-x-2 mb-3">
+                    <i className="fas fa-exclamation-triangle text-destructive"></i>
+                    <span className="font-semibold text-foreground">Side Effects</span>
+                  </div>
+                  <div className="space-y-2">
+                    {selectedLog.nausea > 0 && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Nausea</span>
+                        <span className="text-sm font-medium text-foreground">{selectedLog.nausea}/5</span>
+                      </div>
+                    )}
+                    {selectedLog.vomiting > 0 && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Vomiting</span>
+                        <span className="text-sm font-medium text-foreground">{selectedLog.vomiting}/5</span>
+                      </div>
+                    )}
+                    {selectedLog.diarrhea > 0 && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Diarrhea</span>
+                        <span className="text-sm font-medium text-foreground">{selectedLog.diarrhea}/5</span>
+                      </div>
+                    )}
+                    {selectedLog.constipation > 0 && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Constipation</span>
+                        <span className="text-sm font-medium text-foreground">{selectedLog.constipation}/5</span>
+                      </div>
+                    )}
+                    {selectedLog.heartburn > 0 && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Heartburn</span>
+                        <span className="text-sm font-medium text-foreground">{selectedLog.heartburn}/5</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => setIsViewLogDialogOpen(false)}
+              >
+                Close
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

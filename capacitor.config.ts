@@ -7,6 +7,9 @@ const config: CapacitorConfig = {
   server: {
     androidScheme: 'https',
     iosScheme: 'https',
+    // For development, you can set the URL to your local server
+    // url: 'http://localhost:3000',
+    // cleartext: true,
   },
   plugins: {
     SplashScreen: {

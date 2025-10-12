@@ -1,297 +1,180 @@
-# SemaSlim Mobile App Setup Guide
+# Mobile Setup Guide for SemaSlim
 
-This guide explains how to compile your SemaSlim web app into native iOS and Android applications using Capacitor.
+This guide will help you run the SemaSlim app on iOS and Android devices using Capacitor.
 
 ## Prerequisites
 
-### For iOS Development
-- macOS computer
-- Xcode 14+ installed
-- iOS Developer account (for App Store deployment)
-- CocoaPods installed: `sudo gem install cocoapods`
+### For iOS Development:
+- macOS with Xcode installed
+- iOS Simulator or physical iPhone
+- Apple Developer account (for physical devices)
 
-### For Android Development
+### For Android Development:
 - Android Studio installed
-- Java Development Kit (JDK) 17+
-- Android SDK Platform 33+
+- Android SDK and emulator configured
+- JDK 17 or higher
 
-## Quick Start
+## Setup Steps
 
-### 1. Build the Web Application
-
+### 1. Build the Web App
+First, build the web application:
 ```bash
-npm run build
+npm run mobile:build
 ```
 
-This creates an optimized production build in `dist/public/`.
-
-### 2. Add Mobile Platforms
-
-**For iOS:**
-```bash
-./mobile-build.sh add-ios
-```
-
-**For Android:**
-```bash
-./mobile-build.sh add-android
-```
-
-Or use npx directly:
-```bash
-npx cap add ios
-npx cap add android
-```
-
-### 3. Sync Web Assets to Native Projects
-
-After building the web app, sync the changes:
-
-```bash
-./mobile-build.sh sync
-```
-
-Or:
+### 2. Sync with Native Projects
+This creates/updates the iOS and Android projects:
 ```bash
 npx cap sync
 ```
 
-### 4. Open Native IDEs
-
-**For iOS:**
+Or use the combined command:
 ```bash
-./mobile-build.sh ios
+npm run mobile:sync
 ```
 
-**For Android:**
+### 3. Run on iOS
+
+#### Using iOS Simulator:
 ```bash
-./mobile-build.sh android
+npm run mobile:run:ios
 ```
 
-This opens Xcode or Android Studio where you can:
-- Configure app signing
-- Set permissions
-- Build and run on simulators/devices
-- Submit to app stores
-
-## Configuration
-
-### App Identity
-
-Edit `capacitor.config.ts` to customize your app:
-
-```typescript
-const config: CapacitorConfig = {
-  appId: 'com.yourcompany.semaslim',  // Change this!
-  appName: 'SemaSlim',
-  webDir: 'dist/public',
-};
-```
-
-### Environment Variables
-
-For mobile builds, create `.env.mobile`:
-
+#### Using Xcode (recommended for first run):
 ```bash
-cp .env.mobile.example .env.mobile
+npm run mobile:ios
+```
+This opens Xcode where you can:
+- Select your target device (simulator or physical)
+- Click the Play button to build and run
+
+### 4. Run on Android
+
+#### Using Android Emulator:
+```bash
+npm run mobile:run:android
 ```
 
-**IMPORTANT SECURITY NOTE:** Only `VITE_` prefixed environment variables are embedded in the mobile app. Server-side secrets like `AUTH0_CLIENT_SECRET`, `DATABASE_URL`, and `SESSION_SECRET` must NEVER be included in mobile builds. These secrets should only exist on your backend server.
-
-Update the API URL in `.env.mobile` to point to your backend:
-- **Local testing:** Use your computer's IP address (e.g., `http://192.168.1.100:5000`)
-- **Production:** Use your deployed API URL (e.g., `https://your-api-domain.com`)
-
+#### Using Android Studio (recommended for first run):
+```bash
+npm run mobile:android
 ```
-VITE_API_URL=https://your-api-domain.com
-VITE_APP_NAME=SemaSlim
-VITE_APP_VERSION=1.0.0
-```
-
-Your backend server handles all authentication. The mobile app communicates with your backend API, which then manages Auth0 sessions and database access securely.
+This opens Android Studio where you can:
+- Select your target device (emulator or physical)
+- Click the Run button to build and deploy
 
 ## Development Workflow
 
-### Making Changes
+### Testing with Live Server
+For development, you can point the app to your local development server:
 
-1. Update your React/TypeScript code
-2. Build the web app: `npm run build`
-3. Sync to native projects: `./mobile-build.sh sync`
-4. Test in Xcode/Android Studio
-
-### Live Reload (Development)
-
-For faster iteration during development:
-
-1. Start your dev server:
-   ```bash
-   npm run dev
-   ```
-
-2. Update `capacitor.config.ts`:
-   ```typescript
-   server: {
-     url: 'http://192.168.1.xxx:5000',  // Your dev machine IP
-     cleartext: true
-   }
-   ```
-
-3. Run the app in the simulator/device
-4. Changes will hot-reload automatically
-
-**Remember:** Remove the `server.url` config before production builds!
-
-## Platform-Specific Configuration
-
-### iOS
-
-1. Open `ios/App/App.xcworkspace` in Xcode
-2. Update Bundle Identifier (matches `appId` in config)
-3. Configure signing in "Signing & Capabilities"
-4. Update deployment target (iOS 13.0+)
-5. Set required permissions in `Info.plist`:
-   - Camera (for barcode scanning)
-   - Photo Library (for profile pictures)
-   - Notifications (for medication reminders)
-
-### Android
-
-1. Open `android/` folder in Android Studio
-2. Update `package` in `android/app/build.gradle`
-3. Update `minSdkVersion` (21+) and `targetSdkVersion` (33+)
-4. Set permissions in `AndroidManifest.xml`:
-   - CAMERA
-   - READ_EXTERNAL_STORAGE
-   - INTERNET
-
-## Building for Production
-
-### iOS
-
-1. Open in Xcode: `./mobile-build.sh ios`
-2. Select "Any iOS Device" as target
-3. Product → Archive
-4. Follow Xcode's submission process to App Store
-
-### Android
-
-1. Open in Android Studio: `./mobile-build.sh android`
-2. Build → Generate Signed Bundle / APK
-3. Follow the signing wizard
-4. Upload to Google Play Console
-
-## Native Features
-
-Capacitor provides access to native APIs:
-
+1. Edit `capacitor.config.ts`:
 ```typescript
-import { Camera } from '@capacitor/camera';
-import { LocalNotifications } from '@capacitor/local-notifications';
-import { Storage } from '@capacitor/preferences';
-
-// Example: Take a photo
-const image = await Camera.getPhoto({
-  quality: 90,
-  allowEditing: true,
-  resultType: CameraResultType.Uri
-});
+server: {
+  url: 'http://YOUR_LOCAL_IP:3000',  // e.g., 'http://192.168.1.100:3000'
+  cleartext: true,
+},
 ```
 
-To add more native plugins:
+2. Find your local IP:
+   - **macOS/Linux**: `ifconfig | grep inet`
+   - **Windows**: `ipconfig`
 
+3. Sync the changes:
 ```bash
-npm install @capacitor/camera
 npx cap sync
 ```
+
+4. Start your development server:
+```bash
+npm run dev
+```
+
+5. Run the app on your device/emulator
+
+**Note**: Your device must be on the same network as your development machine.
+
+### Production Build
+For production, build the web app and sync:
+```bash
+npm run mobile:sync
+```
+The app will use the bundled files in `dist/public`.
+
+## Available Scripts
+
+- `npm run mobile:build` - Build web app for mobile
+- `npm run mobile:sync` - Build and sync with native projects
+- `npm run mobile:ios` - Open iOS project in Xcode
+- `npm run mobile:android` - Open Android project in Android Studio
+- `npm run mobile:run:ios` - Build and run on iOS
+- `npm run mobile:run:android` - Build and run on Android
 
 ## Troubleshooting
 
-### Build Errors
+### iOS Issues
 
-**"webDir not found"**
-- Run `npm run build` first
-- Verify `dist/public` directory exists
+**"Command PhaseScriptExecution failed"**
+- Clean build folder in Xcode (Cmd+Shift+K)
+- Delete derived data
+- Run `npx cap sync ios` again
 
-**iOS Pod Install Fails**
-```bash
-cd ios/App
-pod repo update
-pod install
-```
+**Signing Issues**
+- Ensure you have a valid Apple Developer account
+- Configure signing in Xcode > Project > Signing & Capabilities
 
-**Android Gradle Errors**
-- Update Android Studio
-- Sync Gradle files
-- Clear cache: Build → Clean Project
+### Android Issues
 
-### API Connection Issues
+**SDK not found**
+- Set ANDROID_HOME environment variable
+- Configure SDK location in Android Studio
 
-- Check `VITE_API_URL` environment variable in your mobile build
-- Ensure backend allows CORS for your mobile app origin
-- For local testing, use computer's IP, not localhost (mobile devices can't reach localhost)
-- Verify your backend server has correct Auth0 configuration and allows the mobile app's callback URLs
+**Build fails**
+- Check Java version: `java -version` (needs JDK 17+)
+- Clean and rebuild: `./gradlew clean` in `android/` folder
 
-### Permissions
+### General Issues
 
-If native features don't work:
-- Check platform-specific permission configs
-- Request permissions at runtime
-- Verify capabilities in Xcode
+**White screen on app launch**
+- Check browser console in development mode
+- Verify API endpoints are accessible from the device
+- Check network connectivity
 
-## Testing
+**API calls fail**
+- Ensure backend server is running and accessible
+- For local development, use your machine's IP address
+- Check CORS configuration on backend
 
-### iOS Simulator
-```bash
-./mobile-build.sh ios
-# In Xcode: Select simulator → Press Play
-```
+## Environment Variables
 
-### Android Emulator
-```bash
-./mobile-build.sh android
-# In Android Studio: Select emulator → Press Play
-```
+Make sure to configure these in your `.env` file:
+- `VITE_CLERK_PUBLISHABLE_KEY` - Clerk authentication key
+- `DATABASE_URL` - Database connection string
+- `ANTHROPIC_API_KEY` - Claude AI API key
 
-### Physical Devices
+## App Configuration
 
-**iOS:**
-- Connect device via USB
-- Trust certificate on device
-- Select device in Xcode
-- Build and run
+Key configuration files:
+- `capacitor.config.ts` - Capacitor configuration
+- `app.json` - App metadata
+- `client/src/mobile-init.ts` - Mobile initialization code
 
-**Android:**
-- Enable Developer Mode on device
-- Enable USB Debugging
-- Connect via USB
-- Select device in Android Studio
+## Building for Release
 
-## Helpful Commands
+### iOS App Store
+1. Open in Xcode: `npm run mobile:ios`
+2. Update version and build number
+3. Archive the app (Product > Archive)
+4. Upload to App Store Connect
 
-```bash
-# Check Capacitor status
-npx cap doctor
+### Google Play Store
+1. Open in Android Studio: `npm run mobile:android`
+2. Update version in `android/app/build.gradle`
+3. Generate signed APK/Bundle (Build > Generate Signed Bundle/APK)
+4. Upload to Google Play Console
 
-# Update Capacitor
-npm install @capacitor/cli@latest @capacitor/core@latest
-npm install @capacitor/ios@latest @capacitor/android@latest
-npx cap sync
-
-# View native logs
-npx cap run ios --livereload
-npx cap run android --livereload
-```
-
-## Resources
+## Additional Resources
 
 - [Capacitor Documentation](https://capacitorjs.com/docs)
-- [iOS Human Interface Guidelines](https://developer.apple.com/design/human-interface-guidelines/)
-- [Android Material Design](https://material.io/design)
-- [App Store Review Guidelines](https://developer.apple.com/app-store/review/guidelines/)
-- [Google Play Policies](https://play.google.com/about/developer-content-policy/)
-
-## Support
-
-For issues specific to:
-- **Capacitor:** Check [Capacitor GitHub](https://github.com/ionic-team/capacitor)
-- **SemaSlim App:** Review the main README or contact support
+- [iOS Developer Guide](https://developer.apple.com/ios/)
+- [Android Developer Guide](https://developer.android.com/)

@@ -164,6 +164,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Auth routes
+
+  // Login endpoint - redirects to Clerk sign-in
+  app.get('/api/login', (_req, res) => {
+    // In production, Clerk handles this client-side
+    // This endpoint is for API documentation/testing
+    res.status(200).json({
+      message: 'Please use Clerk sign-in component on the frontend',
+      clerkPublishableKey: process.env.CLERK_PUBLISHABLE_KEY?.substring(0, 15) + '...'
+    });
+  });
+
+  // Logout endpoint - clears Clerk session
+  app.post('/api/logout', async (req: any, res) => {
+    try {
+      logger.info('User logout requested', { userId: req.auth?.userId });
+
+      // Clerk handles session management via cookies
+      // Clear the session cookie and respond
+      res.clearCookie('__session', { path: '/' });
+      res.clearCookie('__clerk_db_jwt', { path: '/' });
+
+      res.status(200).json({
+        message: 'Logged out successfully',
+        redirect: '/'
+      });
+    } catch (error) {
+      logger.error('Logout error', error as Error);
+      res.status(500).json({ message: 'Logout failed' });
+    }
+  });
+
+  // Also support GET for logout (for browser redirects)
+  app.get('/api/logout', async (req: any, res) => {
+    try {
+      logger.info('User logout requested (GET)', { userId: req.auth?.userId });
+
+      res.clearCookie('__session', { path: '/' });
+      res.clearCookie('__clerk_db_jwt', { path: '/' });
+
+      // Redirect to home page after logout
+      res.redirect('/');
+    } catch (error) {
+      logger.error('Logout error', error as Error);
+      res.status(500).json({ message: 'Logout failed' });
+    }
+  });
+
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.auth.userId;

@@ -101,6 +101,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Diagnostic endpoint for environment variables (no auth required)
+  app.get('/api/diagnostics', async (_req, res) => {
+    try {
+      const diagnostics = {
+        timestamp: new Date().toISOString(),
+        environment: {
+          nodeEnv: process.env.NODE_ENV || 'not set',
+          isVercel: process.env.VERCEL === '1',
+          isLambda: !!process.env.AWS_LAMBDA_FUNCTION_NAME,
+        },
+        envVars: {
+          hasClerkPublishableKey: !!process.env.CLERK_PUBLISHABLE_KEY,
+          hasClerkSecretKey: !!process.env.CLERK_SECRET_KEY,
+          hasViteClerkPublishableKey: !!process.env.VITE_CLERK_PUBLISHABLE_KEY,
+          hasDatabaseUrl: !!process.env.DATABASE_URL,
+          hasAnthropicApiKey: !!process.env.ANTHROPIC_API_KEY,
+          hasSessionSecret: !!process.env.SESSION_SECRET,
+          clerkPublishableKeyPrefix: process.env.CLERK_PUBLISHABLE_KEY?.substring(0, 15) || 'not set',
+        },
+        database: 'checking...'
+      };
+
+      // Test database connection
+      try {
+        const { pool, withRetry } = await import('./db');
+        await withRetry(() => pool.query('SELECT 1'), 2, 500);
+        diagnostics.database = 'connected';
+      } catch (dbError) {
+        diagnostics.database = `error: ${dbError instanceof Error ? dbError.message : 'Unknown error'}`;
+      }
+
+      const allEnvVarsSet =
+        diagnostics.envVars.hasClerkPublishableKey &&
+        diagnostics.envVars.hasClerkSecretKey &&
+        diagnostics.envVars.hasDatabaseUrl;
+
+      res.status(allEnvVarsSet ? 200 : 503).json({
+        status: allEnvVarsSet && diagnostics.database === 'connected' ? 'healthy' : 'configuration_error',
+        message: allEnvVarsSet
+          ? 'All critical environment variables are set'
+          : 'Missing required environment variables - check Vercel dashboard',
+        diagnostics
+      });
+    } catch (error) {
+      logger.error('Diagnostics check failed', error as Error);
+      res.status(500).json({
+        status: 'error',
+        message: 'Diagnostics check failed',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {

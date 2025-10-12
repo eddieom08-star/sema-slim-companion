@@ -5,7 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth as useClerkAuth } from "@clerk/clerk-react";
 import { useAuth } from "@/hooks/useAuth";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Dashboard from "@/pages/dashboard";
@@ -20,56 +20,25 @@ import { OfflineIndicator } from "@/components/offline-indicator";
 import { NetworkAwareIndicator } from "@/components/network-aware";
 import { Redirect } from "@/components/redirect";
 
+/**
+ * Router component with simplified auth flow
+ *
+ * PHASE 1 CLEANUP:
+ * - Removed 3-second error delay band-aid
+ * - Removed showError state
+ * - Simplified to just show loading while auth is in progress
+ * - Let error boundaries handle actual errors
+ */
 function Router() {
-  const { isAuthenticated, isLoading, user, error } = useAuth();
-  const { isSignedIn, isLoaded: clerkLoaded } = useClerkAuth();
-  const [showError, setShowError] = useState(false);
+  const { isAuthenticated, isLoading, user } = useAuth();
 
-  // Only show error screen if error persists for more than 3 seconds
-  // This allows retry logic to complete without showing error prematurely
-  useEffect(() => {
-    if (error && clerkLoaded && isSignedIn && !user) {
-      const timer = setTimeout(() => {
-        setShowError(true);
-      }, 3000); // Wait 3 seconds before showing error
-      return () => clearTimeout(timer);
-    } else {
-      setShowError(false);
-    }
-  }, [error, clerkLoaded, isSignedIn, user]);
-
+  // Show loading spinner while Clerk or database user is loading
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center space-y-4">
           <div className="w-10 h-10 bg-primary rounded-lg animate-pulse mx-auto"></div>
           <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Only show authentication error if showError is true (set after 3 second delay)
-  // This gives retry logic time to complete before showing error screen
-  if (showError) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <div className="text-center space-y-4 max-w-md">
-          <div className="w-12 h-12 bg-destructive/10 rounded-lg flex items-center justify-center mx-auto">
-            <i className="fas fa-exclamation-triangle text-destructive text-xl"></i>
-          </div>
-          <div className="space-y-2">
-            <h2 className="text-lg font-semibold text-foreground">Authentication Error</h2>
-            <p className="text-sm text-muted-foreground">
-              We encountered an issue loading your account. This usually resolves by signing in again.
-            </p>
-          </div>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-          >
-            Try Again
-          </button>
         </div>
       </div>
     );

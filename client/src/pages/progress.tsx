@@ -30,6 +30,10 @@ export default function Progress() {
     queryKey: ["/api/streaks"],
   });
 
+  const { data: userProfile, isLoading: isProfileLoading } = useQuery({
+    queryKey: ["/api/auth/user"],
+  });
+
   const logWeight = useMutation({
     mutationFn: async (data: any) => {
       await apiRequest("POST", "/api/weight-logs", data);
@@ -77,7 +81,7 @@ export default function Progress() {
 
   const weightLoggingStreak = (streaks as any)?.find((s: any) => s.streakType === 'weight_logging')?.currentStreak || 0;
 
-  if (weightLogsLoading || achievementsLoading || streaksLoading) {
+  if (weightLogsLoading || achievementsLoading || streaksLoading || isProfileLoading) {
     return (
       <div className="min-h-screen bg-background">
         <Navigation />
@@ -113,7 +117,7 @@ export default function Progress() {
           <Card data-testid="card-current-weight">
             <CardContent className="p-6 text-center">
               <div className="text-3xl font-bold text-foreground mb-2">
-                {latestWeight ? `${Number(latestWeight.weight).toFixed(1)} lbs` : 'No data'}
+                {latestWeight ? `${Number(latestWeight.weight).toFixed(1)} lbs` : userProfile && (userProfile as any).currentWeight ? `${Number((userProfile as any).currentWeight).toFixed(1)} lbs` : 'No data'}
               </div>
               <div className="text-sm text-muted-foreground mb-2">Current Weight</div>
               {weightChange !== 0 && (

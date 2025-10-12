@@ -243,6 +243,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Logout route - redirects to Clerk sign-out with proper return URL
+  app.get('/api/logout', (_req, res) => {
+    // Clerk handles session cleanup via their sign-out endpoint
+    // All data is automatically saved since it's persisted in the database on each request
+    const signOutUrl = process.env.CLERK_SIGN_OUT_URL || 'https://clerk.complete-bullfrog-71.accounts.dev/sign-out';
+    const returnUrl = process.env.NODE_ENV === 'production'
+      ? process.env.PRODUCTION_URL || 'http://localhost:3000'
+      : 'http://localhost:3000';
+
+    res.redirect(`${signOutUrl}?redirect_url=${encodeURIComponent(returnUrl)}`);
+  });
+
   // User profile routes
   app.put('/api/user/profile', isAuthenticated, async (req: any, res) => {
     try {
@@ -250,6 +262,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Updating profile for user:", userId, "with data:", req.body);
       const validatedData = updateUserProfileSchema.parse(req.body);
       const user = await storage.updateUserProfile(userId, validatedData);
+
+      // If onboarding is being completed and medication data is provided, create a medication entry
+      if (validatedData.onboardingCompleted && validatedData.medicationType && validatedData.startDate) {
+        // Check if medication already exists to avoid duplicates
+        const existingMedications = await storage.getUserMedications(userId);
+
+        if (existingMedications.length === 0) {
+          // Determine default dosage based on medication type
+          const defaultDosages: Record<string, string> = {
+            'ozempic': '0.25mg',
+            'mounjaro': '2.5mg',
+            'wegovy': '0.25mg',
+            'rybelsus': '3mg'
+          };
+
+          const dosage = defaultDosages[validatedData.medicationType] || '0.25mg';
+
+          // Calculate next due date (weekly for most GLP-1s)
+          const nextDueDate = new Date(validatedData.startDate);
+          nextDueDate.setDate(nextDueDate.getDate() + 7);
+
+          await storage.createMedication({
+            userId,
+            medicationType: validatedData.medicationType,
+            dosage,
+            frequency: 'weekly',
+            startDate: validatedData.startDate,
+            nextDueDate,
+            reminderEnabled: true,
+            adherenceScore: 100
+          });
+
+          console.log(`Created medication entry for user ${userId}: ${validatedData.medicationType} ${dosage}`);
+        }
+      }
+
       res.json(user);
     } catch (error: any) {
       if (error.name === 'ZodError') {
@@ -1426,6 +1474,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error creating recommendation:", error);
       res.status(500).json({ message: "Failed to create recommendation" });
+    }
+  });
+
+  // AI Recipe Chat endpoint - Claude integration
+  app.post('/api/ai/recipe-chat', isAuthenticated, async (req: any, res) => {
+    try {
+      const { messages, systemPrompt } = req.body;
+
+      if (!messages || !Array.isArray(messages)) {
+        return res.status(400).json({ message: "Messages array is required" });
+      }
+
+      if (!systemPrompt || typeof systemPrompt !== 'string') {
+        return res.status(400).json({ message: "System prompt is required" });
+      }
+
+      // Import Anthropic SDK dynamically
+      const { Anthropic } = await import('@anthropic-ai/sdk');
+
+      const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+      if (!anthropicApiKey || anthropicApiKey === 'your_anthropic_api_key_here') {
+        logger.error('Anthropic API key not configured');
+        return res.status(500).json({
+          message: "AI service is not configured. Please add your Anthropic API key to the environment variables."
+        });
+      }
+
+      const anthropic = new Anthropic({
+        apiKey: anthropicApiKey,
+      });
+
+      // Format messages for Claude API (remove system messages from user conversation)
+      const formattedMessages = messages
+        .filter((msg: any) => msg.role === 'user' || msg.role === 'assistant')
+        .map((msg: any) => ({
+          role: msg.role,
+          content: msg.content
+        }));
+
+      // Call Claude API
+      const response = await anthropic.messages.create({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 2048,
+        system: systemPrompt,
+        messages: formattedMessages,
+      });
+
+      // Extract the text response
+      const assistantMessage = response.content[0].type === 'text'
+        ? response.content[0].text
+        : 'I apologize, but I could not generate a response.';
+
+      res.json({ message: assistantMessage });
+    } catch (error: any) {
+      console.error("Error calling Claude API:", error);
+
+      // Provide more specific error messages
+      if (error.status === 401) {
+        return res.status(500).json({ message: "AI service authentication failed. Please check the API key." });
+      } else if (error.status === 429) {
+        return res.status(429).json({ message: "AI service rate limit exceeded. Please try again later." });
+      } else if (error.message?.includes('API key')) {
+        return res.status(500).json({ message: "AI service configuration error. Please contact support." });
+      }
+
+      res.status(500).json({ message: "Failed to get AI response. Please try again." });
     }
   });
 

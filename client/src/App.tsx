@@ -5,7 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth as useClerkAuth } from "@clerk/clerk-react";
 import { useAuth } from "@/hooks/useAuth";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Dashboard from "@/pages/dashboard";
@@ -22,6 +22,20 @@ import { NetworkAwareIndicator } from "@/components/network-aware";
 function Router() {
   const { isAuthenticated, isLoading, user, error } = useAuth();
   const { isSignedIn, isLoaded: clerkLoaded } = useClerkAuth();
+  const [showError, setShowError] = useState(false);
+
+  // Only show error screen if error persists for more than 3 seconds
+  // This allows retry logic to complete without showing error prematurely
+  useEffect(() => {
+    if (error && clerkLoaded && isSignedIn && !user) {
+      const timer = setTimeout(() => {
+        setShowError(true);
+      }, 3000); // Wait 3 seconds before showing error
+      return () => clearTimeout(timer);
+    } else {
+      setShowError(false);
+    }
+  }, [error, clerkLoaded, isSignedIn, user]);
 
   if (isLoading) {
     return (
@@ -34,12 +48,9 @@ function Router() {
     );
   }
 
-  // Only show authentication error if:
-  // 1. There's an error AND
-  // 2. Clerk shows user as signed in AND
-  // 3. We don't have user data yet (if we have user data, auth is working)
-  // This prevents showing error during brief race conditions after sign-in
-  if (error && clerkLoaded && isSignedIn && !user) {
+  // Only show authentication error if showError is true (set after 3 second delay)
+  // This gives retry logic time to complete before showing error screen
+  if (showError) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <div className="text-center space-y-4 max-w-md">

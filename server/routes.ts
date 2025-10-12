@@ -44,8 +44,24 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutM
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Apply Clerk middleware to all routes
-  app.use(clerkMiddleware());
+  // Verify Clerk credentials are loaded
+  if (!process.env.CLERK_PUBLISHABLE_KEY || !process.env.CLERK_SECRET_KEY) {
+    logger.error('Clerk credentials not found in environment', {
+      hasPublishable: !!process.env.CLERK_PUBLISHABLE_KEY,
+      hasSecret: !!process.env.CLERK_SECRET_KEY,
+    });
+    throw new Error('CLERK_PUBLISHABLE_KEY and CLERK_SECRET_KEY must be set');
+  }
+
+  logger.info('Initializing Clerk middleware', {
+    publishableKeyPrefix: process.env.CLERK_PUBLISHABLE_KEY.substring(0, 15),
+  });
+
+  // Apply Clerk middleware to all routes with explicit config
+  app.use(clerkMiddleware({
+    publishableKey: process.env.CLERK_PUBLISHABLE_KEY,
+    secretKey: process.env.CLERK_SECRET_KEY,
+  }));
 
   // Health check endpoints (no auth required)
   app.get('/health', async (_req, res) => {

@@ -1,11 +1,10 @@
 {
   "version": 2,
-  "buildCommand": "npm run build",
+  "buildCommand": "npm run vercel-build",
   "functions": {
     "api/serverless.js": {
       "memory": 1024,
-      "maxDuration": 10,
-      "includeFiles": "dist/**"
+      "maxDuration": 10
     }
   },
   "rewrites": [

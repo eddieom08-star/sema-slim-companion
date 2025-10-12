@@ -1,7 +1,7 @@
 // Vercel Serverless Function Handler
 // This wraps your Express app for Vercel's serverless environment
 
-import { createServer } from '../dist/index.js';
+import { createServer } from './server.js';
 
 // Cache the Express app instance
 let app = null;

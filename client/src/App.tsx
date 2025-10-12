@@ -18,6 +18,7 @@ import Recipes from "@/pages/recipes";
 import { PWAInstallPrompt } from "@/components/pwa-install-prompt";
 import { OfflineIndicator } from "@/components/offline-indicator";
 import { NetworkAwareIndicator } from "@/components/network-aware";
+import { Redirect } from "@/components/redirect";
 
 function Router() {
   const { isAuthenticated, isLoading, user, error } = useAuth();
@@ -78,6 +79,7 @@ function Router() {
     <Switch>
       {!isAuthenticated ? (
         <>
+          {/* Not authenticated: show landing page */}
           <Route path="/" component={Landing} />
           <Route path="/:any*" component={Landing} />
         </>
@@ -85,12 +87,15 @@ function Router() {
         <>
           {user && !(user as any).onboardingCompleted ? (
             <>
+              {/* Authenticated but onboarding not complete: show onboarding */}
               <Route path="/" component={Onboarding} />
               <Route path="/:any*" component={Onboarding} />
             </>
           ) : (
             <>
-              <Route path="/" component={Dashboard} />
+              {/* Authenticated and onboarded: show app */}
+              <Route path="/" component={() => <Redirect to="/dashboard" />} />
+              <Route path="/dashboard" component={Dashboard} />
               <Route path="/food-tracking" component={FoodTracking} />
               <Route path="/medication" component={Medication} />
               <Route path="/recipes" component={Recipes} />

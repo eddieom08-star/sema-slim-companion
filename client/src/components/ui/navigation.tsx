@@ -22,7 +22,7 @@ export default function Navigation() {
   };
 
   const navItems = [
-    { path: "/", label: "Dashboard", icon: "fas fa-tachometer-alt" },
+    { path: "/dashboard", label: "Dashboard", icon: "fas fa-tachometer-alt" },
     { path: "/food-tracking", label: "Food", icon: "fas fa-utensils" },
     { path: "/medication", label: "Medication", icon: "fas fa-syringe" },
     { path: "/recipes", label: "Recipes", icon: "fas fa-book" },
@@ -44,21 +44,25 @@ export default function Navigation() {
           </div>
           
           <nav className="hidden md:flex items-center space-x-8">
-            {navItems.map((item) => (
-              <Link key={item.path} href={item.path}>
-                <a 
-                  className={`text-sm font-medium transition-colors flex items-center space-x-2 ${
-                    location === item.path 
-                      ? "text-primary" 
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                  data-testid={`nav-link-${item.label.toLowerCase()}`}
-                >
-                  <i className={item.icon}></i>
-                  <span>{item.label}</span>
-                </a>
-              </Link>
-            ))}
+            {navItems.map((item) => {
+              // Dashboard should be active for both /dashboard and / (which redirects to /dashboard)
+              const isActive = location === item.path || (item.path === "/dashboard" && location === "/");
+              return (
+                <Link key={item.path} href={item.path}>
+                  <a
+                    className={`text-sm font-medium transition-colors flex items-center space-x-2 ${
+                      isActive
+                        ? "text-primary"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                    data-testid={`nav-link-${item.label.toLowerCase()}`}
+                  >
+                    <i className={item.icon}></i>
+                    <span>{item.label}</span>
+                  </a>
+                </Link>
+              );
+            })}
           </nav>
           
           <div className="flex items-center space-x-4">
@@ -104,21 +108,25 @@ export default function Navigation() {
       {/* Mobile Navigation */}
       <div className="md:hidden border-t border-border">
         <div className="flex justify-around py-2">
-          {navItems.map((item) => (
-            <Link key={item.path} href={item.path}>
-              <a 
-                className={`flex flex-col items-center p-2 text-xs transition-colors ${
-                  location === item.path 
-                    ? "text-primary" 
-                    : "text-muted-foreground"
-                }`}
-                data-testid={`mobile-nav-${item.label.toLowerCase()}`}
-              >
-                <i className={`${item.icon} text-lg mb-1`}></i>
-                <span>{item.label}</span>
-              </a>
-            </Link>
-          ))}
+          {navItems.map((item) => {
+            // Dashboard should be active for both /dashboard and / (which redirects to /dashboard)
+            const isActive = location === item.path || (item.path === "/dashboard" && location === "/");
+            return (
+              <Link key={item.path} href={item.path}>
+                <a
+                  className={`flex flex-col items-center p-2 text-xs transition-colors ${
+                    isActive
+                      ? "text-primary"
+                      : "text-muted-foreground"
+                  }`}
+                  data-testid={`mobile-nav-${item.label.toLowerCase()}`}
+                >
+                  <i className={`${item.icon} text-lg mb-1`}></i>
+                  <span>{item.label}</span>
+                </a>
+              </Link>
+            );
+          })}
         </div>
       </div>
 

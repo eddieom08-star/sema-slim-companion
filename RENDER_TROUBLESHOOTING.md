@@ -46,13 +46,35 @@ Error: CLERK_PUBLISHABLE_KEY and CLERK_SECRET_KEY must be set
    - ✅ `NODE_ENV` = `production`
    - ✅ `PORT` = `10000`
 
-**Note:** Check the correct DATABASE_URL from your earlier file:
-```
-postgresql://username:password@your-neon-host.neon.tech/dbname?sslmode=require
+**CRITICAL:** Check these exact values:
+```bash
+DATABASE_URL=postgresql://username:password@your-neon-host.neon.tech/dbname?sslmode=require
+PORT=10000
 ```
 (Note: `us-west-2` with hyphen, not `us-west2`)
+(Note: `PORT=10000` as a number, NOT the literal string `PORT=PORT`)
 
-## Issue 3: Rollup Platform Binary Error
+## Issue 3: PORT Configuration Error (NaN)
+
+**Symptoms:**
+```
+Starting HTTP server... | {"port":null,"host":"0.0.0.0"}
+Fatal error during server initialization | {"error":"options.port should be >= 0 and < 65536. Received type number (NaN)."}
+RangeError [ERR_SOCKET_BAD_PORT]
+```
+
+**Cause:** PORT environment variable is set to the literal string `"PORT"` instead of a number
+
+**Fix:**
+1. Go to Render dashboard → Your service → **Environment**
+2. Find the **PORT** variable
+3. Change from: `PORT` (wrong)
+4. Change to: `10000` (correct)
+5. Save and redeploy
+
+**Important:** The value should be just the number `10000`, NOT the string `"PORT"`
+
+## Issue 4: Rollup Platform Binary Error
 
 **Symptoms:**
 ```
@@ -69,7 +91,7 @@ Error: Cannot find module @rollup/rollup-linux-x64-gnu
 grep -i "rollup" dist/index.js
 ```
 
-## Issue 4: Server Not Listening
+## Issue 5: Server Not Listening
 
 **Symptoms:**
 ```
@@ -90,7 +112,7 @@ Running in serverless mode - skipping server.listen()
 - `VERCEL` should NOT be set on Render
 - `AWS_LAMBDA_FUNCTION_NAME` should NOT be set on Render
 
-## Issue 5: Static Files Not Found
+## Issue 6: Static Files Not Found
 
 **Symptoms:**
 ```
@@ -190,10 +212,14 @@ Run this in your local terminal to verify the correct values:
 cat /Users/edoomoniyi/sema-slim-env/sema-slim-companion.env
 ```
 
-### Common DATABASE_URL Issues:
+### Common Environment Variable Issues:
+
+**DATABASE_URL:**
 - ❌ `us-west2` (missing hyphen)
 - ✅ `us-west-2` (correct format)
-- ❌ `PORT=PORT` (literal string)
+
+**PORT:**
+- ❌ `PORT=PORT` (literal string - causes NaN error)
 - ✅ `PORT=10000` (actual port number)
 
 ## Get Help from Logs

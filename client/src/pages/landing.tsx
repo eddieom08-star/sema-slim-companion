@@ -2,10 +2,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { SignInButton, SignUpButton, useUser } from "@clerk/clerk-react";
 import { useLocation } from "wouter";
+import { useEffect } from "react";
 
 export default function Landing() {
-  const { isSignedIn } = useUser();
+  const { isSignedIn, isLoaded } = useUser();
   const [, setLocation] = useLocation();
+
+  // Auto-redirect to dashboard if already signed in
+  useEffect(() => {
+    if (isLoaded && isSignedIn) {
+      setLocation("/dashboard");
+    }
+  }, [isLoaded, isSignedIn, setLocation]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -23,7 +31,11 @@ export default function Landing() {
               </div>
             </div>
 
-            {isSignedIn ? (
+            {!isLoaded ? (
+              <Button disabled data-testid="button-loading">
+                Loading...
+              </Button>
+            ) : isSignedIn ? (
               <Button onClick={() => setLocation("/dashboard")} data-testid="button-dashboard">
                 Go to Dashboard
               </Button>

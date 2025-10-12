@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
+import { useClerk } from "@clerk/clerk-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { NotificationCenter, useUnreadNotificationsCount } from "@/components/notification-center";
@@ -7,11 +8,17 @@ import { NotificationCenter, useUnreadNotificationsCount } from "@/components/no
 export default function Navigation() {
   const [location] = useLocation();
   const { user } = useAuth();
+  const { signOut } = useClerk();
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const unreadCount = useUnreadNotificationsCount();
 
-  const handleLogout = () => {
-    window.location.href = "/api/logout";
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      // Clerk will automatically redirect to "/" (configured in main.tsx afterSignOutUrl)
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
   };
 
   const navItems = [

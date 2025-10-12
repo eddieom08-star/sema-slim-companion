@@ -236,12 +236,22 @@ app.use((req, res, next) => {
 // Only start the server if not in serverless mode (Vercel/Lambda)
 if (process.env.VERCEL !== '1' && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
   (async () => {
-    // Handle favicon requests to prevent 502 errors
-    app.get('/favicon.ico', (_req, res) => {
-      res.redirect(301, '/icons/icon-192.svg');
-    });
+    try {
+      logger.info('Starting server initialization', {
+        nodeEnv: process.env.NODE_ENV,
+        port: process.env.PORT || '5000',
+        hasDatabase: !!process.env.DATABASE_URL,
+        hasClerkKeys: !!(process.env.CLERK_PUBLISHABLE_KEY && process.env.CLERK_SECRET_KEY),
+      });
 
-    const server = await registerRoutes(app);
+      // Handle favicon requests to prevent 502 errors
+      app.get('/favicon.ico', (_req, res) => {
+        res.redirect(301, '/icons/icon-192.svg');
+      });
+
+      logger.info('Registering routes...');
+      const server = await registerRoutes(app);
+      logger.info('Routes registered successfully');
 
   app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -266,14 +276,27 @@ if (process.env.VERCEL !== '1' && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen(port, "0.0.0.0", () => {
-    log(`serving on port ${port}`);
-  });
+      // ALWAYS serve the app on the port specified in the environment variable PORT
+      // Other ports are firewalled. Default to 5000 if not specified.
+      // this serves both the API and the client.
+      // It is the only port that is not firewalled.
+      const port = parseInt(process.env.PORT || '5000', 10);
+      logger.info('Starting HTTP server...', { port, host: '0.0.0.0' });
+
+      server.listen(port, "0.0.0.0", () => {
+        logger.info(`Server started successfully on port ${port}`);
+        log(`serving on port ${port}`);
+      });
+
+      // Handle server listen errors
+      server.on('error', (error: any) => {
+        logger.error('Server listen error', error, {
+          port,
+          code: error.code,
+          syscall: error.syscall
+        });
+        process.exit(1);
+      });
 
   // Graceful shutdown handler
   let isShuttingDown = false;
@@ -316,9 +339,19 @@ if (process.env.VERCEL !== '1' && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
     // Log but don't exit - let the process manager handle restarts if needed
   });
 
-  process.on('unhandledRejection', (reason, promise) => {
-    logger.error('Unhandled Promise Rejection', reason as Error, { promise: String(promise) });
-    // Log but don't exit - let the process manager handle restarts if needed
-  });
+      process.on('unhandledRejection', (reason, promise) => {
+        logger.error('Unhandled Promise Rejection', reason as Error, { promise: String(promise) });
+        // Log but don't exit - let the process manager handle restarts if needed
+      });
+
+    } catch (error) {
+      logger.error('Fatal error during server initialization', error as Error);
+      process.exit(1);
+    }
   })();
+} else {
+  logger.info('Running in serverless mode - skipping server.listen()', {
+    isVercel: process.env.VERCEL === '1',
+    isLambda: !!process.env.AWS_LAMBDA_FUNCTION_NAME,
+  });
 }

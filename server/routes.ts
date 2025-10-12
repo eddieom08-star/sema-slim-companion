@@ -46,11 +46,20 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutM
 export async function registerRoutes(app: Express): Promise<Server> {
   // Verify Clerk credentials are loaded
   if (!process.env.CLERK_PUBLISHABLE_KEY || !process.env.CLERK_SECRET_KEY) {
-    logger.error('Clerk credentials not found in environment', {
+    const envDebug = {
       hasPublishable: !!process.env.CLERK_PUBLISHABLE_KEY,
       hasSecret: !!process.env.CLERK_SECRET_KEY,
-    });
-    throw new Error('CLERK_PUBLISHABLE_KEY and CLERK_SECRET_KEY must be set');
+      hasViteClerkKey: !!process.env.VITE_CLERK_PUBLISHABLE_KEY,
+      isVercel: process.env.VERCEL === '1',
+      nodeEnv: process.env.NODE_ENV,
+      // Log all env var keys (not values) for debugging
+      envKeys: Object.keys(process.env).filter(k => k.includes('CLERK')).join(', ')
+    };
+
+    logger.error('Clerk credentials not found in environment', envDebug);
+    console.error('CRITICAL: Clerk environment variables missing:', JSON.stringify(envDebug, null, 2));
+
+    throw new Error(`CLERK_PUBLISHABLE_KEY and CLERK_SECRET_KEY must be set. Debug: ${JSON.stringify(envDebug)}`);
   }
 
   logger.info('Initializing Clerk middleware', {

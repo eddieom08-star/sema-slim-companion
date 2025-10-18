@@ -49,17 +49,19 @@ export function CaloriesChart() {
   }
 
   // Group by date and sum calories
-  const dailyCalories = foodLogs.reduce((acc: any, log: any) => {
-    const date = format(parseISO(log.loggedAt), 'yyyy-MM-dd');
-    if (!acc[date]) {
-      acc[date] = { date, calories: 0, protein: 0, carbs: 0, fat: 0, fullDate: log.loggedAt };
-    }
-    acc[date].calories += log.calories || 0;
-    acc[date].protein += log.protein || 0;
-    acc[date].carbs += log.carbs || 0;
-    acc[date].fat += log.fat || 0;
-    return acc;
-  }, {});
+  const dailyCalories = foodLogs
+    .filter((log: any) => log && log.consumedAt) // Filter out logs without consumedAt
+    .reduce((acc: any, log: any) => {
+      const date = format(parseISO(log.consumedAt), 'yyyy-MM-dd');
+      if (!acc[date]) {
+        acc[date] = { date, calories: 0, protein: 0, carbs: 0, fat: 0, fullDate: log.consumedAt };
+      }
+      acc[date].calories += log.calories || 0;
+      acc[date].protein += log.protein || 0;
+      acc[date].carbs += log.carbs || 0;
+      acc[date].fat += log.fat || 0;
+      return acc;
+    }, {});
 
   // Filter and prepare chart data
   const chartData = Object.values(dailyCalories)

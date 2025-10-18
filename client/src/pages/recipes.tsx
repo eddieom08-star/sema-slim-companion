@@ -15,6 +15,25 @@ import { apiRequest } from "@/lib/queryClient";
 interface Message {
   role: "user" | "assistant";
   content: string;
+  recipes?: ParsedRecipe[];
+}
+
+interface ParsedRecipe {
+  name: string;
+  description: string;
+  calories: number;
+  protein: number;
+  carbs?: number;
+  fat?: number;
+  prepTime: number;
+  cookTime: number;
+  servings: number;
+  difficulty: string;
+  ingredients: string[];
+  instructions: string[];
+  isGlp1Friendly?: boolean;
+  isHighProtein?: boolean;
+  isLowCarb?: boolean;
 }
 
 const SYSTEM_PROMPT = `You are a friendly, efficient Meal Planning Assistant helping users create personalized meal plans. Your goal is to gather 7 specific requirements through natural conversation, then provide tailored meal recommendations.
@@ -55,6 +74,80 @@ EXAMPLES OF NATURAL QUESTIONS:
 
 ❌ Avoid: "Select your preparation difficulty level from the following options"
 ✅ Use: "Are you comfortable with more involved cooking, or should I keep it simple?"`;
+
+// Helper function to parse recipes from AI response
+function parseRecipesFromText(text: string): ParsedRecipe[] {
+  const recipes: ParsedRecipe[] = [];
+
+  // Split by numbered recipes (e.g., "1. Recipe Name" or "1) Recipe Name")
+  const recipeMatches = text.match(/(\d+[\.)]\s+)([^\n]+(?:\n(?!\d+[\.)]\s+).*)*)/g);
+
+  if (!recipeMatches) return recipes;
+
+  recipeMatches.forEach((recipeBlock) => {
+    try {
+      // Extract recipe name (first line after number)
+      const nameMatch = recipeBlock.match(/^\d+[\.)]\s+(.+?)(?:\n|$)/);
+      if (!nameMatch) return;
+
+      const name = nameMatch[1].trim();
+
+      // Extract calories (e.g., "300 calories", "calories: 400", "400 cal")
+      const calorieMatch = recipeBlock.match(/(\d+)\s*(?:calories|cal)/i);
+      const calories = calorieMatch ? parseInt(calorieMatch[1]) : 400;
+
+      // Extract protein (e.g., "30g protein", "protein: 25g")
+      const proteinMatch = recipeBlock.match(/(\d+)\s*g?\s*protein/i);
+      const protein = proteinMatch ? parseInt(proteinMatch[1]) : 25;
+
+      // Extract carbs
+      const carbMatch = recipeBlock.match(/(\d+)\s*g?\s*carbs?/i);
+      const carbs = carbMatch ? parseInt(carbMatch[1]) : undefined;
+
+      // Extract fat
+      const fatMatch = recipeBlock.match(/(\d+)\s*g?\s*fat/i);
+      const fat = fatMatch ? parseInt(fatMatch[1]) : undefined;
+
+      // Extract prep/cook time (e.g., "15 minutes", "under 15 min")
+      const prepMatch = recipeBlock.match(/(?:quick|make|prep).*?(\d+)\s*(?:minutes|min)/i);
+      const prepTime = prepMatch ? parseInt(prepMatch[1]) : 15;
+
+      // Extract ingredients (lines starting with -)
+      const ingredients = recipeBlock.match(/^[\s-]*(.+?)$/gm)
+        ?.filter(line => line.trim().startsWith('-'))
+        .map(line => line.replace(/^[\s-]+/, '').trim())
+        .filter(Boolean) || [];
+
+      // Determine if high protein (>25g)
+      const isHighProtein = protein >= 25;
+
+      // Determine if GLP-1 friendly (lower fat, high protein)
+      const isGlp1Friendly = protein >= 20 && (!fat || fat < 15);
+
+      recipes.push({
+        name,
+        description: recipeBlock.substring(0, 200).trim(),
+        calories,
+        protein,
+        carbs,
+        fat,
+        prepTime,
+        cookTime: 0,
+        servings: 1,
+        difficulty: 'medium',
+        ingredients: ingredients.length > 0 ? ingredients : ['See recipe details above'],
+        instructions: ['Follow the preparation steps outlined above'],
+        isGlp1Friendly,
+        isHighProtein,
+        isLowCarb: carbs ? carbs < 30 : false
+      });
+    } catch (error) {
+      console.error('Error parsing recipe:', error);
+    }
+  });
+
+  return recipes;
+}
 
 export default function Recipes() {
   const { toast } = useToast();
@@ -202,9 +295,13 @@ export default function Recipes() {
 
       const data = await response.json();
 
+      // Parse recipes from the AI response
+      const parsedRecipes = parseRecipesFromText(data.message);
+
       const assistantMessage: Message = {
         role: "assistant",
-        content: data.message
+        content: data.message,
+        recipes: parsedRecipes.length > 0 ? parsedRecipes : undefined
       };
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -229,6 +326,43 @@ export default function Recipes() {
         setImagePreview(reader.result as string);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSaveRecipe = async (recipe: ParsedRecipe) => {
+    try {
+      const recipeData = {
+        name: recipe.name,
+        description: recipe.description,
+        recipeType: 'dinner', // Default to dinner
+        difficulty: recipe.difficulty,
+        prepTime: recipe.prepTime,
+        cookTime: recipe.cookTime,
+        servings: recipe.servings,
+        ingredients: recipe.ingredients,
+        instructions: recipe.instructions,
+        calories: recipe.calories,
+        protein: recipe.protein.toString(),
+        carbs: recipe.carbs?.toString() || '0',
+        fat: recipe.fat?.toString() || '0',
+        isGlp1Friendly: recipe.isGlp1Friendly || false,
+        isHighProtein: recipe.isHighProtein || false,
+        isLowCarb: recipe.isLowCarb || false,
+        isPublic: false
+      };
+
+      await saveRecipe.mutateAsync(recipeData);
+
+      toast({
+        title: "Recipe saved!",
+        description: `${recipe.name} has been added to your collection.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save recipe. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -312,19 +446,76 @@ export default function Recipes() {
                 <ScrollArea className="flex-1 px-4 h-full">
                   <div className="space-y-4 py-4">
                     {messages.map((message, index) => (
-                      <div
-                        key={index}
-                        className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
-                      >
+                      <div key={index} className="space-y-2">
                         <div
-                          className={`max-w-[80%] rounded-lg p-3 ${
-                            message.role === "user"
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-muted"
-                          }`}
+                          className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
                         >
-                          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                          <div
+                            className={`max-w-[80%] rounded-lg p-3 ${
+                              message.role === "user"
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-muted"
+                            }`}
+                          >
+                            <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                          </div>
                         </div>
+
+                        {/* Recipe Cards with Save Buttons */}
+                        {message.recipes && message.recipes.length > 0 && (
+                          <div className="space-y-2 ml-4">
+                            {message.recipes.map((recipe, recipeIndex) => (
+                              <Card key={recipeIndex} className="bg-background border-2">
+                                <CardContent className="p-3 space-y-2">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="flex-1 min-w-0">
+                                      <h4 className="font-semibold text-sm">{recipe.name}</h4>
+                                      <div className="flex flex-wrap gap-2 mt-1">
+                                        <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                                          {recipe.calories} cal
+                                        </span>
+                                        <span className="text-xs bg-secondary/10 text-secondary px-2 py-0.5 rounded-full">
+                                          {recipe.protein}g protein
+                                        </span>
+                                        {recipe.carbs && (
+                                          <span className="text-xs bg-accent/10 text-accent px-2 py-0.5 rounded-full">
+                                            {recipe.carbs}g carbs
+                                          </span>
+                                        )}
+                                        {recipe.isHighProtein && (
+                                          <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                                            High Protein
+                                          </span>
+                                        )}
+                                        {recipe.isGlp1Friendly && (
+                                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+                                            GLP-1 Friendly
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <Button
+                                      size="sm"
+                                      variant="default"
+                                      onClick={() => handleSaveRecipe(recipe)}
+                                      disabled={saveRecipe.isPending}
+                                      className="flex-shrink-0"
+                                    >
+                                      {saveRecipe.isPending ? (
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                      ) : (
+                                        <>
+                                          <BookOpen className="h-3 w-3 mr-1" />
+                                          Save
+                                        </>
+                                      )}
+                                    </Button>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ))}
                     {isLoading && (

@@ -340,47 +340,108 @@ export default function Medication() {
                 </div>
               )}
 
-              {/* Side Effect Ratings */}
-              {(selectedLog.nausea > 0 || selectedLog.vomiting > 0 || selectedLog.diarrhea > 0 || selectedLog.constipation > 0 || selectedLog.heartburn > 0) && (
-                <div className="border border-destructive/20 bg-destructive/5 rounded-lg p-4">
-                  <div className="flex items-center space-x-2 mb-3">
-                    <i className="fas fa-exclamation-triangle text-destructive"></i>
-                    <span className="font-semibold text-foreground">Side Effects</span>
+              {/* Side Effect Ratings - Always show */}
+              <div className={`border rounded-lg p-4 ${
+                (selectedLog.nausea > 0 || selectedLog.vomiting > 0 || selectedLog.diarrhea > 0 || selectedLog.constipation > 0 || selectedLog.heartburn > 0)
+                  ? 'border-destructive/20 bg-destructive/5'
+                  : 'border-border'
+              }`}>
+                <div className="flex items-center space-x-2 mb-3">
+                  <i className={`fas fa-exclamation-triangle ${
+                    (selectedLog.nausea > 0 || selectedLog.vomiting > 0 || selectedLog.diarrhea > 0 || selectedLog.constipation > 0 || selectedLog.heartburn > 0)
+                      ? 'text-destructive'
+                      : 'text-muted-foreground'
+                  }`}></i>
+                  <span className="font-semibold text-foreground">Side Effects</span>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center space-x-2">
+                      <i className="fas fa-dizzy text-xs text-muted-foreground"></i>
+                      <span className="text-sm text-foreground">Nausea</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-24 bg-muted rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full ${selectedLog.nausea > 0 ? 'bg-destructive' : 'bg-muted-foreground/20'}`}
+                          style={{ width: `${(selectedLog.nausea / 5) * 100}%` }}
+                        ></div>
+                      </div>
+                      <span className="text-sm font-medium text-foreground w-10 text-right">{selectedLog.nausea || 0}/5</span>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    {selectedLog.nausea > 0 && (
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Nausea</span>
-                        <span className="text-sm font-medium text-foreground">{selectedLog.nausea}/5</span>
+
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center space-x-2">
+                      <i className="fas fa-head-side-cough text-xs text-muted-foreground"></i>
+                      <span className="text-sm text-foreground">Vomiting</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-24 bg-muted rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full ${selectedLog.vomiting > 0 ? 'bg-destructive' : 'bg-muted-foreground/20'}`}
+                          style={{ width: `${(selectedLog.vomiting / 5) * 100}%` }}
+                        ></div>
                       </div>
-                    )}
-                    {selectedLog.vomiting > 0 && (
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Vomiting</span>
-                        <span className="text-sm font-medium text-foreground">{selectedLog.vomiting}/5</span>
+                      <span className="text-sm font-medium text-foreground w-10 text-right">{selectedLog.vomiting || 0}/5</span>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center space-x-2">
+                      <i className="fas fa-toilet text-xs text-muted-foreground"></i>
+                      <span className="text-sm text-foreground">Diarrhea</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-24 bg-muted rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full ${selectedLog.diarrhea > 0 ? 'bg-destructive' : 'bg-muted-foreground/20'}`}
+                          style={{ width: `${(selectedLog.diarrhea / 5) * 100}%` }}
+                        ></div>
                       </div>
-                    )}
-                    {selectedLog.diarrhea > 0 && (
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Diarrhea</span>
-                        <span className="text-sm font-medium text-foreground">{selectedLog.diarrhea}/5</span>
+                      <span className="text-sm font-medium text-foreground w-10 text-right">{selectedLog.diarrhea || 0}/5</span>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center space-x-2">
+                      <i className="fas fa-stomach text-xs text-muted-foreground"></i>
+                      <span className="text-sm text-foreground">Constipation</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-24 bg-muted rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full ${selectedLog.constipation > 0 ? 'bg-destructive' : 'bg-muted-foreground/20'}`}
+                          style={{ width: `${(selectedLog.constipation / 5) * 100}%` }}
+                        ></div>
                       </div>
-                    )}
-                    {selectedLog.constipation > 0 && (
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Constipation</span>
-                        <span className="text-sm font-medium text-foreground">{selectedLog.constipation}/5</span>
+                      <span className="text-sm font-medium text-foreground w-10 text-right">{selectedLog.constipation || 0}/5</span>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center space-x-2">
+                      <i className="fas fa-fire text-xs text-muted-foreground"></i>
+                      <span className="text-sm text-foreground">Heartburn</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-24 bg-muted rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full ${selectedLog.heartburn > 0 ? 'bg-destructive' : 'bg-muted-foreground/20'}`}
+                          style={{ width: `${(selectedLog.heartburn / 5) * 100}%` }}
+                        ></div>
                       </div>
-                    )}
-                    {selectedLog.heartburn > 0 && (
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Heartburn</span>
-                        <span className="text-sm font-medium text-foreground">{selectedLog.heartburn}/5</span>
-                      </div>
-                    )}
+                      <span className="text-sm font-medium text-foreground w-10 text-right">{selectedLog.heartburn || 0}/5</span>
+                    </div>
                   </div>
                 </div>
-              )}
+
+                {!(selectedLog.nausea > 0 || selectedLog.vomiting > 0 || selectedLog.diarrhea > 0 || selectedLog.constipation > 0 || selectedLog.heartburn > 0) && (
+                  <p className="text-xs text-muted-foreground mt-3 text-center">
+                    No side effects reported
+                  </p>
+                )}
+              </div>
 
               <Button
                 variant="outline"

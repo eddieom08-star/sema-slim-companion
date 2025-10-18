@@ -1569,14 +1569,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Call Claude API
-      const response = await anthropic.messages.create({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 2048,
-        system: systemPrompt,
-        messages: formattedMessages,
-      });
-
-      logger.info('Claude API call successful');
+      let response;
+      try {
+        response = await anthropic.messages.create({
+          model: 'claude-3-5-sonnet-20241022',
+          max_tokens: 2048,
+          system: systemPrompt,
+          messages: formattedMessages,
+        });
+        logger.info('Claude API call successful');
+      } catch (apiError: any) {
+        logger.error('Claude API call failed', apiError);
+        console.error('Anthropic messages.create error:', {
+          message: apiError.message,
+          status: apiError.status,
+          type: apiError.type,
+          error: apiError.error
+        });
+        throw apiError; // Re-throw to be caught by outer catch
+      }
 
       // Extract the text response
       const assistantMessage = response.content[0].type === 'text'
@@ -1590,21 +1601,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: error.message,
         status: error.status,
         stack: error.stack,
-        name: error.name
+        name: error.name,
+        type: error.type,
+        response: error.response,
+        cause: error.cause
       });
+
+      // Log the full error object for debugging
+      logger.error('Full Claude API error:', error);
 
       // Provide more specific error messages
       if (error.status === 401) {
-        return res.status(500).json({ message: "AI service authentication failed. Please check the API key." });
+        return res.status(500).json({
+          message: "AI service authentication failed. Please check the API key.",
+          error: error.message
+        });
       } else if (error.status === 429) {
-        return res.status(429).json({ message: "AI service rate limit exceeded. Please try again later." });
+        return res.status(429).json({
+          message: "AI service rate limit exceeded. Please try again later.",
+          error: error.message
+        });
       } else if (error.message?.includes('API key')) {
-        return res.status(500).json({ message: "AI service configuration error. Please contact support." });
+        return res.status(500).json({
+          message: "AI service configuration error. Please contact support.",
+          error: error.message
+        });
       }
 
+      // Return detailed error in all environments for debugging
       res.status(500).json({
-        message: "Failed to get AI response. Please try again.",
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        message: "Failed to get AI response",
+        error: error.message,
+        errorType: error.name || error.type,
+        statusCode: error.status,
+        details: error.cause?.message || error.response?.data?.message
       });
     }
   });

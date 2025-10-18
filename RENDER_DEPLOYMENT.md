@@ -2,10 +2,12 @@
 
 ## ✅ **Database Setup (Already Done)**
 
-You're using **Neon PostgreSQL** which is perfect! Your current database:
+You're using **Neon PostgreSQL** which is perfect! Your database:
 ```
 postgresql://username:password@your-neon-host.neon.tech/dbname?sslmode=require
 ```
+
+> **Note:** Replace with your actual Neon database connection string from your Neon dashboard or .env file.
 
 **Database is serverless and ready to use from Render** ✅
 

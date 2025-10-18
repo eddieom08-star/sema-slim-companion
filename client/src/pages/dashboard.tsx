@@ -172,70 +172,6 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {/* Health & Medication Overview */}
-        {userProfile && (userProfile as any).onboardingCompleted && (
-          <div className="mb-8">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <i className="fas fa-heartbeat text-primary"></i>
-                  <span>Health & Medication Overview</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {/* Medication Info */}
-                  {(userProfile as any).medicationType && (
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2 text-muted-foreground">
-                        <i className="fas fa-syringe text-sm"></i>
-                        <span className="text-xs font-medium uppercase">Medication</span>
-                      </div>
-                      <p className="text-lg font-semibold text-foreground capitalize">
-                        {(userProfile as any).medicationType}
-                      </p>
-                      {(userProfile as any).startDate && (
-                        <p className="text-xs text-muted-foreground">
-                          Started: {new Date((userProfile as any).startDate).toLocaleDateString()}
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Weight Goals */}
-                  {(userProfile as any).currentWeight && (userProfile as any).targetWeight && (
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2 text-muted-foreground">
-                        <i className="fas fa-bullseye text-sm"></i>
-                        <span className="text-xs font-medium uppercase">Weight Goal</span>
-                      </div>
-                      <p className="text-lg font-semibold text-foreground">
-                        {Number((userProfile as any).currentWeight).toFixed(1)} → {Number((userProfile as any).targetWeight).toFixed(1)} lbs
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {(Number((userProfile as any).currentWeight) - Number((userProfile as any).targetWeight)).toFixed(1)} lbs to go
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Activity Level */}
-                  {(userProfile as any).activityLevel && (
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2 text-muted-foreground">
-                        <i className="fas fa-running text-sm"></i>
-                        <span className="text-xs font-medium uppercase">Activity</span>
-                      </div>
-                      <p className="text-lg font-semibold text-foreground capitalize">
-                        {(userProfile as any).activityLevel.replace('_', ' ')}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
         {/* Gamification Section */}
         <div className="mb-8">
           <Card className="bg-gradient-to-br from-primary/10 via-background to-secondary/10">
@@ -350,6 +286,70 @@ export default function Dashboard() {
             </Card>
           </div>
         </div>
+
+        {/* Health & Medication Overview */}
+        {userProfile && (userProfile as any).onboardingCompleted && (
+          <div className="mt-8">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <i className="fas fa-heartbeat text-primary"></i>
+                  <span>Health & Medication Overview</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {/* Medication Info */}
+                  {(userProfile as any).medicationType && (
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-2 text-muted-foreground">
+                        <i className="fas fa-syringe text-sm"></i>
+                        <span className="text-xs font-medium uppercase">Medication</span>
+                      </div>
+                      <p className="text-lg font-semibold text-foreground capitalize">
+                        {(userProfile as any).medicationType}
+                      </p>
+                      {(userProfile as any).startDate && (
+                        <p className="text-xs text-muted-foreground">
+                          Started: {new Date((userProfile as any).startDate).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Weight Goals */}
+                  {(userProfile as any).currentWeight && (userProfile as any).targetWeight && (
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-2 text-muted-foreground">
+                        <i className="fas fa-bullseye text-sm"></i>
+                        <span className="text-xs font-medium uppercase">Weight Goal</span>
+                      </div>
+                      <p className="text-lg font-semibold text-foreground">
+                        {Number((userProfile as any).currentWeight).toFixed(1)} → {Number((userProfile as any).targetWeight).toFixed(1)} lbs
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {(Number((userProfile as any).currentWeight) - Number((userProfile as any).targetWeight)).toFixed(1)} lbs to go
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Activity Level */}
+                  {(userProfile as any).activityLevel && (
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-2 text-muted-foreground">
+                        <i className="fas fa-running text-sm"></i>
+                        <span className="text-xs font-medium uppercase">Activity</span>
+                      </div>
+                      <p className="text-lg font-semibold text-foreground capitalize">
+                        {(userProfile as any).activityLevel.replace('_', ' ')}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Quick Actions */}
         <div className="mt-8">

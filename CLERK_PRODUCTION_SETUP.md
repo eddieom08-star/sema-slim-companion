@@ -10,10 +10,13 @@ Your application is currently using **Clerk development keys** (`pk_test_...`) i
 
 ### Current Keys (DEVELOPMENT ONLY):
 ```bash
+# Example format - DO NOT use real keys in documentation
 CLERK_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 CLERK_SECRET_KEY=sk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 VITE_CLERK_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
+
+**⚠️ SECURITY WARNING:** Never commit real API keys to documentation or code. The above are placeholder examples only.
 
 **These keys must be replaced with production keys.**
 

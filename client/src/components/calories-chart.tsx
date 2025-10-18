@@ -56,10 +56,11 @@ export function CaloriesChart() {
       if (!acc[date]) {
         acc[date] = { date, calories: 0, protein: 0, carbs: 0, fat: 0, fullDate: log.consumedAt };
       }
-      acc[date].calories += log.calories || 0;
-      acc[date].protein += log.protein || 0;
-      acc[date].carbs += log.carbs || 0;
-      acc[date].fat += log.fat || 0;
+      // Explicitly coerce Decimal types to numbers to prevent NaN errors
+      acc[date].calories += Number(log.calories) || 0;
+      acc[date].protein += Number(log.protein) || 0;
+      acc[date].carbs += Number(log.carbs) || 0;
+      acc[date].fat += Number(log.fat) || 0;
       return acc;
     }, {});
 
@@ -73,10 +74,10 @@ export function CaloriesChart() {
     .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .map((day: any) => ({
       date: format(parseISO(day.date), 'MMM d'),
-      calories: Math.round(day.calories),
-      protein: Math.round(day.protein),
-      carbs: Math.round(day.carbs),
-      fat: Math.round(day.fat),
+      calories: Math.round(Number(day.calories) || 0),
+      protein: Math.round(Number(day.protein) || 0),
+      carbs: Math.round(Number(day.carbs) || 0),
+      fat: Math.round(Number(day.fat) || 0),
       fullDate: day.date,
     }));
 
@@ -157,11 +158,11 @@ export function CaloriesChart() {
     );
   }
 
-  // Calculate averages
-  const avgCalories = chartData.reduce((sum, d) => sum + d.calories, 0) / chartData.length;
-  const avgProtein = chartData.reduce((sum, d) => sum + d.protein, 0) / chartData.length;
-  const avgCarbs = chartData.reduce((sum, d) => sum + d.carbs, 0) / chartData.length;
-  const avgFat = chartData.reduce((sum, d) => sum + d.fat, 0) / chartData.length;
+  // Calculate averages with safety checks to prevent NaN
+  const avgCalories = chartData.reduce((sum, d) => sum + (Number(d.calories) || 0), 0) / (chartData.length || 1);
+  const avgProtein = chartData.reduce((sum, d) => sum + (Number(d.protein) || 0), 0) / (chartData.length || 1);
+  const avgCarbs = chartData.reduce((sum, d) => sum + (Number(d.carbs) || 0), 0) / (chartData.length || 1);
+  const avgFat = chartData.reduce((sum, d) => sum + (Number(d.fat) || 0), 0) / (chartData.length || 1);
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {

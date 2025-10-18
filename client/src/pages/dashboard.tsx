@@ -108,7 +108,7 @@ export default function Dashboard() {
             <CardContent className="p-6">
               <div className="flex items-center space-x-2 mb-2">
                 <i className="fas fa-utensils text-primary"></i>
-                <span className="text-sm font-medium text-muted-foreground">Today's Calories</span>
+                <span className="text-sm font-medium text-muted-foreground">Calories in</span>
               </div>
               <div className="text-2xl font-bold text-foreground" data-testid="text-todays-calories">
                 {(dashboardData as any)?.todaysCalories || 0}

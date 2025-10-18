@@ -102,76 +102,6 @@ export default function Dashboard() {
           </p>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card data-testid="card-calories">
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-2 mb-2">
-                <i className="fas fa-utensils text-primary"></i>
-                <span className="text-sm font-medium text-muted-foreground">Calories in</span>
-              </div>
-              <div className="text-2xl font-bold text-foreground" data-testid="text-todays-calories">
-                {(dashboardData as any)?.todaysCalories || 0}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {(dashboardData as any)?.todaysCalories < 1400 ? "On track" : "Above target"}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card data-testid="card-weight-change">
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-2 mb-2">
-                <i className="fas fa-weight text-secondary"></i>
-                <span className="text-sm font-medium text-muted-foreground">Weekly Change</span>
-              </div>
-              <div className="text-2xl font-bold text-foreground" data-testid="text-weekly-change">
-                {(dashboardData as any)?.weeklyWeightChange > 0 ? '+' : ''}
-                {(dashboardData as any)?.weeklyWeightChange?.toFixed(1) || '0.0'} lbs
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {(dashboardData as any)?.weeklyWeightChange < 0 ? "Great progress!" : "Keep going!"}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card data-testid="card-streak">
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-2 mb-2">
-                <i className="fas fa-fire text-accent"></i>
-                <span className="text-sm font-medium text-muted-foreground">Tracking Streak</span>
-              </div>
-              <div className="text-2xl font-bold text-foreground" data-testid="text-tracking-streak">
-                {foodTrackingStreak} days
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Keep it up!
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card data-testid="card-medication">
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-2 mb-2">
-                <i className="fas fa-syringe text-destructive"></i>
-                <span className="text-sm font-medium text-muted-foreground">Next Medication</span>
-              </div>
-              <div className="text-lg font-bold text-foreground" data-testid="text-next-medication">
-                {(dashboardData as any)?.upcomingMedication ? (
-                  <>
-                    {(dashboardData as any).upcomingMedication.medicationType}
-                    <p className="text-xs text-muted-foreground font-normal">
-                      {(dashboardData as any).upcomingMedication.dosage}
-                    </p>
-                  </>
-                ) : (
-                  "No upcoming"
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
         {/* Gamification Section */}
         <div className="mb-8">
           <Card className="bg-gradient-to-br from-primary/10 via-background to-secondary/10">
@@ -242,6 +172,76 @@ export default function Dashboard() {
                     <span className="px-2 py-1 bg-background rounded-md">Tracking hunger (+5)</span>
                   </div>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <Card data-testid="card-calories">
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-2 mb-2">
+                <i className="fas fa-utensils text-primary"></i>
+                <span className="text-sm font-medium text-muted-foreground">Calories in</span>
+              </div>
+              <div className="text-2xl font-bold text-foreground" data-testid="text-todays-calories">
+                {(dashboardData as any)?.todaysCalories || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {(dashboardData as any)?.todaysCalories < 1400 ? "On track" : "Above target"}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card data-testid="card-weight-change">
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-2 mb-2">
+                <i className="fas fa-weight text-secondary"></i>
+                <span className="text-sm font-medium text-muted-foreground">Weekly Change</span>
+              </div>
+              <div className="text-2xl font-bold text-foreground" data-testid="text-weekly-change">
+                {(dashboardData as any)?.weeklyWeightChange > 0 ? '+' : ''}
+                {(dashboardData as any)?.weeklyWeightChange?.toFixed(1) || '0.0'} lbs
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {(dashboardData as any)?.weeklyWeightChange < 0 ? "Great progress!" : "Keep going!"}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card data-testid="card-streak">
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-2 mb-2">
+                <i className="fas fa-fire text-accent"></i>
+                <span className="text-sm font-medium text-muted-foreground">Tracking Streak</span>
+              </div>
+              <div className="text-2xl font-bold text-foreground" data-testid="text-tracking-streak">
+                {foodTrackingStreak} days
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Keep it up!
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card data-testid="card-medication">
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-2 mb-2">
+                <i className="fas fa-syringe text-destructive"></i>
+                <span className="text-sm font-medium text-muted-foreground">Next Medication</span>
+              </div>
+              <div className="text-lg font-bold text-foreground" data-testid="text-next-medication">
+                {(dashboardData as any)?.upcomingMedication ? (
+                  <>
+                    {(dashboardData as any).upcomingMedication.medicationType}
+                    <p className="text-xs text-muted-foreground font-normal">
+                      {(dashboardData as any).upcomingMedication.dosage}
+                    </p>
+                  </>
+                ) : (
+                  "No upcoming"
+                )}
               </div>
             </CardContent>
           </Card>

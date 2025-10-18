@@ -84,7 +84,7 @@ Both Vercel and Render deployments are now **deployed and running** as of Octobe
       "hasDatabaseUrl": true,
       "hasAnthropicApiKey": true,
       "hasSessionSecret": true,
-      "clerkPublishableKeyPrefix": "pk_test_Y29tcGx"
+      "clerkPublishableKeyPrefix": "pk_test_..."
     },
     "database": "connected"
   }

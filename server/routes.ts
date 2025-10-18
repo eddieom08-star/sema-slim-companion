@@ -1500,6 +1500,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // AI Recipe Chat endpoint - Claude integration
   app.post('/api/ai/recipe-chat', isAuthenticated, async (req: any, res) => {
     try {
+      logger.info('Recipe chat endpoint called', {
+        userId: req.auth?.userId,
+        hasMessages: !!req.body.messages,
+        hasSystemPrompt: !!req.body.systemPrompt
+      });
+
       const { messages, systemPrompt } = req.body;
 
       if (!messages || !Array.isArray(messages)) {
@@ -1511,6 +1517,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+      logger.info('Checking Anthropic API key', {
+        hasKey: !!anthropicApiKey,
+        keyPrefix: anthropicApiKey?.substring(0, 10)
+      });
+
       if (!anthropicApiKey || anthropicApiKey === 'your_anthropic_api_key_here') {
         logger.error('Anthropic API key not configured');
         return res.status(500).json({
@@ -1518,9 +1529,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      logger.info('Initializing Anthropic client');
       const anthropic = new Anthropic({
         apiKey: anthropicApiKey,
       });
+      logger.info('Anthropic client initialized successfully');
 
       // Format messages for Claude API (remove system messages from user conversation)
       const formattedMessages = messages
@@ -1546,6 +1559,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: assistantMessage });
     } catch (error: any) {
       console.error("Error calling Claude API:", error);
+      console.error("Error details:", {
+        message: error.message,
+        status: error.status,
+        stack: error.stack,
+        name: error.name
+      });
 
       // Provide more specific error messages
       if (error.status === 401) {
@@ -1556,7 +1575,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: "AI service configuration error. Please contact support." });
       }
 
-      res.status(500).json({ message: "Failed to get AI response. Please try again." });
+      res.status(500).json({
+        message: "Failed to get AI response. Please try again.",
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
   });
 

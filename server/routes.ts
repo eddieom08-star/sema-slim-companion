@@ -3,7 +3,6 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { logger } from "./logger";
 import { clerkMiddleware, requireAuth } from "./clerkAuth";
-import { Anthropic } from "@anthropic-ai/sdk";
 
 const isAuthenticated = requireAuth;
 import {
@@ -1529,18 +1528,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      logger.info('Initializing Anthropic client');
+      logger.info('Dynamically importing Anthropic SDK');
+      let Anthropic;
       let anthropic;
       try {
+        // Dynamically import for better serverless compatibility
+        const anthropicModule = await import('@anthropic-ai/sdk');
+        Anthropic = anthropicModule.Anthropic || anthropicModule.default;
+        logger.info('Anthropic SDK imported successfully');
+
         anthropic = new Anthropic({
           apiKey: anthropicApiKey,
         });
         logger.info('Anthropic client initialized successfully');
       } catch (initError: any) {
         logger.error('Failed to initialize Anthropic client', initError);
+        console.error('Anthropic initialization error details:', {
+          message: initError.message,
+          stack: initError.stack,
+          name: initError.name
+        });
         return res.status(500).json({
           message: "Failed to initialize AI service",
-          error: initError.message
+          error: initError.message,
+          details: process.env.NODE_ENV === 'development' ? initError.stack : undefined
         });
       }
 

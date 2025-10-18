@@ -417,6 +417,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Alias for food-logs (used by charts)
+  app.get('/api/food-logs', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.auth.userId;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+
+      // Get all food entries (no date filter for historical charting)
+      const entries = await storage.getUserFoodEntries(userId, undefined);
+
+      // Apply limit if specified
+      const limitedEntries = limit ? entries.slice(0, limit) : entries;
+
+      res.json(limitedEntries);
+    } catch (error) {
+      console.error("Error fetching food logs:", error);
+      res.status(500).json({ message: "Failed to fetch food logs" });
+    }
+  });
+
   app.post('/api/food-entries', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.auth.userId;

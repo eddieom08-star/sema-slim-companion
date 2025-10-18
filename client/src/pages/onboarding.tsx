@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useLocation } from "wouter";
 
 export default function Onboarding() {
   const [step, setStep] = useState(1);
@@ -23,6 +24,7 @@ export default function Onboarding() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -34,6 +36,10 @@ export default function Onboarding() {
         title: "Welcome to SemaSlim!",
         description: "Your profile has been set up successfully.",
       });
+
+      // FIX: Explicitly navigate to dashboard after successful onboarding
+      // This prevents white screen by not relying on router conditional re-render
+      setLocation("/dashboard");
     },
     onError: (error) => {
       toast({
@@ -85,7 +91,18 @@ export default function Onboarding() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4">
+    <div className="min-h-screen bg-background flex items-center justify-center px-4 relative">
+      {/* FIX: Loading overlay during profile update - prevents jarring transitions */}
+      {updateProfileMutation.isPending && (
+        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="text-center space-y-4">
+            <div className="w-12 h-12 bg-primary rounded-lg animate-pulse mx-auto"></div>
+            <p className="text-lg font-medium">Setting up your profile...</p>
+            <p className="text-sm text-muted-foreground">This will only take a moment</p>
+          </div>
+        </div>
+      )}
+
       <Card className="w-full max-w-2xl">
         <CardHeader className="text-center">
           <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center mx-auto mb-4">

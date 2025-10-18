@@ -9,6 +9,8 @@ import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import Navigation from "@/components/ui/navigation";
 import { ProgressChart } from "@/components/progress-chart";
+import { AppetiteChart } from "@/components/appetite-chart";
+import { CaloriesChart } from "@/components/calories-chart";
 import { AchievementBadge } from "@/components/achievement-badge";
 import { Trophy, Zap, TrendingUp } from "lucide-react";
 
@@ -102,79 +104,105 @@ export default function Dashboard() {
           </p>
         </div>
 
-        {/* Gamification Section */}
-        <div className="mb-8">
-          <Card className="bg-gradient-to-br from-primary/10 via-background to-secondary/10">
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Trophy className="w-5 h-5 text-primary" />
-                  <span>Your Progress</span>
-                </div>
-                <div className="flex items-center space-x-2 text-sm">
-                  <Zap className="w-4 h-4 text-primary" />
-                  <span className="font-bold text-primary" data-testid="text-total-points">
-                    {totalPoints} Points
-                  </span>
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {/* Level Display */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
-                      <TrendingUp className="w-6 h-6 text-primary" />
+        {/* Your Progress and Achievements Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+          {/* Gamification Section */}
+          <div className="lg:col-span-2">
+            <Card className="bg-gradient-to-br from-primary/10 via-background to-secondary/10">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Trophy className="w-5 h-5 text-primary" />
+                    <span>Your Progress</span>
+                  </div>
+                  <div className="flex items-center space-x-2 text-sm">
+                    <Zap className="w-4 h-4 text-primary" />
+                    <span className="font-bold text-primary" data-testid="text-total-points">
+                      {totalPoints} Points
+                    </span>
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {/* Level Display */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+                        <TrendingUp className="w-6 h-6 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-foreground" data-testid="text-current-level">
+                          Level {currentLevel}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {Math.max(0, pointsNeededForLevel - pointsInCurrentLevel)} points to Level {currentLevel + 1}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-2xl font-bold text-foreground" data-testid="text-current-level">
-                        Level {currentLevel}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {Math.max(0, pointsNeededForLevel - pointsInCurrentLevel)} points to Level {currentLevel + 1}
-                      </p>
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>Level {currentLevel}</span>
+                      <span>Level {currentLevel + 1}</span>
+                    </div>
+                    <Progress value={levelProgress} className="h-3" data-testid="progress-level" />
+                    <p className="text-xs text-center text-muted-foreground">
+                      {pointsInCurrentLevel}/{pointsNeededForLevel} points
+                    </p>
+                  </div>
+
+                  {/* Points Stats */}
+                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/50">
+                    <div className="text-center">
+                      <p className="text-sm text-muted-foreground">Current Points</p>
+                      <p className="text-lg font-bold text-primary">{totalPoints}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm text-muted-foreground">Lifetime Points</p>
+                      <p className="text-lg font-bold text-secondary">{(gamificationData as any)?.lifetimePoints || 0}</p>
+                    </div>
+                  </div>
+
+                  {/* Earn More Points */}
+                  <div className="mt-4 p-3 bg-primary/5 rounded-lg">
+                    <p className="text-xs font-medium text-muted-foreground mb-2">Earn points by:</p>
+                    <div className="flex flex-wrap gap-2 text-xs">
+                      <span className="px-2 py-1 bg-background rounded-md">Logging food (+3)</span>
+                      <span className="px-2 py-1 bg-background rounded-md">Logging weight (+5)</span>
+                      <span className="px-2 py-1 bg-background rounded-md">Taking medication (+5)</span>
+                      <span className="px-2 py-1 bg-background rounded-md">Tracking hunger (+5)</span>
                     </div>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+          </div>
 
-                {/* Progress Bar */}
-                <div className="space-y-2">
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Level {currentLevel}</span>
-                    <span>Level {currentLevel + 1}</span>
-                  </div>
-                  <Progress value={levelProgress} className="h-3" data-testid="progress-level" />
-                  <p className="text-xs text-center text-muted-foreground">
-                    {pointsInCurrentLevel}/{pointsNeededForLevel} points
-                  </p>
+          {/* Achievements */}
+          <div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <i className="fas fa-trophy text-secondary"></i>
+                  <span>Recent Achievements</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4" data-testid="achievements-list">
+                  {(userAchievements as any)?.slice(0, 3).map((achievement: any, index: number) => (
+                    <AchievementBadge key={achievement.id} achievement={achievement} />
+                  )) || (
+                    <p className="text-muted-foreground text-sm">
+                      Start tracking to earn achievements!
+                    </p>
+                  )}
                 </div>
-
-                {/* Points Stats */}
-                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/50">
-                  <div className="text-center">
-                    <p className="text-sm text-muted-foreground">Current Points</p>
-                    <p className="text-lg font-bold text-primary">{totalPoints}</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-sm text-muted-foreground">Lifetime Points</p>
-                    <p className="text-lg font-bold text-secondary">{(gamificationData as any)?.lifetimePoints || 0}</p>
-                  </div>
-                </div>
-
-                {/* Earn More Points */}
-                <div className="mt-4 p-3 bg-primary/5 rounded-lg">
-                  <p className="text-xs font-medium text-muted-foreground mb-2">Earn points by:</p>
-                  <div className="flex flex-wrap gap-2 text-xs">
-                    <span className="px-2 py-1 bg-background rounded-md">Logging food (+3)</span>
-                    <span className="px-2 py-1 bg-background rounded-md">Logging weight (+5)</span>
-                    <span className="px-2 py-1 bg-background rounded-md">Taking medication (+5)</span>
-                    <span className="px-2 py-1 bg-background rounded-md">Tracking hunger (+5)</span>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -247,44 +275,49 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Progress Chart */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <i className="fas fa-chart-line text-primary"></i>
-                  <span>Weight Progress</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ProgressChart />
-              </CardContent>
-            </Card>
-          </div>
+        {/* Weight Progress Chart */}
+        <div className="mb-8">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <i className="fas fa-chart-line text-primary"></i>
+                <span>Weight Progress</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ProgressChart />
+            </CardContent>
+          </Card>
+        </div>
 
-          {/* Achievements */}
-          <div>
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <i className="fas fa-trophy text-secondary"></i>
-                  <span>Recent Achievements</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4" data-testid="achievements-list">
-                  {(userAchievements as any)?.slice(0, 3).map((achievement: any, index: number) => (
-                    <AchievementBadge key={achievement.id} achievement={achievement} />
-                  )) || (
-                    <p className="text-muted-foreground text-sm">
-                      Start tracking to earn achievements!
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+        {/* Appetite History Chart */}
+        <div className="mb-8">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <i className="fas fa-chart-line text-primary"></i>
+                <span>Appetite History</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <AppetiteChart />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Calories Chart */}
+        <div className="mb-8">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <i className="fas fa-utensils text-primary"></i>
+                <span>Calorie Trends</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CaloriesChart />
+            </CardContent>
+          </Card>
         </div>
 
         {/* Health & Medication Overview */}

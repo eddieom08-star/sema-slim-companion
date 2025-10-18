@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { logger } from "./logger";
 import { clerkMiddleware, requireAuth } from "./clerkAuth";
+import { Anthropic } from "@anthropic-ai/sdk";
 
 const isAuthenticated = requireAuth;
 import {
@@ -1508,9 +1509,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!systemPrompt || typeof systemPrompt !== 'string') {
         return res.status(400).json({ message: "System prompt is required" });
       }
-
-      // Import Anthropic SDK dynamically
-      const { Anthropic } = await import('@anthropic-ai/sdk');
 
       const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
       if (!anthropicApiKey || anthropicApiKey === 'your_anthropic_api_key_here') {

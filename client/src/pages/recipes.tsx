@@ -300,17 +300,17 @@ export default function Recipes() {
 
           {/* AI Recipe Creator Tab */}
           <TabsContent value="ai-creator" className="mt-6">
-            <Card className="h-[600px] flex flex-col">
-              <CardHeader>
+            <Card className="flex flex-col overflow-hidden h-[600px]">
+              <CardHeader className="flex-shrink-0">
                 <CardTitle className="flex items-center gap-2">
                   <Bot className="h-5 w-5" />
                   AI Recipe Assistant
                 </CardTitle>
               </CardHeader>
-              <CardContent className="flex-1 flex flex-col p-0">
+              <CardContent className="flex-1 flex flex-col p-0 overflow-hidden min-h-0">
                 {/* Messages Area */}
-                <ScrollArea className="flex-1 p-4">
-                  <div className="space-y-4">
+                <ScrollArea className="flex-1 px-4 h-full">
+                  <div className="space-y-4 py-4">
                     {messages.map((message, index) => (
                       <div
                         key={index}
@@ -339,7 +339,7 @@ export default function Recipes() {
                 </ScrollArea>
 
                 {/* Input Area */}
-                <div className="border-t p-4">
+                <div className="flex-shrink-0 border-t p-4">
                   <div className="flex gap-2">
                     <Input
                       placeholder="Type your message..."

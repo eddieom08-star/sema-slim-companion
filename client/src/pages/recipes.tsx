@@ -182,7 +182,22 @@ export default function Recipes() {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
         console.error('AI API error:', errorData);
-        throw new Error(errorData.message || 'Failed to get AI response');
+        console.error('Full error details:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorData
+        });
+
+        // Create detailed error message
+        let errorMessage = errorData.message || 'Failed to get AI response';
+        if (errorData.error) {
+          errorMessage += `: ${errorData.error}`;
+        }
+        if (errorData.details) {
+          errorMessage += ` (${errorData.details})`;
+        }
+
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();

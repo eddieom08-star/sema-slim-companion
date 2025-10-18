@@ -1496,6 +1496,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Diagnostic endpoint to test Anthropic API key
+  app.get('/api/ai/test', isAuthenticated, async (req: any, res) => {
+    try {
+      const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+
+      if (!anthropicApiKey || anthropicApiKey === 'your_anthropic_api_key_here') {
+        return res.status(500).json({
+          success: false,
+          message: "Anthropic API key not configured",
+          hasKey: false
+        });
+      }
+
+      // Try to import and initialize Anthropic
+      const anthropicModule = await import('@anthropic-ai/sdk');
+      const Anthropic = anthropicModule.Anthropic || anthropicModule.default;
+      const anthropic = new Anthropic({ apiKey: anthropicApiKey });
+
+      // Try a simple API call with minimal tokens
+      const testResponse = await anthropic.messages.create({
+        model: 'claude-3-haiku-20240307', // Use cheapest model for testing
+        max_tokens: 10,
+        messages: [{ role: 'user', content: 'Hi' }],
+      });
+
+      res.json({
+        success: true,
+        message: "Anthropic API key is valid and working",
+        hasKey: true,
+        keyPrefix: anthropicApiKey.substring(0, 15),
+        modelTested: 'claude-3-haiku-20240307',
+        responseReceived: !!testResponse
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        message: "Anthropic API test failed",
+        error: error.message,
+        status: error.status,
+        type: error.type
+      });
+    }
+  });
+
   // AI Recipe Chat endpoint - Claude integration
   app.post('/api/ai/recipe-chat', isAuthenticated, async (req: any, res) => {
     try {
@@ -1563,33 +1607,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
           content: msg.content
         }));
 
-      // Use the correct Claude 3.5 Sonnet model name
-      const model = 'claude-3-5-sonnet-20240620';
+      // Try multiple model names in order of preference
+      // The API key might not have access to newer models
+      const modelPriority = [
+        'claude-3-5-sonnet-20241022',  // Newest Claude 3.5 Sonnet v2
+        'claude-3-5-sonnet-20240620',  // Original Claude 3.5 Sonnet
+        'claude-3-sonnet-20240229',    // Claude 3 Sonnet
+        'claude-3-haiku-20240307'      // Claude 3 Haiku (fallback)
+      ];
+
+      let model = modelPriority[0]; // Start with the newest
 
       logger.info('Calling Claude API', {
         messageCount: formattedMessages.length,
-        model
+        model,
+        availableModels: modelPriority
       });
 
-      // Call Claude API
+      // Call Claude API with fallback model support
       let response;
-      try {
-        response = await anthropic.messages.create({
-          model,
-          max_tokens: 2048,
-          system: systemPrompt,
-          messages: formattedMessages,
-        });
-        logger.info('Claude API call successful');
-      } catch (apiError: any) {
-        logger.error('Claude API call failed', apiError);
-        console.error('Anthropic messages.create error:', {
-          message: apiError.message,
-          status: apiError.status,
-          type: apiError.type,
-          error: apiError.error
-        });
-        throw apiError; // Re-throw to be caught by outer catch
+      let lastError;
+
+      for (let i = 0; i < modelPriority.length; i++) {
+        model = modelPriority[i];
+        try {
+          logger.info(`Trying model: ${model}`);
+          response = await anthropic.messages.create({
+            model,
+            max_tokens: 2048,
+            system: systemPrompt,
+            messages: formattedMessages,
+          });
+          logger.info(`Claude API call successful with model: ${model}`);
+          break; // Success! Exit the loop
+        } catch (apiError: any) {
+          lastError = apiError;
+          logger.warn(`Model ${model} failed with status ${apiError.status}`);
+
+          // If it's a 404 (model not found), try the next model
+          if (apiError.status === 404 && i < modelPriority.length - 1) {
+            logger.info(`Model ${model} not found, trying next model...`);
+            continue;
+          }
+
+          // If it's not a 404, or we're on the last model, throw the error
+          logger.error('Claude API call failed', apiError);
+          console.error('Anthropic messages.create error:', {
+            message: apiError.message,
+            status: apiError.status,
+            type: apiError.type,
+            error: apiError.error,
+            modelAttempted: model
+          });
+          throw apiError;
+        }
+      }
+
+      // If we tried all models and none worked
+      if (!response && lastError) {
+        throw lastError;
       }
 
       // Extract the text response

@@ -278,12 +278,19 @@ export function AppetiteChart() {
               dataKey="hungerLevel"
               name="Hunger Level"
               stroke="hsl(var(--primary))"
-              strokeWidth={2}
+              strokeWidth={3}
+              connectNulls={true}
               dot={{
                 fill: 'hsl(var(--primary))',
                 strokeWidth: 2,
                 stroke: 'hsl(var(--background))',
-                r: 3
+                r: 4
+              }}
+              activeDot={{
+                r: 6,
+                fill: 'hsl(var(--primary))',
+                stroke: 'hsl(var(--background))',
+                strokeWidth: 2
               }}
             />
             <Line
@@ -291,12 +298,19 @@ export function AppetiteChart() {
               dataKey="fullnessLevel"
               name="Fullness Level"
               stroke="hsl(var(--secondary))"
-              strokeWidth={2}
+              strokeWidth={3}
+              connectNulls={true}
               dot={{
                 fill: 'hsl(var(--secondary))',
                 strokeWidth: 2,
                 stroke: 'hsl(var(--background))',
-                r: 3
+                r: 4
+              }}
+              activeDot={{
+                r: 6,
+                fill: 'hsl(var(--secondary))',
+                stroke: 'hsl(var(--background))',
+                strokeWidth: 2
               }}
             />
             <Line
@@ -304,13 +318,20 @@ export function AppetiteChart() {
               dataKey="cravingIntensity"
               name="Craving Intensity"
               stroke="hsl(var(--accent))"
-              strokeWidth={2}
+              strokeWidth={3}
               strokeDasharray="5 5"
+              connectNulls={true}
               dot={{
                 fill: 'hsl(var(--accent))',
                 strokeWidth: 2,
                 stroke: 'hsl(var(--background))',
-                r: 3
+                r: 4
+              }}
+              activeDot={{
+                r: 6,
+                fill: 'hsl(var(--accent))',
+                stroke: 'hsl(var(--background))',
+                strokeWidth: 2
               }}
             />
           </LineChart>

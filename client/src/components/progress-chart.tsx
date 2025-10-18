@@ -300,14 +300,15 @@ export function ProgressChart() {
               dataKey="weight"
               stroke="hsl(var(--primary))"
               strokeWidth={3}
-              dot={{ 
-                fill: 'hsl(var(--primary))', 
-                strokeWidth: 2, 
+              connectNulls={true}
+              dot={{
+                fill: 'hsl(var(--primary))',
+                strokeWidth: 2,
                 stroke: 'hsl(var(--background))',
-                r: 4 
+                r: 4
               }}
-              activeDot={{ 
-                r: 6, 
+              activeDot={{
+                r: 6,
                 fill: 'hsl(var(--primary))',
                 stroke: 'hsl(var(--background))',
                 strokeWidth: 2

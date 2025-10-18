@@ -8,7 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import Navigation from "@/components/ui/navigation";
-import { Bot, ScanLine, Send, Loader2, BookOpen, Trash2, ChefHat } from "lucide-react";
+import { Bot, ScanLine, Send, Loader2, BookOpen, Trash2, ChefHat, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -232,12 +232,13 @@ export default function Recipes() {
     scrollToBottom();
   }, [messages]);
 
-  const handleSendMessage = async () => {
-    if (!inputMessage.trim() || isLoading) return;
+  const handleSendMessage = async (customMessage?: string) => {
+    const messageToSend = customMessage || inputMessage;
+    if (!messageToSend.trim() || isLoading) return;
 
     const userMessage: Message = {
       role: "user",
-      content: inputMessage
+      content: messageToSend
     };
 
     setMessages(prev => [...prev, userMessage]);
@@ -315,6 +316,11 @@ export default function Recipes() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleInstantRecipe = () => {
+    const instantRecipePrompt = "Generate a single low-calorie, high-protein recipe immediately. No questions needed. Requirements: under 400 calories, 25g+ protein, quick to prepare (under 20 minutes). Skip all clarification questions and provide the recipe now with full nutritional details.";
+    handleSendMessage(instantRecipePrompt);
   };
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -532,6 +538,24 @@ export default function Recipes() {
                 {/* Input Area */}
                 <div className="flex-shrink-0 border-t p-4">
                   <div className="flex gap-2">
+                    <Button
+                      onClick={() => handleSendMessage()}
+                      disabled={!inputMessage.trim() || isLoading}
+                      size="icon"
+                      variant="default"
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      onClick={handleInstantRecipe}
+                      disabled={isLoading}
+                      size="sm"
+                      variant="outline"
+                      className="flex-shrink-0"
+                    >
+                      <Zap className="h-4 w-4 mr-2" />
+                      Instant Recipe
+                    </Button>
                     <Input
                       placeholder="Type your message..."
                       value={inputMessage}
@@ -543,14 +567,8 @@ export default function Recipes() {
                         }
                       }}
                       disabled={isLoading}
+                      className="flex-1"
                     />
-                    <Button
-                      onClick={handleSendMessage}
-                      disabled={!inputMessage.trim() || isLoading}
-                      size="icon"
-                    >
-                      <Send className="h-4 w-4" />
-                    </Button>
                   </div>
                 </div>
               </CardContent>

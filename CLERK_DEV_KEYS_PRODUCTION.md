@@ -106,7 +106,7 @@ You can continue using **development keys for testing** by adding your productio
 
 **Fix:**
 1. Verify `VITE_CLERK_PUBLISHABLE_KEY` and `CLERK_PUBLISHABLE_KEY` are identical
-2. Both should be `pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
+2. Both should match your Clerk publishable key from the dashboard (format: `pk_test_...`)
 3. Check both Vercel and Render environment variables
 
 ### Error: "Cross-origin request blocked"

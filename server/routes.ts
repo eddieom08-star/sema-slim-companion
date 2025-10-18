@@ -1530,10 +1530,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       logger.info('Initializing Anthropic client');
-      const anthropic = new Anthropic({
-        apiKey: anthropicApiKey,
-      });
-      logger.info('Anthropic client initialized successfully');
+      let anthropic;
+      try {
+        anthropic = new Anthropic({
+          apiKey: anthropicApiKey,
+        });
+        logger.info('Anthropic client initialized successfully');
+      } catch (initError: any) {
+        logger.error('Failed to initialize Anthropic client', initError);
+        return res.status(500).json({
+          message: "Failed to initialize AI service",
+          error: initError.message
+        });
+      }
 
       // Format messages for Claude API (remove system messages from user conversation)
       const formattedMessages = messages
@@ -1543,6 +1552,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           content: msg.content
         }));
 
+      logger.info('Calling Claude API', {
+        messageCount: formattedMessages.length,
+        model: 'claude-3-5-sonnet-20241022'
+      });
+
       // Call Claude API
       const response = await anthropic.messages.create({
         model: 'claude-3-5-sonnet-20241022',
@@ -1550,6 +1564,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         system: systemPrompt,
         messages: formattedMessages,
       });
+
+      logger.info('Claude API call successful');
 
       // Extract the text response
       const assistantMessage = response.content[0].type === 'text'

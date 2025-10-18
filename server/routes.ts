@@ -1563,16 +1563,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           content: msg.content
         }));
 
+      // Use the correct Claude 3.5 Sonnet model name
+      const model = 'claude-3-5-sonnet-20240620';
+
       logger.info('Calling Claude API', {
         messageCount: formattedMessages.length,
-        model: 'claude-3-5-sonnet-20241022'
+        model
       });
 
       // Call Claude API
       let response;
       try {
         response = await anthropic.messages.create({
-          model: 'claude-3-5-sonnet-20241022',
+          model,
           max_tokens: 2048,
           system: systemPrompt,
           messages: formattedMessages,

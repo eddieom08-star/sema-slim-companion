@@ -92,6 +92,8 @@ CLERK_SECRET_KEY=sk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 VITE_CLERK_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
+> **Note:** Replace the `xxxxxxxx` placeholders with your actual keys from the Clerk Dashboard.
+
 **If these don't match your Clerk dashboard:** Update them and redeploy.
 
 ---

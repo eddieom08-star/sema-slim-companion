@@ -180,7 +180,9 @@ export default function Recipes() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to get AI response');
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+        console.error('AI API error:', errorData);
+        throw new Error(errorData.message || 'Failed to get AI response');
       }
 
       const data = await response.json();
@@ -191,10 +193,11 @@ export default function Recipes() {
       };
 
       setMessages(prev => [...prev, assistantMessage]);
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Recipe chat error:', error);
       toast({
         title: "Error",
-        description: "Failed to get response. Please try again.",
+        description: error.message || "Failed to get response. Please try again.",
         variant: "destructive"
       });
     } finally {

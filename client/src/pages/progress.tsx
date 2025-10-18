@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import Navigation from "@/components/ui/navigation";
 import { ProgressChart } from "@/components/progress-chart";
@@ -15,6 +16,8 @@ import { format } from "date-fns";
 export default function Progress() {
   const [weightInput, setWeightInput] = useState("");
   const [weightNotes, setWeightNotes] = useState("");
+  const [selectedWeightLog, setSelectedWeightLog] = useState<any>(null);
+  const [isViewLogDialogOpen, setIsViewLogDialogOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -189,7 +192,14 @@ export default function Progress() {
                       const change = prevLog ? Number(log.weight) - Number(prevLog.weight) : 0;
                       
                       return (
-                        <div key={log.id} className="flex items-center justify-between p-4 border border-border rounded-lg">
+                        <div
+                          key={log.id}
+                          className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                          onClick={() => {
+                            setSelectedWeightLog(log);
+                            setIsViewLogDialogOpen(true);
+                          }}
+                        >
                           <div className="flex-1">
                             <div className="flex items-center space-x-2 mb-1">
                               <i className="fas fa-weight text-primary text-sm"></i>
@@ -206,11 +216,12 @@ export default function Progress() {
                               {format(new Date(log.loggedAt), 'MMM d, yyyy h:mm a')}
                             </p>
                             {log.notes && (
-                              <p className="text-xs text-muted-foreground mt-1">
+                              <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
                                 {log.notes}
                               </p>
                             )}
                           </div>
+                          <i className="fas fa-chevron-right text-muted-foreground ml-4"></i>
                         </div>
                       );
                     })
@@ -313,6 +324,90 @@ export default function Progress() {
           </div>
         </div>
       </div>
+
+      {/* Weight Log Details Dialog */}
+      <Dialog open={isViewLogDialogOpen} onOpenChange={setIsViewLogDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <i className="fas fa-weight text-primary"></i>
+              <span>Weight Log Details</span>
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedWeightLog && (
+            <div className="space-y-4 pt-4">
+              {/* Weight Value */}
+              <div className="border border-border rounded-lg p-4 text-center bg-primary/5">
+                <div className="text-4xl font-bold text-primary mb-2">
+                  {Number(selectedWeightLog.weight).toFixed(1)} lbs
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {format(new Date(selectedWeightLog.loggedAt), 'EEEE, MMM d, yyyy')}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {format(new Date(selectedWeightLog.loggedAt), 'h:mm a')}
+                </div>
+              </div>
+
+              {/* Weight Change */}
+              {(() => {
+                const logIndex = (weightLogs as any)?.findIndex((log: any) => log.id === selectedWeightLog.id);
+                const prevLog = logIndex !== -1 && logIndex < (weightLogs as any).length - 1
+                  ? (weightLogs as any)[logIndex + 1]
+                  : null;
+                const change = prevLog ? Number(selectedWeightLog.weight) - Number(prevLog.weight) : null;
+
+                return change !== null && change !== 0 ? (
+                  <div className="border border-border rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Change from previous entry</span>
+                      <div className="flex items-center space-x-2">
+                        <span className={`text-lg font-bold ${change < 0 ? 'text-secondary' : 'text-destructive'}`}>
+                          {change > 0 ? '+' : ''}{change.toFixed(1)} lbs
+                        </span>
+                        <i className={`fas ${change < 0 ? 'fa-arrow-down text-secondary' : 'fa-arrow-up text-destructive'}`}></i>
+                      </div>
+                    </div>
+                    {prevLog && (
+                      <div className="text-xs text-muted-foreground mt-2">
+                        Previous: {Number(prevLog.weight).toFixed(1)} lbs on {format(new Date(prevLog.loggedAt), 'MMM d, yyyy')}
+                      </div>
+                    )}
+                  </div>
+                ) : null;
+              })()}
+
+              {/* Notes */}
+              <div className="border border-border rounded-lg p-4">
+                <div className="flex items-center space-x-2 mb-3">
+                  <i className="fas fa-sticky-note text-accent"></i>
+                  <span className="font-semibold text-foreground">Notes</span>
+                </div>
+                {selectedWeightLog.notes ? (
+                  <p className="text-sm text-foreground whitespace-pre-wrap">
+                    {selectedWeightLog.notes}
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">
+                    No notes recorded for this entry
+                  </p>
+                )}
+              </div>
+
+              {/* Close Button */}
+              <Button
+                onClick={() => setIsViewLogDialogOpen(false)}
+                className="w-full"
+                variant="outline"
+              >
+                <i className="fas fa-times mr-2"></i>
+                Close
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

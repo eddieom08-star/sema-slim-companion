@@ -291,11 +291,18 @@ export function CaloriesChart() {
               name="Calories"
               stroke="hsl(var(--primary))"
               strokeWidth={3}
+              connectNulls={true}
               dot={{
                 fill: 'hsl(var(--primary))',
                 strokeWidth: 2,
                 stroke: 'hsl(var(--background))',
                 r: 4
+              }}
+              activeDot={{
+                r: 6,
+                fill: 'hsl(var(--primary))',
+                stroke: 'hsl(var(--background))',
+                strokeWidth: 2
               }}
             />
           </LineChart>

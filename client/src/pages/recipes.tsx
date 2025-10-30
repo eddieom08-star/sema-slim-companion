@@ -412,13 +412,13 @@ export default function Recipes() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20 md:pb-8">
       <Navigation />
-      <div className="container mx-auto p-4 md:p-6 space-y-6">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 md:py-8">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold">Recipes</h1>
-          <p className="text-muted-foreground">Create recipes with AI or scan existing ones</p>
+        <div className="mb-6 md:mb-8">
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Recipes</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Create recipes with AI or scan existing ones</p>
         </div>
 
         {/* Tabs */}
@@ -441,7 +441,7 @@ export default function Recipes() {
           {/* AI Recipe Creator Tab */}
           <TabsContent value="ai-creator" className="mt-6">
             <Card className="flex flex-col overflow-hidden h-[600px]">
-              <CardHeader className="flex-shrink-0">
+              <CardHeader className="flex-shrink-0 p-4 md:p-6">
                 <CardTitle className="flex items-center gap-2">
                   <Bot className="h-5 w-5" />
                   AI Recipe Assistant
@@ -472,7 +472,7 @@ export default function Recipes() {
                           <div className="space-y-2 ml-4">
                             {message.recipes.map((recipe, recipeIndex) => (
                               <Card key={recipeIndex} className="bg-background border-2">
-                                <CardContent className="p-3 space-y-2">
+                                <CardContent className="p-2 md:p-3 space-y-2">
                                   <div className="flex items-start justify-between gap-2">
                                     <div className="flex-1 min-w-0">
                                       <h4 className="font-semibold text-sm">{recipe.name}</h4>
@@ -578,24 +578,24 @@ export default function Recipes() {
           {/* My Recipes Tab */}
           <TabsContent value="my-recipes" className="mt-6">
             <Card>
-              <CardHeader>
+              <CardHeader className="p-4 md:p-6">
                 <CardTitle className="flex items-center gap-2">
                   <ChefHat className="h-5 w-5" />
                   My Saved Recipes
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-4 md:p-6">
                 {recipesLoading ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
                     {[...Array(3)].map((_, i) => (
                       <div key={i} className="h-64 bg-muted rounded-lg animate-pulse"></div>
                     ))}
                   </div>
                 ) : (recipes as any)?.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
                     {(recipes as any).map((recipe: any) => (
                       <Card key={recipe.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                        <CardContent className="p-4">
+                        <CardContent className="p-4 md:p-6">
                           <div className="flex flex-col h-full">
                             <div className="flex items-start justify-between mb-3">
                               <h3 className="font-semibold text-lg line-clamp-2">{recipe.name}</h3>
@@ -689,13 +689,13 @@ export default function Recipes() {
           {/* Scan Receipt Tab */}
           <TabsContent value="scan-receipt" className="mt-6">
             <Card>
-              <CardHeader>
+              <CardHeader className="p-4 md:p-6">
                 <CardTitle className="flex items-center gap-2">
                   <ScanLine className="h-5 w-5" />
                   Scan Recipe from Receipt or Image
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="p-4 md:p-6 space-y-6">
                 <div className="text-center">
                   <p className="text-muted-foreground mb-4">
                     Upload a photo of a recipe, receipt, or cookbook page to extract the recipe information

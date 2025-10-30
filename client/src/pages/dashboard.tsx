@@ -90,22 +90,22 @@ export default function Dashboard() {
   const levelProgress = Math.min(100, (pointsInCurrentLevel / pointsNeededForLevel) * 100);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20 md:pb-8">
       <Navigation />
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 md:py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">
+        <div className="mb-6 md:mb-8">
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
             Welcome back! 👋
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm md:text-base text-muted-foreground">
             Here's your GLP-1 journey overview for today
           </p>
         </div>
 
         {/* Your Progress and Achievements Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8 mb-6 md:mb-8">
           {/* Gamification Section */}
           <div className="lg:col-span-2">
             <Card className="bg-gradient-to-br from-primary/10 via-background to-secondary/10">
@@ -206,9 +206,9 @@ export default function Dashboard() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 mb-6 md:mb-8">
           <Card data-testid="card-calories">
-            <CardContent className="p-6">
+            <CardContent className="p-4 md:p-6">
               <div className="flex items-center space-x-2 mb-2">
                 <i className="fas fa-utensils text-primary"></i>
                 <span className="text-sm font-medium text-muted-foreground">Calories in</span>
@@ -223,7 +223,7 @@ export default function Dashboard() {
           </Card>
 
           <Card data-testid="card-weight-change">
-            <CardContent className="p-6">
+            <CardContent className="p-4 md:p-6">
               <div className="flex items-center space-x-2 mb-2">
                 <i className="fas fa-weight text-secondary"></i>
                 <span className="text-sm font-medium text-muted-foreground">Weekly Change</span>
@@ -239,7 +239,7 @@ export default function Dashboard() {
           </Card>
 
           <Card data-testid="card-streak">
-            <CardContent className="p-6">
+            <CardContent className="p-4 md:p-6">
               <div className="flex items-center space-x-2 mb-2">
                 <i className="fas fa-fire text-accent"></i>
                 <span className="text-sm font-medium text-muted-foreground">Tracking Streak</span>
@@ -254,7 +254,7 @@ export default function Dashboard() {
           </Card>
 
           <Card data-testid="card-medication">
-            <CardContent className="p-6">
+            <CardContent className="p-4 md:p-6">
               <div className="flex items-center space-x-2 mb-2">
                 <i className="fas fa-syringe text-destructive"></i>
                 <span className="text-sm font-medium text-muted-foreground">Next Medication</span>
@@ -276,7 +276,7 @@ export default function Dashboard() {
         </div>
 
         {/* Weight Progress Chart */}
-        <div className="mb-8">
+        <div className="mb-6 md:mb-8">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
@@ -291,7 +291,7 @@ export default function Dashboard() {
         </div>
 
         {/* Appetite History Chart */}
-        <div className="mb-8">
+        <div className="mb-6 md:mb-8">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
@@ -306,7 +306,7 @@ export default function Dashboard() {
         </div>
 
         {/* Calories Chart */}
-        <div className="mb-8">
+        <div className="mb-6 md:mb-8">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
@@ -322,7 +322,7 @@ export default function Dashboard() {
 
         {/* Health & Medication Overview */}
         {userProfile && (userProfile as any).onboardingCompleted && (
-          <div className="mt-8">
+          <div className="mt-6 md:mt-8">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
@@ -385,7 +385,7 @@ export default function Dashboard() {
         )}
 
         {/* Quick Actions */}
-        <div className="mt-8">
+        <div className="mt-6 md:mt-8 mb-4">
           <Card>
             <CardHeader>
               <CardTitle>Quick Actions</CardTitle>

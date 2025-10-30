@@ -112,22 +112,22 @@ export default function FoodTracking() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20 md:pb-8">
       <Navigation />
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 md:py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Food Tracking</h1>
-          <p className="text-muted-foreground">
+        <div className="mb-6 md:mb-8">
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Food Tracking</h1>
+          <p className="text-sm md:text-base text-muted-foreground">
             Track your meals and monitor your nutrition for optimal GLP-1 results
           </p>
         </div>
 
         {/* Nutrition Summary */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-6 md:mb-8">
           <Card data-testid="card-calories-summary">
-            <CardContent className="p-6 text-center">
+            <CardContent className="p-4 md:p-6 text-center">
               <div className="text-2xl font-bold text-foreground mb-2">
                 {todaysCalories}
               </div>
@@ -145,7 +145,7 @@ export default function FoodTracking() {
           </Card>
 
           <Card data-testid="card-protein-summary">
-            <CardContent className="p-6 text-center">
+            <CardContent className="p-4 md:p-6 text-center">
               <div className="text-2xl font-bold text-foreground mb-2">
                 {todaysProtein.toFixed(1)}g
               </div>
@@ -163,7 +163,7 @@ export default function FoodTracking() {
           </Card>
 
           <Card data-testid="card-carbs-summary">
-            <CardContent className="p-6 text-center">
+            <CardContent className="p-4 md:p-6 text-center">
               <div className="text-2xl font-bold text-foreground mb-2">
                 {todaysCarbs.toFixed(1)}g
               </div>
@@ -181,7 +181,7 @@ export default function FoodTracking() {
           </Card>
 
           <Card data-testid="card-fat-summary">
-            <CardContent className="p-6 text-center">
+            <CardContent className="p-4 md:p-6 text-center">
               <div className="text-2xl font-bold text-foreground mb-2">
                 {todaysFat.toFixed(1)}g
               </div>
@@ -200,7 +200,7 @@ export default function FoodTracking() {
         </div>
 
         {/* Add Food Form - Moved to second section */}
-        <div className="mb-8">
+        <div className="mb-6 md:mb-8">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
@@ -215,7 +215,7 @@ export default function FoodTracking() {
         </div>
 
         {/* Food Log */}
-        <div className="mb-8">
+        <div className="mb-6 md:mb-8">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
@@ -290,7 +290,7 @@ export default function FoodTracking() {
         </div>
 
         {/* Hunger & Appetite Tracking - Moved lower down */}
-        <div className="mb-8">
+        <div className="mb-6 md:mb-8">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
@@ -409,7 +409,7 @@ export default function FoodTracking() {
         </div>
 
         {/* Appetite Trends Chart */}
-        <div className="mb-8">
+        <div className="mb-6 md:mb-8">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">

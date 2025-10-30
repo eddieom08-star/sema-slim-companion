@@ -85,12 +85,12 @@ export default function Medication() {
 
   if (medicationsLoading || logsLoading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background pb-20 md:pb-8">
         <Navigation />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 md:py-8">
           <div className="animate-pulse space-y-6">
             <div className="h-8 bg-muted rounded w-1/3"></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
               {[...Array(3)].map((_, i) => (
                 <div key={i} className="h-48 bg-muted rounded-lg"></div>
               ))}
@@ -102,20 +102,20 @@ export default function Medication() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20 md:pb-8">
       <Navigation />
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 md:py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Medication Management</h1>
-          <p className="text-muted-foreground">
+        <div className="mb-6 md:mb-8">
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Medication Management</h1>
+          <p className="text-sm md:text-base text-muted-foreground">
             Track your GLP-1 medications, dosages, and side effects
           </p>
         </div>
 
         {/* Active Medications */}
-        <div className="mb-8">
+        <div className="mb-6 md:mb-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-foreground">Active Medications</h2>
             <Button onClick={() => setIsAddDialogOpen(true)} data-testid="button-add-medication-header">
@@ -123,9 +123,9 @@ export default function Medication() {
               Add Medication
             </Button>
           </div>
-          
+
           {(medications as any) && (medications as any).length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
               {(medications as any).map((medication: any) => (
                 <MedicationCard
                   key={medication.id}
@@ -138,7 +138,7 @@ export default function Medication() {
             </div>
           ) : (
             <Card>
-              <CardContent className="p-8 text-center">
+              <CardContent className="p-4 md:p-6 text-center">
                 <i className="fas fa-prescription-bottle-alt text-4xl text-muted-foreground mb-4"></i>
                 <h3 className="text-lg font-semibold text-foreground mb-2">No medications added</h3>
                 <p className="text-muted-foreground mb-4">
@@ -154,15 +154,15 @@ export default function Medication() {
         </div>
 
         {/* Recent Logs */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8">
           <Card>
-            <CardHeader>
+            <CardHeader className="p-4 md:p-6">
               <CardTitle className="flex items-center space-x-2">
                 <i className="fas fa-history text-primary"></i>
                 <span>Recent Logs</span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 md:p-6">
               <div className="space-y-4" data-testid="recent-medication-logs">
                 {(medicationLogs as any) && (medicationLogs as any).length > 0 ? (
                   (medicationLogs as any).slice(0, 5).map((log: any) => (
@@ -218,13 +218,13 @@ export default function Medication() {
 
           {/* Side Effects Tracking */}
           <Card>
-            <CardHeader>
+            <CardHeader className="p-4 md:p-6">
               <CardTitle className="flex items-center space-x-2">
                 <i className="fas fa-exclamation-triangle text-secondary"></i>
                 <span>Side Effects</span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 md:p-6">
               <div className="space-y-4">
                 <div className="text-sm text-muted-foreground mb-4">
                   Track common GLP-1 side effects to share with your healthcare provider

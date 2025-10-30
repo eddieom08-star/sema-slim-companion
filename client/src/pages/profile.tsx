@@ -87,23 +87,23 @@ export default function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20 md:pb-8">
       <Navigation />
-      
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-foreground" data-testid="heading-profile">Profile Settings</h1>
-          <p className="text-muted-foreground mt-2">
+
+      <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 md:py-8">
+        <div className="mb-6 md:mb-8">
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2" data-testid="heading-profile">Profile Settings</h1>
+          <p className="text-sm md:text-base text-muted-foreground">
             Manage your personal information and health settings
           </p>
         </div>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid gap-3 md:gap-6 md:grid-cols-2">
               {/* Personal Information */}
               <Card>
-                <CardHeader>
+                <CardHeader className="p-4 md:p-6">
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle>Personal Information</CardTitle>
@@ -123,7 +123,7 @@ export default function Profile() {
                     )}
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="p-4 md:p-6 space-y-4">
                   <div>
                     <FormLabel>Email</FormLabel>
                     <Input
@@ -226,11 +226,11 @@ export default function Profile() {
 
               {/* Health Information */}
               <Card>
-                <CardHeader>
+                <CardHeader className="p-4 md:p-6">
                   <CardTitle>Health Information</CardTitle>
                   <CardDescription>Your physical measurements and goals</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="p-4 md:p-6 space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
@@ -327,11 +327,11 @@ export default function Profile() {
 
               {/* Medication Information */}
               <Card className="md:col-span-2">
-                <CardHeader>
+                <CardHeader className="p-4 md:p-6">
                   <CardTitle>Medication Information</CardTitle>
                   <CardDescription>Your GLP-1 medication details</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="p-4 md:p-6 space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}

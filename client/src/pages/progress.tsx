@@ -86,12 +86,12 @@ export default function Progress() {
 
   if (weightLogsLoading || achievementsLoading || streaksLoading || isProfileLoading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background pb-20 md:pb-8">
         <Navigation />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 md:py-8">
           <div className="animate-pulse space-y-6">
             <div className="h-8 bg-muted rounded w-1/3"></div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6">
               {[...Array(3)].map((_, i) => (
                 <div key={i} className="h-32 bg-muted rounded-lg"></div>
               ))}
@@ -103,22 +103,22 @@ export default function Progress() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20 md:pb-8">
       <Navigation />
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 md:py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Progress Tracking</h1>
-          <p className="text-muted-foreground">
+        <div className="mb-6 md:mb-8">
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Progress Tracking</h1>
+          <p className="text-sm md:text-base text-muted-foreground">
             Monitor your weight loss journey and celebrate your achievements
           </p>
         </div>
 
         {/* Progress Summary */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6 mb-6 md:mb-8">
           <Card data-testid="card-current-weight">
-            <CardContent className="p-6 text-center">
+            <CardContent className="p-4 md:p-6 text-center">
               <div className="text-3xl font-bold text-foreground mb-2">
                 {latestWeight ? `${Number(latestWeight.weight).toFixed(1)} lbs` : userProfile && (userProfile as any).currentWeight ? `${Number((userProfile as any).currentWeight).toFixed(1)} lbs` : 'No data'}
               </div>
@@ -137,7 +137,7 @@ export default function Progress() {
           </Card>
 
           <Card data-testid="card-total-loss">
-            <CardContent className="p-6 text-center">
+            <CardContent className="p-4 md:p-6 text-center">
               <div className="text-3xl font-bold text-secondary mb-2">
                 {totalWeightLoss > 0 ? `${totalWeightLoss.toFixed(1)} lbs` : '0.0 lbs'}
               </div>
@@ -149,7 +149,7 @@ export default function Progress() {
           </Card>
 
           <Card data-testid="card-logging-streak">
-            <CardContent className="p-6 text-center">
+            <CardContent className="p-4 md:p-6 text-center">
               <div className="text-3xl font-bold text-accent mb-2">
                 {weightLoggingStreak} days
               </div>
@@ -161,30 +161,30 @@ export default function Progress() {
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8">
           {/* Weight Chart */}
           <div className="lg:col-span-2">
             <Card>
-              <CardHeader>
+              <CardHeader className="p-4 md:p-6">
                 <CardTitle className="flex items-center space-x-2">
                   <i className="fas fa-chart-line text-primary"></i>
                   <span>Weight Progress Chart</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-4 md:p-6">
                 <ProgressChart />
               </CardContent>
             </Card>
 
             {/* Recent Weight Logs */}
-            <Card className="mt-6">
-              <CardHeader>
+            <Card className="mt-6 md:mt-8">
+              <CardHeader className="p-4 md:p-6">
                 <CardTitle className="flex items-center space-x-2">
                   <i className="fas fa-history text-secondary"></i>
                   <span>Recent Weight Logs</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-4 md:p-6">
                 <div className="space-y-4" data-testid="recent-weight-logs">
                   {(weightLogs as any) && (weightLogs as any).length > 0 ? (
                     (weightLogs as any).slice(0, 10).map((log: any, index: number) => {
@@ -241,13 +241,13 @@ export default function Progress() {
           <div className="space-y-6">
             {/* Log Weight */}
             <Card>
-              <CardHeader>
+              <CardHeader className="p-4 md:p-6">
                 <CardTitle className="flex items-center space-x-2">
                   <i className="fas fa-plus text-secondary"></i>
                   <span>Log Weight</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-4 md:p-6">
                 <form onSubmit={handleWeightSubmit} className="space-y-4">
                   <div>
                     <Label htmlFor="weight">Weight (lbs)</Label>
@@ -299,13 +299,13 @@ export default function Progress() {
 
             {/* Achievements */}
             <Card>
-              <CardHeader>
+              <CardHeader className="p-4 md:p-6">
                 <CardTitle className="flex items-center space-x-2">
                   <i className="fas fa-trophy text-accent"></i>
                   <span>Achievements</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-4 md:p-6">
                 <div className="space-y-4" data-testid="achievements-list">
                   {(userAchievements as any) && (userAchievements as any).length > 0 ? (
                     (userAchievements as any).slice(0, 5).map((achievement: any) => (

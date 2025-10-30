@@ -129,22 +129,22 @@ export default function Navigation() {
 
       {/* Bottom Mobile Navigation */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50 safe-area-inset-bottom">
-        <div className="flex justify-around items-center h-16 px-2">
+        <div className="grid grid-cols-5 gap-1 h-16 px-1">
           {navItems.map((item) => {
             // Dashboard should be active for both /dashboard and / (which redirects to /dashboard)
             const isActive = location === item.path || (item.path === "/dashboard" && location === "/");
             return (
               <Link key={item.path} href={item.path}>
                 <a
-                  className={`flex flex-col items-center justify-center px-3 py-2 rounded-lg transition-all ${
+                  className={`flex flex-col items-center justify-center h-full px-1 py-2 rounded-lg transition-all ${
                     isActive
                       ? "text-primary bg-primary/10"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                   data-testid={`mobile-nav-${item.label.toLowerCase()}`}
                 >
-                  <i className={`${item.icon} text-xl mb-1`}></i>
-                  <span className="text-xs font-medium">{item.label}</span>
+                  <i className={`${item.icon} text-lg mb-0.5`}></i>
+                  <span className="text-[10px] font-medium leading-tight">{item.label}</span>
                 </a>
               </Link>
             );

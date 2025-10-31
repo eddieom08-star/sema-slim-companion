@@ -58,9 +58,9 @@ export default function Dashboard() {
 
   if (isDashboardLoading || isStreaksLoading || isAchievementsLoading || isGamificationLoading || isProfileLoading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background pb-20 md:pb-8 overflow-x-hidden">
         <Navigation />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 md:py-8">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {[...Array(4)].map((_, i) => (
               <Card key={i}>
@@ -90,10 +90,10 @@ export default function Dashboard() {
   const levelProgress = Math.min(100, (pointsInCurrentLevel / pointsNeededForLevel) * 100);
 
   return (
-    <div className="min-h-screen bg-background pb-20 md:pb-8">
+    <div className="min-h-screen bg-background pb-20 md:pb-8 overflow-x-hidden">
       <Navigation />
 
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 md:py-8">
+      <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 md:py-8">
         {/* Header */}
         <div className="mb-6 md:mb-8">
           <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
@@ -207,68 +207,68 @@ export default function Dashboard() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 mb-6 md:mb-8">
-          <Card data-testid="card-calories">
-            <CardContent className="p-4 md:p-6">
-              <div className="flex items-center space-x-2 mb-2">
-                <i className="fas fa-utensils text-primary"></i>
-                <span className="text-sm font-medium text-muted-foreground">Calories in</span>
+          <Card data-testid="card-calories" className="overflow-hidden">
+            <CardContent className="p-3 md:p-6">
+              <div className="flex items-center space-x-1.5 mb-2">
+                <i className="fas fa-utensils text-primary text-sm"></i>
+                <span className="text-xs md:text-sm font-medium text-muted-foreground truncate">Calories</span>
               </div>
-              <div className="text-2xl font-bold text-foreground" data-testid="text-todays-calories">
+              <div className="text-xl md:text-2xl font-bold text-foreground" data-testid="text-todays-calories">
                 {(dashboardData as any)?.todaysCalories || 0}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground truncate">
                 {(dashboardData as any)?.todaysCalories < 1400 ? "On track" : "Above target"}
               </p>
             </CardContent>
           </Card>
 
-          <Card data-testid="card-weight-change">
-            <CardContent className="p-4 md:p-6">
-              <div className="flex items-center space-x-2 mb-2">
-                <i className="fas fa-weight text-secondary"></i>
-                <span className="text-sm font-medium text-muted-foreground">Weekly Change</span>
+          <Card data-testid="card-weight-change" className="overflow-hidden">
+            <CardContent className="p-3 md:p-6">
+              <div className="flex items-center space-x-1.5 mb-2">
+                <i className="fas fa-weight text-secondary text-sm"></i>
+                <span className="text-xs md:text-sm font-medium text-muted-foreground truncate">Week</span>
               </div>
-              <div className="text-2xl font-bold text-foreground" data-testid="text-weekly-change">
+              <div className="text-xl md:text-2xl font-bold text-foreground" data-testid="text-weekly-change">
                 {(dashboardData as any)?.weeklyWeightChange > 0 ? '+' : ''}
                 {(dashboardData as any)?.weeklyWeightChange?.toFixed(1) || '0.0'} lbs
               </div>
-              <p className="text-xs text-muted-foreground">
-                {(dashboardData as any)?.weeklyWeightChange < 0 ? "Great progress!" : "Keep going!"}
+              <p className="text-xs text-muted-foreground truncate">
+                {(dashboardData as any)?.weeklyWeightChange < 0 ? "Progress!" : "Keep going!"}
               </p>
             </CardContent>
           </Card>
 
-          <Card data-testid="card-streak">
-            <CardContent className="p-4 md:p-6">
-              <div className="flex items-center space-x-2 mb-2">
-                <i className="fas fa-fire text-accent"></i>
-                <span className="text-sm font-medium text-muted-foreground">Tracking Streak</span>
+          <Card data-testid="card-streak" className="overflow-hidden">
+            <CardContent className="p-3 md:p-6">
+              <div className="flex items-center space-x-1.5 mb-2">
+                <i className="fas fa-fire text-accent text-sm"></i>
+                <span className="text-xs md:text-sm font-medium text-muted-foreground truncate">Streak</span>
               </div>
-              <div className="text-2xl font-bold text-foreground" data-testid="text-tracking-streak">
+              <div className="text-xl md:text-2xl font-bold text-foreground" data-testid="text-tracking-streak">
                 {foodTrackingStreak} days
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground truncate">
                 Keep it up!
               </p>
             </CardContent>
           </Card>
 
-          <Card data-testid="card-medication">
-            <CardContent className="p-4 md:p-6">
-              <div className="flex items-center space-x-2 mb-2">
-                <i className="fas fa-syringe text-destructive"></i>
-                <span className="text-sm font-medium text-muted-foreground">Next Medication</span>
+          <Card data-testid="card-medication" className="overflow-hidden">
+            <CardContent className="p-3 md:p-6">
+              <div className="flex items-center space-x-1.5 mb-2">
+                <i className="fas fa-syringe text-destructive text-sm"></i>
+                <span className="text-xs md:text-sm font-medium text-muted-foreground truncate">Next Med</span>
               </div>
-              <div className="text-lg font-bold text-foreground" data-testid="text-next-medication">
+              <div className="text-base md:text-lg font-bold text-foreground truncate" data-testid="text-next-medication">
                 {(dashboardData as any)?.upcomingMedication ? (
                   <>
-                    {(dashboardData as any).upcomingMedication.medicationType}
-                    <p className="text-xs text-muted-foreground font-normal">
+                    <span className="truncate block">{(dashboardData as any).upcomingMedication.medicationType}</span>
+                    <p className="text-xs text-muted-foreground font-normal truncate">
                       {(dashboardData as any).upcomingMedication.dosage}
                     </p>
                   </>
                 ) : (
-                  "No upcoming"
+                  "None"
                 )}
               </div>
             </CardContent>

@@ -87,10 +87,10 @@ export default function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20 md:pb-8">
+    <div className="min-h-screen bg-background pb-20 md:pb-8 overflow-x-hidden">
       <Navigation />
 
-      <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 md:py-8">
+      <main className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 md:py-8">
         <div className="mb-6 md:mb-8">
           <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2" data-testid="heading-profile">Profile Settings</h1>
           <p className="text-sm md:text-base text-muted-foreground">

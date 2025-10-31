@@ -85,9 +85,9 @@ export default function Medication() {
 
   if (medicationsLoading || logsLoading) {
     return (
-      <div className="min-h-screen bg-background pb-20 md:pb-8">
+      <div className="min-h-screen bg-background pb-20 md:pb-8 overflow-x-hidden">
         <Navigation />
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 md:py-8">
+        <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 md:py-8">
           <div className="animate-pulse space-y-6">
             <div className="h-8 bg-muted rounded w-1/3"></div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
@@ -102,10 +102,10 @@ export default function Medication() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20 md:pb-8">
+    <div className="min-h-screen bg-background pb-20 md:pb-8 overflow-x-hidden">
       <Navigation />
 
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 md:py-8">
+      <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 md:py-8">
         {/* Header */}
         <div className="mb-6 md:mb-8">
           <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Medication Management</h1>

@@ -1,7 +1,10 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Capacitor } from "@capacitor/core";
 import { clerkNative } from "@/lib/clerkNative";
 import { isTokenGetterReady } from "@/lib/queryClient";
+
+const isMobile = Capacitor.isNativePlatform();
 
 // Helper to get auth headers for debugging
 async function getAuthHeaders(): Promise<Record<string, string>> {
@@ -27,14 +30,17 @@ declare global {
 /**
  * Native-only auth hook using Clerk iOS SDK
  * Does NOT use @clerk/clerk-react web SDK
+ * On web, returns not authenticated immediately (no infinite loading)
  */
 export function useAuthNative() {
   const [isSignedIn, setIsSignedIn] = useState<boolean>(false);
-  const [isLoaded, setIsLoaded] = useState<boolean>(false);
-  const [tokenReady, setTokenReady] = useState<boolean>(false);
+  const [isLoaded, setIsLoaded] = useState<boolean>(!isMobile); // Web loads immediately
+  const [tokenReady, setTokenReady] = useState<boolean>(!isMobile); // Web is always "ready"
 
-  // Wait for token getter to be ready before enabling queries
+  // Wait for token getter to be ready before enabling queries (mobile only)
   useEffect(() => {
+    if (!isMobile) return; // Skip on web
+
     const checkTokenReady = () => {
       const ready = isTokenGetterReady();
       console.log('[useAuthNative] Token getter ready:', ready);
@@ -54,8 +60,14 @@ export function useAuthNative() {
     return () => clearInterval(interval);
   }, [tokenReady]);
 
-  // Check auth status from native plugin
+  // Check auth status from native plugin (mobile only)
   useEffect(() => {
+    if (!isMobile) {
+      // On web, we're not authenticated via native - show landing page
+      console.log('[useAuthNative] Web platform - skipping native auth check');
+      return;
+    }
+
     const checkAuthStatus = async () => {
       try {
         const result = await clerkNative.isSignedIn();

@@ -77,6 +77,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
+  // Debug endpoint to check what headers are being received (no auth required)
+  app.get('/api/debug/headers', async (req, res) => {
+    const authHeader = req.headers.authorization;
+    res.json({
+      hasAuthHeader: !!authHeader,
+      authHeaderPrefix: authHeader?.substring(0, 30),
+      authHeaderLength: authHeader?.length,
+      allHeaders: Object.keys(req.headers),
+      clerkAuth: (req as any).auth || 'not set by middleware',
+    });
+  });
+
   app.get('/api/health', async (_req, res) => {
     try {
       // Check database connection with retry

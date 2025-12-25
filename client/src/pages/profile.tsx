@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthNative as useAuth } from "@/hooks/useAuthNative";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -13,7 +13,10 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Edit, Save, X } from "lucide-react";
+import { Edit, Save, X, LogOut } from "lucide-react";
+// import { useClerk } from "@clerk/clerk-react"; // DISABLED - Using native SDK
+import { Capacitor } from "@capacitor/core";
+import { clerkNative } from "@/lib/clerkNative";
 
 const profileFormSchema = updateUserProfileSchema.extend({
   currentWeight: z.preprocess(
@@ -36,7 +39,10 @@ export default function Profile() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  // const { signOut } = useClerk(); // DISABLED - Using native SDK
   const [isEditing, setIsEditing] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const isMobile = Capacitor.isNativePlatform();
 
   const form = useForm({
     resolver: zodResolver(profileFormSchema),
@@ -84,6 +90,23 @@ export default function Profile() {
   const handleCancel = () => {
     form.reset();
     setIsEditing(false);
+  };
+
+  const handleLogout = async () => {
+    try {
+      setIsLoggingOut(true);
+      await clerkNative.signOut();
+      // Reload to clear app state and return to landing
+      window.location.href = "/";
+    } catch (error) {
+      console.error("Logout error:", error);
+      setIsLoggingOut(false);
+      toast({
+        title: "Logout failed",
+        description: (error as Error).message,
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -383,6 +406,37 @@ export default function Profile() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Account Actions - Mobile Only */}
+              {isMobile && (
+                <Card className="md:col-span-2">
+                  <CardHeader className="p-4 md:p-6">
+                    <CardTitle>Account Actions</CardTitle>
+                    <CardDescription>Manage your account</CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-4 md:p-6">
+                    <Button
+                      variant="destructive"
+                      onClick={handleLogout}
+                      disabled={isLoggingOut}
+                      className="w-full"
+                      data-testid="button-logout-mobile"
+                    >
+                      {isLoggingOut ? (
+                        <>
+                          <i className="fas fa-spinner fa-spin mr-2"></i>
+                          Logging out...
+                        </>
+                      ) : (
+                        <>
+                          <LogOut className="h-4 w-4 mr-2" />
+                          Logout
+                        </>
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
             </div>
 
             {isEditing && (

@@ -11,6 +11,74 @@ import { HungerChart } from "@/components/hunger-chart";
 import { apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
 import { Brain, Zap, Pizza, IceCream, Cookie } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
+
+// Mock data for testing without authentication
+const MOCK_FOOD_ENTRIES = [
+  {
+    id: "1",
+    foodName: "Grilled Chicken Breast",
+    brand: "Home cooked",
+    quantity: "6",
+    unit: "oz",
+    calories: 280,
+    protein: "53",
+    carbs: "0",
+    fat: "6",
+    mealType: "lunch",
+    loggedAt: new Date().toISOString()
+  },
+  {
+    id: "2",
+    foodName: "Mixed Green Salad",
+    brand: "",
+    quantity: "2",
+    unit: "cups",
+    calories: 35,
+    protein: "2",
+    carbs: "7",
+    fat: "0.5",
+    mealType: "lunch",
+    loggedAt: new Date().toISOString()
+  },
+  {
+    id: "3",
+    foodName: "Protein Shake",
+    brand: "Optimum Nutrition",
+    quantity: "1",
+    unit: "scoop",
+    calories: 120,
+    protein: "24",
+    carbs: "3",
+    fat: "1",
+    mealType: "breakfast",
+    loggedAt: new Date().toISOString()
+  },
+  {
+    id: "4",
+    foodName: "Greek Yogurt",
+    brand: "Fage Total 0%",
+    quantity: "1",
+    unit: "cup",
+    calories: 100,
+    protein: "18",
+    carbs: "7",
+    fat: "0",
+    mealType: "snack",
+    loggedAt: new Date().toISOString()
+  }
+];
+
+const MOCK_HUNGER_LOGS = [
+  {
+    id: "1",
+    hungerBefore: 5,
+    hungerAfter: 3,
+    cravingIntensity: 2,
+    cravingType: "sweet",
+    loggedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString() // 2 hours ago
+  }
+];
 
 export default function FoodTracking() {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -20,6 +88,9 @@ export default function FoodTracking() {
   const [cravingType, setCravingType] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Check if we're bypassing auth (mobile platform)
+  const isBypassingAuth = Capacitor.isNativePlatform();
 
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
   const { data: foodEntries, isLoading } = useQuery({
@@ -31,6 +102,7 @@ export default function FoodTracking() {
       if (!response.ok) throw new Error("Failed to fetch food entries");
       return response.json();
     },
+    enabled: !isBypassingAuth, // Disable query when bypassing auth
   });
 
   const { data: hungerLogs } = useQuery({
@@ -42,7 +114,12 @@ export default function FoodTracking() {
       if (!response.ok) throw new Error("Failed to fetch hunger logs");
       return response.json();
     },
+    enabled: !isBypassingAuth, // Disable query when bypassing auth
   });
+
+  // Use effective data - mock when bypassing auth, real data otherwise
+  const effectiveFoodEntries = isBypassingAuth ? MOCK_FOOD_ENTRIES : foodEntries;
+  const effectiveHungerLogs = isBypassingAuth ? MOCK_HUNGER_LOGS : hungerLogs;
 
   const deleteFoodEntry = useMutation({
     mutationFn: async (id: string) => {
@@ -66,6 +143,15 @@ export default function FoodTracking() {
 
   const logHunger = useMutation({
     mutationFn: async () => {
+      // If bypassing auth, show demo message instead of API call
+      if (isBypassingAuth) {
+        toast({
+          title: "Demo Mode",
+          description: "You're in test mode. Data won't be saved, but you can explore all features!",
+        });
+        return;
+      }
+
       await apiRequest("POST", "/api/hunger-logs", {
         hungerBefore: Math.max(hungerLevel, 1),
         hungerAfter: fullnessLevel > 0 ? Math.max(11 - fullnessLevel, 1) : null,
@@ -75,6 +161,15 @@ export default function FoodTracking() {
       });
     },
     onSuccess: () => {
+      if (isBypassingAuth) {
+        // Just reset form in demo mode
+        setHungerLevel(5);
+        setFullnessLevel(0);
+        setCravingIntensity(0);
+        setCravingType("");
+        return;
+      }
+
       queryClient.invalidateQueries({ queryKey: ["/api/hunger-logs"] });
       toast({
         title: "Hunger log recorded",
@@ -95,10 +190,10 @@ export default function FoodTracking() {
     },
   });
 
-  const todaysCalories = foodEntries?.reduce((sum: number, entry: any) => sum + entry.calories, 0) || 0;
-  const todaysProtein = foodEntries?.reduce((sum: number, entry: any) => sum + Number(entry.protein), 0) || 0;
-  const todaysCarbs = foodEntries?.reduce((sum: number, entry: any) => sum + Number(entry.carbs), 0) || 0;
-  const todaysFat = foodEntries?.reduce((sum: number, entry: any) => sum + Number(entry.fat), 0) || 0;
+  const todaysCalories = effectiveFoodEntries?.reduce((sum: number, entry: any) => sum + entry.calories, 0) || 0;
+  const todaysProtein = effectiveFoodEntries?.reduce((sum: number, entry: any) => sum + Number(entry.protein), 0) || 0;
+  const todaysCarbs = effectiveFoodEntries?.reduce((sum: number, entry: any) => sum + Number(entry.carbs), 0) || 0;
+  const todaysFat = effectiveFoodEntries?.reduce((sum: number, entry: any) => sum + Number(entry.fat), 0) || 0;
 
   const calorieTarget = 1400; // This could be dynamic based on user profile
   const proteinTarget = 120;
@@ -108,7 +203,7 @@ export default function FoodTracking() {
   const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack'];
 
   const getFoodEntriesByMeal = (mealType: string) => {
-    return foodEntries?.filter((entry: any) => entry.mealType === mealType) || [];
+    return effectiveFoodEntries?.filter((entry: any) => entry.mealType === mealType) || [];
   };
 
   return (
@@ -394,7 +489,7 @@ export default function FoodTracking() {
               <div className="mt-6 flex items-center justify-between">
                 <div className="text-sm text-muted-foreground" data-testid="text-last-logged">
                   <Zap className="w-4 h-4 inline mr-1" />
-                  Last logged: {hungerLogs?.[0] ? format(new Date(hungerLogs[0].loggedAt), 'h:mm a') : 'Never'}
+                  Last logged: {effectiveHungerLogs?.[0] ? format(new Date(effectiveHungerLogs[0].loggedAt), 'h:mm a') : 'Never'}
                 </div>
                 <Button
                   onClick={() => logHunger.mutate()}

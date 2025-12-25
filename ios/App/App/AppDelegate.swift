@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import Clerk
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -8,6 +9,18 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
+
+        // Initialize Clerk with publishable key
+        Task {
+            do {
+                try await Clerk.shared.configure(publishableKey: "pk_test_Y29tcGxldGUtYnVsbGZyb2ctNzEuY2xlcmsuYWNjb3VudHMuZGV2JA")
+                print("[AppDelegate] Clerk initialized successfully")
+            } catch {
+                print("[AppDelegate] Clerk initialization error: \(error)")
+            }
+        }
+
+        print("[AppDelegate] App launched")
         return true
     }
 

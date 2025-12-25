@@ -21,4 +21,22 @@ end
 
 post_install do |installer|
   assertDeploymentTarget(installer)
+
+  # Disable quoted include warning that causes build failures in CapacitorCordova
+  installer.pods_project.targets.each do |target|
+    target.build_configurations.each do |config|
+      config.build_settings['CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER'] = 'NO'
+      # Disable User Script Sandboxing to fix "Embed Pods Frameworks" script errors
+      config.build_settings['ENABLE_USER_SCRIPT_SANDBOXING'] = 'NO'
+    end
+  end
+
+  # Also disable sandboxing for the main project target
+  installer.generated_projects.each do |project|
+    project.targets.each do |target|
+      target.build_configurations.each do |config|
+        config.build_settings['ENABLE_USER_SCRIPT_SANDBOXING'] = 'NO'
+      end
+    end
+  end
 end

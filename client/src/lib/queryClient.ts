@@ -1,10 +1,38 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { Capacitor } from "@capacitor/core";
+
+// API base URL - use production URL when running on native platform (iOS/Android)
+const getApiBaseUrl = () => {
+  if (Capacitor.isNativePlatform()) {
+    return "https://sema-slim-companion.vercel.app";
+  }
+  return ""; // Use relative URLs for web
+};
 
 // Get Clerk session token - will be injected by auth wrapper
 let getSessionToken: (() => Promise<string | null>) | null = null;
+let tokenGetterReady = false;
 
 export function setAuthTokenGetter(getter: () => Promise<string | null>) {
+  console.log('[QueryClient] setAuthTokenGetter called');
   getSessionToken = getter;
+  tokenGetterReady = true;
+}
+
+export function hasAuthTokenGetter(): boolean {
+  return getSessionToken !== null;
+}
+
+export function isTokenGetterReady(): boolean {
+  return tokenGetterReady;
+}
+
+// For mobile: Initialize token getter synchronously at module load time
+// This MUST happen before any React components render
+if (Capacitor.isNativePlatform()) {
+  console.log('[QueryClient] Mobile detected - will configure token getter during initialization');
+  // Token getter will be configured by initializeMobile() before React renders
+  // See main.tsx where we await initializeMobile() before rendering
 }
 
 async function throwIfResNotOk(res: Response) {
@@ -17,17 +45,27 @@ async function throwIfResNotOk(res: Response) {
 async function getAuthHeaders(): Promise<Record<string, string>> {
   const headers: Record<string, string> = {};
 
+  console.log('[QueryClient] Getting auth headers, getter exists:', !!getSessionToken);
+
   if (getSessionToken) {
     try {
       const token = await getSessionToken();
+      console.log('[QueryClient] Token retrieved:', token ? `${token.substring(0, 20)}...` : 'null');
+      console.log('[QueryClient] Token length:', token?.length);
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
+        console.log('[QueryClient] Authorization header set:', headers['Authorization'].substring(0, 27) + '...');
+      } else {
+        console.warn('[QueryClient] Token is null, skipping Authorization header');
       }
     } catch (error) {
-      console.error('Failed to get session token:', error);
+      console.error('[QueryClient] Failed to get session token:', error);
     }
+  } else {
+    console.warn('[QueryClient] No auth token getter configured!');
   }
 
+  console.log('[QueryClient] Final headers:', Object.keys(headers));
   return headers;
 }
 
@@ -37,8 +75,10 @@ export async function apiRequest(
   data?: unknown | undefined,
 ): Promise<Response> {
   const authHeaders = await getAuthHeaders();
+  const baseUrl = getApiBaseUrl();
+  const fullUrl = baseUrl + url;
 
-  const res = await fetch(url, {
+  const res = await fetch(fullUrl, {
     method,
     headers: {
       ...authHeaders,
@@ -59,8 +99,11 @@ export const getQueryFn: <T>(options: {
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
     const authHeaders = await getAuthHeaders();
+    const baseUrl = getApiBaseUrl();
+    const url = queryKey.join("/") as string;
+    const fullUrl = baseUrl + url;
 
-    const res = await fetch(queryKey.join("/") as string, {
+    const res = await fetch(fullUrl, {
       headers: authHeaders,
       credentials: "include",
     });

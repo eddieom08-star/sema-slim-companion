@@ -1,25 +1,189 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { SignInButton, SignUpButton, useUser } from "@clerk/clerk-react";
+// import { useUser } from "@clerk/clerk-react"; // DISABLED - Using native SDK
 import { useLocation } from "wouter";
+import { useEffect, useRef, useState } from "react";
+import { Capacitor } from "@capacitor/core";
+import { Browser } from "@capacitor/browser";
+import { clerkNative } from "@/lib/clerkNative";
 
 /**
  * Landing Page - Marketing site for unauthenticated users
  *
- * PHASE 2 CLEANUP:
- * - Removed auto-redirect useEffect (was causing race condition)
- * - No longer checks auth state for routing
- * - App.tsx handles all routing decisions
- * - This page is purely presentational
+ * NATIVE AUTH ONLY:
+ * - Uses ClerkNative plugin for authentication state
+ * - No web-based Clerk React hooks
+ * - Direct native sign-in/sign-up calls
+ * - Optimized for mobile-first experience
  */
 export default function Landing() {
-  const { isSignedIn, isLoaded } = useUser();
   const [, setLocation] = useLocation();
+  const [isSignedIn, setIsSignedIn] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [forceLoaded, setForceLoaded] = useState(false);
+  const [touchCount, setTouchCount] = useState(0);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isMobile = Capacitor.isNativePlatform();
+
+  // Check native auth status
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const result = await clerkNative.isSignedIn();
+        setIsSignedIn(result.isSignedIn);
+        setIsLoaded(true);
+      } catch (error) {
+        console.error('[SemaSlim Landing] Auth check error:', error);
+        setIsLoaded(true);
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  // NOTE: Redirect handled by App.tsx router
+  // Landing page should not be accessible when authenticated
+  // If you see this page while signed in, there's a routing issue in App.tsx
+
+  // Mobile fix: Force show sign in button after timeout
+  useEffect(() => {
+    if (isMobile && !isLoaded) {
+      console.log('[SemaSlim Landing] Auth not loaded yet, starting timeout...');
+
+      if (!timeoutRef.current) {
+        timeoutRef.current = setTimeout(() => {
+          console.log('[SemaSlim Landing] Auth timeout reached - forcing sign in button to show');
+          setForceLoaded(true);
+        }, 2000);
+      }
+
+      return () => {
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
+      };
+    }
+  }, [isMobile, isLoaded]);
+
+  // Log auth state changes for debugging
+  useEffect(() => {
+    if (isMobile) {
+      console.log('[SemaSlim Landing] Auth state:', { isLoaded, isSignedIn, forceLoaded });
+    }
+  }, [isMobile, isLoaded, isSignedIn, forceLoaded]);
+
+  const showAuthButton = isLoaded || forceLoaded;
+
+  // Direct button handlers - Use native Clerk on mobile, navigate on web
+  const handleSignInClick = async () => {
+    console.log('[SemaSlim Landing] Sign In button clicked', {
+      touchCount: touchCount + 1,
+      isMobile
+    });
+    setTouchCount(prev => prev + 1);
+
+    // MOBILE: Use native Clerk iOS SDK
+    if (isMobile) {
+      console.log('[SemaSlim Landing] Opening native Clerk sign-in');
+      try {
+        const result = await clerkNative.presentSignIn();
+        console.log('[SemaSlim Landing] Sign-in result:', result);
+
+        // Check if sign-in was successful
+        if ((result as any).isSignedIn) {
+          console.log('[SemaSlim Landing] Sign-in successful, redirecting to dashboard');
+          setLocation('/dashboard');
+        } else {
+          console.log('[SemaSlim Landing] Sign-in cancelled or failed');
+        }
+      } catch (error) {
+        console.error('[SemaSlim Landing] Sign-in error:', error);
+        alert(`Sign-in error: ${(error as Error).message}`);
+      }
+    } else {
+      // WEB: Navigate to sign-in page
+      setLocation('/sign-in');
+    }
+  };
+
+  const handleSignUpClick = async () => {
+    console.log('[SemaSlim Landing] Sign Up button clicked', {
+      touchCount: touchCount + 1,
+      isMobile
+    });
+    setTouchCount(prev => prev + 1);
+
+    // MOBILE: Use native Clerk iOS SDK
+    if (isMobile) {
+      console.log('[SemaSlim Landing] Opening native Clerk sign-up');
+      try {
+        const result = await clerkNative.presentSignUp();
+        console.log('[SemaSlim Landing] Sign-up result:', result);
+
+        // Check if sign-up was successful
+        if ((result as any).isSignedIn) {
+          console.log('[SemaSlim Landing] Sign-up successful, redirecting to dashboard');
+          setLocation('/dashboard');
+        } else {
+          console.log('[SemaSlim Landing] Sign-up cancelled or failed');
+        }
+      } catch (error) {
+        console.error('[SemaSlim Landing] Sign-up error:', error);
+        alert(`Sign-up error: ${(error as Error).message}`);
+      }
+    } else {
+      // WEB: Navigate to sign-up page
+      setLocation('/sign-up');
+    }
+  };
+
+  const handleDashboardClick = () => {
+    console.log('[SemaSlim Landing] Dashboard button clicked');
+    setLocation("/dashboard");
+  };
+
+  const handleLogoutClick = async () => {
+    console.log('[SemaSlim Landing] Logout button clicked');
+
+    if (isMobile) {
+      try {
+        await clerkNative.signOut();
+        console.log('[SemaSlim Landing] Signed out successfully');
+        // Force reload to clear all state
+        window.location.reload();
+      } catch (error) {
+        console.error('[SemaSlim Landing] Logout error:', error);
+        alert(`Logout error: ${(error as Error).message}`);
+      }
+    }
+  };
+
+  // Log touch events for debugging
+  useEffect(() => {
+    if (isMobile) {
+      const logTouch = (e: TouchEvent) => {
+        console.log('[SemaSlim Landing] Touch detected:', {
+          type: e.type,
+          touches: e.touches.length,
+          target: (e.target as HTMLElement)?.tagName
+        });
+      };
+
+      window.addEventListener('touchstart', logTouch);
+      window.addEventListener('touchend', logTouch);
+
+      return () => {
+        window.removeEventListener('touchstart', logTouch);
+        window.removeEventListener('touchend', logTouch);
+      };
+    }
+  }, [isMobile]);
 
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-card border-b border-border sticky top-0 z-50">
+      <header className="bg-card border-b border-border sticky top-0 z-50 safe-area-top">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-3">
@@ -32,76 +196,92 @@ export default function Landing() {
               </div>
             </div>
 
-            {!isLoaded ? (
+            {!showAuthButton ? (
               <Button disabled data-testid="button-loading">
                 Loading...
               </Button>
             ) : isSignedIn ? (
-              <Button onClick={() => setLocation("/dashboard")} data-testid="button-dashboard">
-                Go to Dashboard
-              </Button>
-            ) : (
-              <SignInButton mode="modal">
-                <Button data-testid="button-login">
-                  Sign In
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleLogoutClick}
+                  variant="outline"
+                  data-testid="button-logout"
+                  style={{ touchAction: 'manipulation' }}
+                >
+                  Log Out
                 </Button>
-              </SignInButton>
+                <Button
+                  onClick={handleDashboardClick}
+                  data-testid="button-dashboard"
+                  style={{ touchAction: 'manipulation' }}
+                >
+                  Dashboard
+                </Button>
+              </div>
+            ) : (
+              <Button
+                onClick={handleSignInClick}
+                data-testid="button-login"
+                style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+              >
+                Sign In {isMobile && touchCount > 0 && `(${touchCount})`}
+              </Button>
             )}
           </div>
         </div>
       </header>
 
       {/* Hero Section */}
-      <section className="gradient-bg text-primary-foreground py-16 lg:py-24">
+      <section className="gradient-bg text-primary-foreground py-8 sm:py-16 lg:py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="space-y-8">
-              <div className="space-y-4">
-                <h2 className="text-4xl lg:text-6xl font-bold leading-tight text-black">
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+            <div className="space-y-6 sm:space-y-8">
+              <div className="space-y-3 sm:space-y-4">
+                <h2 className="text-3xl sm:text-4xl lg:text-6xl font-bold leading-tight text-black">
                   Optimize Your<br />
                   <span className="text-black">GLP-1 Journey</span>
                 </h2>
-                <p className="text-xl text-black leading-relaxed">
+                <p className="text-base sm:text-xl text-black leading-relaxed">
                   The only weight management app designed specifically for semaglutide users. Track nutrition, manage medications, and achieve sustainable results.
                 </p>
               </div>
               
               <div className="flex flex-col sm:flex-row gap-4">
-                <SignUpButton mode="modal">
-                  <Button 
-                    className="bg-card text-primary px-8 py-4 rounded-lg font-semibold hover:bg-card/90 transition-colors"
-                    data-testid="button-start-trial"
-                  >
-                    Start Free Trial
-                  </Button>
-                </SignUpButton>
-                <SignUpButton mode="modal">
-                  <Button 
-                    className="bg-blue-600 text-white px-8 py-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-                    data-testid="button-view-demo"
-                  >
-                    Try it for Free
-                  </Button>
-                </SignUpButton>
+                <Button
+                  onClick={handleSignUpClick}
+                  className="bg-card text-primary px-8 py-4 rounded-lg font-semibold hover:bg-card/90 transition-colors"
+                  data-testid="button-start-trial"
+                  style={{ touchAction: 'manipulation' }}
+                >
+                  Start Free Trial
+                </Button>
+                <Button
+                  onClick={handleSignUpClick}
+                  className="bg-blue-600 text-white px-8 py-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                  data-testid="button-view-demo"
+                  style={{ touchAction: 'manipulation' }}
+                >
+                  Try it for Free
+                </Button>
               </div>
-              
-              <div className="flex items-center space-x-8 pt-4">
+
+              <div className="flex items-center justify-center sm:justify-start space-x-4 sm:space-x-8 pt-4">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-black" data-testid="text-users-count">500K+</div>
-                  <div className="text-sm text-black">Active Users</div>
+                  <div className="text-xl sm:text-2xl font-bold text-black" data-testid="text-users-count">500K+</div>
+                  <div className="text-xs sm:text-sm text-black">Active Users</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-black" data-testid="text-app-rating">4.9★</div>
-                  <div className="text-sm text-black">App Rating</div>
+                  <div className="text-xl sm:text-2xl font-bold text-black" data-testid="text-app-rating">4.9★</div>
+                  <div className="text-xs sm:text-sm text-black">App Rating</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-black" data-testid="text-avg-loss">18 lbs</div>
-                  <div className="text-sm text-black">Avg. Loss</div>
+                  <div className="text-xl sm:text-2xl font-bold text-black" data-testid="text-avg-loss">18 lbs</div>
+                  <div className="text-xs sm:text-sm text-black">Avg. Loss</div>
                 </div>
               </div>
             </div>
-            
-            <div className="relative flex justify-center lg:justify-end">
+
+            <div className="relative hidden lg:flex justify-center lg:justify-end">
               <div className="relative mx-auto w-[320px]" data-testid="phone-mockup">
                 {/* Phone Frame */}
                 <div className="relative bg-gray-900 rounded-[3rem] p-3 shadow-2xl">
@@ -190,16 +370,16 @@ export default function Landing() {
       </section>
 
       {/* Medication Plans */}
-      <section className="py-16 bg-muted/30">
+      <section className="py-8 sm:py-16 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center space-y-4 mb-12">
-            <h2 className="text-3xl lg:text-4xl font-bold text-foreground">Plans for Every GLP-1 User</h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+          <div className="text-center space-y-3 sm:space-y-4 mb-8 sm:mb-12">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground">Plans for Every GLP-1 User</h2>
+            <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto">
               Specialized tracking and support for your specific semaglutide medication
             </p>
           </div>
-          
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             {[
               {
                 icon: "fas fa-syringe",
@@ -249,29 +429,29 @@ export default function Landing() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-16 bg-primary text-primary-foreground">
+      <section className="py-8 sm:py-16 bg-primary text-primary-foreground">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="space-y-8">
-            <div className="space-y-4">
-              <h2 className="text-3xl lg:text-5xl font-bold">Ready to Optimize Your GLP-1 Journey?</h2>
-              <p className="text-xl text-primary-foreground/90 leading-relaxed">
-                Join 500,000+ users who've transformed their weight loss journey with SemaSlim. 
+          <div className="space-y-6 sm:space-y-8">
+            <div className="space-y-3 sm:space-y-4">
+              <h2 className="text-2xl sm:text-3xl lg:text-5xl font-bold">Ready to Optimize Your GLP-1 Journey?</h2>
+              <p className="text-base sm:text-xl text-primary-foreground/90 leading-relaxed">
+                Join 500,000+ users who've transformed their weight loss journey with SemaSlim.
                 Start your free trial today and see the difference specialized GLP-1 support makes.
               </p>
             </div>
-            
+
             <div className="flex justify-center">
-              <SignUpButton mode="modal">
-                <Button 
-                  className="bg-card text-primary px-8 py-4 rounded-lg font-semibold hover:bg-card/90 transition-colors min-w-48"
-                  data-testid="button-start-trial-cta"
-                >
-                  Start Free 14-Day Trial
-                </Button>
-              </SignUpButton>
+              <Button
+                onClick={handleSignUpClick}
+                className="bg-card text-primary px-6 sm:px-8 py-3 sm:py-4 rounded-lg font-semibold hover:bg-card/90 transition-colors w-full sm:w-auto sm:min-w-48"
+                data-testid="button-start-trial-cta"
+                style={{ touchAction: 'manipulation' }}
+              >
+                Start Free 14-Day Trial
+              </Button>
             </div>
-            
-            <div className="flex items-center justify-center space-x-8 pt-4 text-sm text-primary-foreground/80">
+
+            <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-8 pt-4 text-xs sm:text-sm text-primary-foreground/80">
               <div className="flex items-center space-x-2">
                 <i className="fas fa-shield-alt"></i>
                 <span>HIPAA Compliant</span>
@@ -282,7 +462,7 @@ export default function Landing() {
               </div>
               <div className="flex items-center space-x-2">
                 <i className="fas fa-credit-card"></i>
-                <span>No Credit Card Required</span>
+                <span>No Card Required</span>
               </div>
             </div>
           </div>
@@ -291,9 +471,9 @@ export default function Landing() {
 
       {/* Footer */}
       <footer className="bg-card border-t border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
           <div className="text-center">
-            <div className="flex items-center justify-center space-x-3 mb-4">
+            <div className="flex items-center justify-center space-x-3 mb-3 sm:mb-4">
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                 <i className="fas fa-heartbeat text-primary-foreground"></i>
               </div>
@@ -302,7 +482,7 @@ export default function Landing() {
                 <p className="text-xs text-muted-foreground">GLP-1 Weight Management</p>
               </div>
             </div>
-            <p className="text-sm text-muted-foreground mb-4">
+            <p className="text-sm text-muted-foreground mb-3 sm:mb-4">
               The comprehensive weight management platform designed specifically for semaglutide medication users.
             </p>
             <p className="text-xs text-muted-foreground">

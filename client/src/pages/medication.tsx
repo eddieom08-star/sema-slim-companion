@@ -10,6 +10,69 @@ import { MedicationForm } from "@/components/medication-form";
 import { DetailedLogDialog } from "@/components/detailed-log-dialog";
 import { apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
+import { Capacitor } from "@capacitor/core";
+
+// Mock data for testing without authentication
+const MOCK_MEDICATIONS = [
+  {
+    id: "1",
+    medicationType: "ozempic",
+    dosage: "0.5mg",
+    frequency: "weekly",
+    startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days ago
+    active: true,
+  },
+  {
+    id: "2",
+    medicationType: "wegovy",
+    dosage: "1.7mg",
+    frequency: "weekly",
+    startDate: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(), // 60 days ago
+    active: true,
+  },
+];
+
+const MOCK_MEDICATION_LOGS = [
+  {
+    id: "1",
+    medicationId: "1",
+    medicationType: "ozempic",
+    dosage: "0.5mg",
+    takenAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
+    notes: "Feeling good, no side effects today",
+    nausea: 1,
+    vomiting: 0,
+    diarrhea: 0,
+    constipation: 2,
+    heartburn: 1,
+  },
+  {
+    id: "2",
+    medicationId: "1",
+    medicationType: "ozempic",
+    dosage: "0.5mg",
+    takenAt: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(), // 9 days ago
+    notes: "Slight nausea after injection",
+    nausea: 3,
+    vomiting: 0,
+    diarrhea: 1,
+    constipation: 0,
+    heartburn: 2,
+  },
+  {
+    id: "3",
+    medicationId: "2",
+    medicationType: "wegovy",
+    dosage: "1.7mg",
+    takenAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days ago
+    notes: "",
+    nausea: 0,
+    vomiting: 0,
+    diarrhea: 0,
+    constipation: 1,
+    heartburn: 0,
+  },
+];
 
 export default function Medication() {
   const { toast } = useToast();
@@ -20,13 +83,23 @@ export default function Medication() {
   const [selectedLog, setSelectedLog] = useState<any>(null);
   const [isViewLogDialogOpen, setIsViewLogDialogOpen] = useState(false);
 
+  // Check if we're bypassing auth (mobile platform)
+  const isBypassingAuth = Capacitor.isNativePlatform();
+
   const { data: medications, isLoading: medicationsLoading } = useQuery({
     queryKey: ["/api/medications"],
+    enabled: !isBypassingAuth, // Disable query when bypassing auth
   });
 
   const { data: medicationLogs, isLoading: logsLoading } = useQuery({
     queryKey: ["/api/medication-logs"],
+    enabled: !isBypassingAuth, // Disable query when bypassing auth
   });
+
+  // Use effective data - mock when bypassing auth, real data otherwise
+  const effectiveMedications = isBypassingAuth ? MOCK_MEDICATIONS : medications;
+  const effectiveMedicationLogs = isBypassingAuth ? MOCK_MEDICATION_LOGS : medicationLogs;
+  const effectiveIsLoading = isBypassingAuth ? false : (medicationsLoading || logsLoading);
 
   const logMedication = useMutation({
     mutationFn: async (data: any) => {
@@ -83,7 +156,7 @@ export default function Medication() {
     });
   };
 
-  if (medicationsLoading || logsLoading) {
+  if (effectiveIsLoading) {
     return (
       <div className="min-h-screen bg-background pb-20 md:pb-8 overflow-x-hidden">
         <Navigation />
@@ -124,9 +197,9 @@ export default function Medication() {
             </Button>
           </div>
 
-          {(medications as any) && (medications as any).length > 0 ? (
+          {(effectiveMedications as any) && (effectiveMedications as any).length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
-              {(medications as any).map((medication: any) => (
+              {(effectiveMedications as any).map((medication: any) => (
                 <MedicationCard
                   key={medication.id}
                   medication={medication}
@@ -164,8 +237,8 @@ export default function Medication() {
             </CardHeader>
             <CardContent className="p-4 md:p-6">
               <div className="space-y-4" data-testid="recent-medication-logs">
-                {(medicationLogs as any) && (medicationLogs as any).length > 0 ? (
-                  (medicationLogs as any).slice(0, 5).map((log: any) => (
+                {(effectiveMedicationLogs as any) && (effectiveMedicationLogs as any).length > 0 ? (
+                  (effectiveMedicationLogs as any).slice(0, 5).map((log: any) => (
                     <div
                       key={log.id}
                       className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
@@ -257,11 +330,11 @@ export default function Medication() {
                   ))}
                 </div>
 
-                <Button 
-                  variant="outline" 
-                  className="w-full mt-4" 
+                <Button
+                  variant="outline"
+                  className="w-full mt-4"
                   onClick={() => {
-                    const firstMedication = (medications as any)?.[0];
+                    const firstMedication = (effectiveMedications as any)?.[0];
                     if (firstMedication) {
                       handleDetailedLog(firstMedication);
                     } else {

@@ -1,64 +1,22 @@
 PODS:
   - Capacitor (7.4.3):
     - CapacitorCordova
-  - CapacitorApp (7.1.0):
-    - Capacitor
-  - CapacitorCamera (7.0.2):
-    - Capacitor
   - CapacitorCordova (7.4.3)
-  - CapacitorKeyboard (7.0.3):
-    - Capacitor
-  - CapacitorNetwork (7.0.2):
-    - Capacitor
-  - CapacitorPreferences (7.0.2):
-    - Capacitor
-  - CapacitorSplashScreen (7.0.3):
-    - Capacitor
-  - CapacitorStatusBar (7.0.3):
-    - Capacitor
 
 DEPENDENCIES:
   - "Capacitor (from `../../node_modules/@capacitor/ios`)"
-  - "CapacitorApp (from `../../node_modules/@capacitor/app`)"
-  - "CapacitorCamera (from `../../node_modules/@capacitor/camera`)"
   - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
-  - "CapacitorKeyboard (from `../../node_modules/@capacitor/keyboard`)"
-  - "CapacitorNetwork (from `../../node_modules/@capacitor/network`)"
-  - "CapacitorPreferences (from `../../node_modules/@capacitor/preferences`)"
-  - "CapacitorSplashScreen (from `../../node_modules/@capacitor/splash-screen`)"
-  - "CapacitorStatusBar (from `../../node_modules/@capacitor/status-bar`)"
 
 EXTERNAL SOURCES:
   Capacitor:
     :path: "../../node_modules/@capacitor/ios"
-  CapacitorApp:
-    :path: "../../node_modules/@capacitor/app"
-  CapacitorCamera:
-    :path: "../../node_modules/@capacitor/camera"
   CapacitorCordova:
     :path: "../../node_modules/@capacitor/ios"
-  CapacitorKeyboard:
-    :path: "../../node_modules/@capacitor/keyboard"
-  CapacitorNetwork:
-    :path: "../../node_modules/@capacitor/network"
-  CapacitorPreferences:
-    :path: "../../node_modules/@capacitor/preferences"
-  CapacitorSplashScreen:
-    :path: "../../node_modules/@capacitor/splash-screen"
-  CapacitorStatusBar:
-    :path: "../../node_modules/@capacitor/status-bar"
 
 SPEC CHECKSUMS:
-  Capacitor: b4741ca7affb32c1b70debd03df92cbf522d8a80
-  CapacitorApp: 846d4b4a1dbb19dd1e9029c08ba6f028aa7be862
-  CapacitorCamera: 6e18d54c8ab30d7dc7b8cd93d96f9b4f57e9202a
+  Capacitor: 28d6c01026a9a3f7156529498ec1f389a2a28dbc
   CapacitorCordova: 435121e81a2df4d0034f0fb11fcefab5104cfdb5
-  CapacitorKeyboard: 3822c3a0c6b58168f96ca562f9534ed095d40860
-  CapacitorNetwork: 9b9eaeb417ec0ffa22e2bc33a4c71df10e1d6f06
-  CapacitorPreferences: b583b5deb74e564c35968189d25d32c0fd41200d
-  CapacitorSplashScreen: d06ae8804808e9f649a08e7bb7f283c77b688084
-  CapacitorStatusBar: 7d8fcbd6768db014bd721d75e246590b014928e8
 
-PODFILE CHECKSUM: 0a3f31091d975bb28c5d184b80e277fab5307b0c
+PODFILE CHECKSUM: 7dfe587981e23b675da9153f844e155d84b54fe4
 
-COCOAPODS: 1.9.3
+COCOAPODS: 1.16.2

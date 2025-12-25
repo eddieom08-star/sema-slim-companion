@@ -1,14 +1,15 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { useClerk } from "@clerk/clerk-react";
+// import { useClerk } from "@clerk/clerk-react"; // DISABLED - Using native SDK
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthNative as useAuth } from "@/hooks/useAuthNative";
 import { NotificationCenter, useUnreadNotificationsCount } from "@/components/notification-center";
+import { clerkNative } from "@/lib/clerkNative";
 
 export default function Navigation() {
   const [location] = useLocation();
   const { user } = useAuth();
-  const { signOut } = useClerk();
+  // const { signOut } = useClerk(); // DISABLED - Using native SDK
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const unreadCount = useUnreadNotificationsCount();
@@ -16,8 +17,9 @@ export default function Navigation() {
   const handleLogout = async () => {
     try {
       setIsLoggingOut(true);
-      // Clerk automatically saves all session data and ensures clean logout
-      await signOut({ redirectUrl: "/" });
+      await clerkNative.signOut();
+      // Reload to clear app state and return to landing
+      window.location.href = "/";
     } catch (error) {
       console.error("Logout error:", error);
       setIsLoggingOut(false);
@@ -35,7 +37,7 @@ export default function Navigation() {
   return (
     <>
       {/* Top Header */}
-      <header className="bg-card border-b border-border sticky top-0 z-50">
+      <header className="bg-card border-b border-border sticky top-0 z-50 safe-area-top">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-3">

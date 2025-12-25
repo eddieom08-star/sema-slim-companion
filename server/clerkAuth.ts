@@ -14,8 +14,14 @@ export const requireAuth: RequestHandler = async (req: any, res, next) => {
     path: req.path,
     hasAuthHeader: !!authHeader,
     authHeaderPrefix: authHeader?.substring(0, 20),
-    hasAuthUserId: !!auth.userId,
-    hasAuthSessionId: !!auth.sessionId,
+    authHeaderLength: authHeader?.length,
+    authObject: {
+      hasUserId: !!auth.userId,
+      hasSessionId: !!auth.sessionId,
+      userId: auth.userId || 'null',
+      sessionId: auth.sessionId || 'null',
+    },
+    allHeaders: Object.keys(req.headers),
   });
 
   if (!auth.userId) {

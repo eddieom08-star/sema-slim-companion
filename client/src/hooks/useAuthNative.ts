@@ -1,139 +1,177 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useSyncExternalStore } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Capacitor } from "@capacitor/core";
 import { clerkNative } from "@/lib/clerkNative";
-import { isTokenGetterReady } from "@/lib/queryClient";
 
 const isMobile = Capacitor.isNativePlatform();
 
-// Helper to get auth headers for debugging
-async function getAuthHeaders(): Promise<Record<string, string>> {
-  const headers: Record<string, string> = {};
+// Global auth state that persists across component mounts
+const AUTH_STORAGE_KEY = 'semaslim_auth_signed_in';
+
+function getStoredAuthState(): boolean {
+  if (!isMobile) return false;
   try {
-    const token = await clerkNative.getToken();
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-  } catch (error) {
-    console.error('[getAuthHeaders] Error:', error);
+    return sessionStorage.getItem(AUTH_STORAGE_KEY) === 'true';
+  } catch {
+    return false;
   }
-  return headers;
 }
 
-// Global flag to prevent duplicate debug calls
-declare global {
-  interface Window {
-    __debugHeadersChecked?: boolean;
+function setStoredAuthState(signedIn: boolean): void {
+  if (!isMobile) return;
+  try {
+    if (signedIn) {
+      sessionStorage.setItem(AUTH_STORAGE_KEY, 'true');
+    } else {
+      sessionStorage.removeItem(AUTH_STORAGE_KEY);
+    }
+  } catch {
+    // Ignore storage errors
   }
+}
+
+// Global state management for cross-component sync
+let globalIsSignedIn = getStoredAuthState();
+let globalIsLoaded = !isMobile;
+const listeners = new Set<() => void>();
+
+function notifyListeners() {
+  listeners.forEach(listener => listener());
+}
+
+function setGlobalSignedIn(signedIn: boolean) {
+  console.log('[useAuthNative] setGlobalSignedIn:', signedIn);
+  globalIsSignedIn = signedIn;
+  setStoredAuthState(signedIn);
+  notifyListeners();
+}
+
+function setGlobalLoaded(loaded: boolean) {
+  globalIsLoaded = loaded;
+  notifyListeners();
 }
 
 /**
  * Native-only auth hook using Clerk iOS SDK
- * Does NOT use @clerk/clerk-react web SDK
- * On web, returns not authenticated immediately (no infinite loading)
+ *
+ * On mobile: Uses native Clerk SDK for auth state, shows app when signed in
+ * User data fetching happens in background, doesn't block rendering
  */
 export function useAuthNative() {
-  const [isSignedIn, setIsSignedIn] = useState<boolean>(false);
-  const [isLoaded, setIsLoaded] = useState<boolean>(!isMobile); // Web loads immediately
-  const [tokenReady, setTokenReady] = useState<boolean>(!isMobile); // Web is always "ready"
+  // Subscribe to global state changes
+  const isSignedIn = useSyncExternalStore(
+    (callback) => {
+      listeners.add(callback);
+      return () => listeners.delete(callback);
+    },
+    () => globalIsSignedIn
+  );
 
-  // Wait for token getter to be ready before enabling queries (mobile only)
-  useEffect(() => {
-    if (!isMobile) return; // Skip on web
+  const isLoaded = useSyncExternalStore(
+    (callback) => {
+      listeners.add(callback);
+      return () => listeners.delete(callback);
+    },
+    () => globalIsLoaded
+  );
 
-    const checkTokenReady = () => {
-      const ready = isTokenGetterReady();
-      console.log('[useAuthNative] Token getter ready:', ready);
-      setTokenReady(ready);
-    };
+  const [authCheckCounter, setAuthCheckCounter] = useState(0);
+  const hasCheckedRef = useRef(false);
 
-    checkTokenReady();
-
-    // Poll until ready (should be immediate after initialization)
-    const interval = setInterval(() => {
-      if (!tokenReady && isTokenGetterReady()) {
-        console.log('[useAuthNative] Token getter became ready');
-        setTokenReady(true);
-      }
-    }, 100);
-
-    return () => clearInterval(interval);
-  }, [tokenReady]);
-
-  // Check auth status from native plugin (mobile only)
+  // Check auth status once on mount or when manually refreshed
   useEffect(() => {
     if (!isMobile) {
-      // On web, we're not authenticated via native - show landing page
-      console.log('[useAuthNative] Web platform - skipping native auth check');
       return;
     }
 
-    const checkAuthStatus = async () => {
-      try {
-        const result = await clerkNative.isSignedIn();
-        console.log('[useAuthNative] isSignedIn check:', result);
-        setIsSignedIn(result.isSignedIn);
-        setIsLoaded(true);
+    // Skip check if we already know we're signed in (from sessionStorage or previous sign-in)
+    if (globalIsSignedIn && globalIsLoaded) {
+      console.log('[useAuthNative] Already signed in, skipping check');
+      return;
+    }
 
-        // Debug: Test what backend receives (only once when signed in)
-        if (result.isSignedIn && tokenReady && !window.__debugHeadersChecked) {
-          window.__debugHeadersChecked = true;
-          try {
-            const baseUrl = import.meta.env.PROD ? 'https://sema-slim-companion.vercel.app' : '';
-            const debugRes = await fetch(`${baseUrl}/api/debug/headers`, {
-              headers: await getAuthHeaders(),
-              credentials: 'include',
-            });
-            const debugData = await debugRes.json();
-            console.log('[useAuthNative] Backend debug response:', debugData);
-          } catch (debugErr) {
-            console.error('[useAuthNative] Debug endpoint failed:', debugErr);
-          }
+    // Prevent double-checking in React strict mode
+    if (hasCheckedRef.current && authCheckCounter === 0) {
+      return;
+    }
+
+    let mounted = true;
+    hasCheckedRef.current = true;
+
+    const checkAuth = async () => {
+      try {
+        // Small delay to let native layer initialize
+        await new Promise(resolve => setTimeout(resolve, 200));
+
+        const result = await clerkNative.isSignedIn();
+        console.log('[useAuthNative] Native isSignedIn result:', result.isSignedIn);
+
+        if (mounted) {
+          setGlobalSignedIn(result.isSignedIn);
+          setGlobalLoaded(true);
         }
       } catch (error) {
-        console.error('[useAuthNative] Error checking sign-in status:', error);
-        setIsSignedIn(false);
-        setIsLoaded(true);
+        console.error('[useAuthNative] Error:', error);
+        if (mounted) {
+          setGlobalSignedIn(false);
+          setGlobalLoaded(true);
+        }
       }
     };
 
-    checkAuthStatus();
+    checkAuth();
 
-    // Poll for auth status changes every 2 seconds
-    const interval = setInterval(checkAuthStatus, 2000);
+    return () => {
+      mounted = false;
+    };
+  }, [authCheckCounter]);
 
-    return () => clearInterval(interval);
-  }, [tokenReady]);
+  // Expose global auth functions
+  useEffect(() => {
+    if (!isMobile) return;
 
+    // Refresh auth by re-checking with native SDK
+    (window as any).refreshAuth = () => {
+      setAuthCheckCounter(prev => prev + 1);
+    };
+
+    // Directly set signed-in state (use after successful sign-in)
+    (window as any).setSignedIn = (signedIn: boolean) => {
+      console.log('[useAuthNative] setSignedIn called:', signedIn);
+      setGlobalSignedIn(signedIn);
+      setGlobalLoaded(true);
+    };
+
+    return () => {
+      delete (window as any).refreshAuth;
+      delete (window as any).setSignedIn;
+    };
+  }, []);
+
+  // Fetch user data in background - don't block on this for mobile
   const {
     data: user,
-    isLoading: userLoading,
     error,
   } = useQuery({
     queryKey: ["/api/auth/user"],
-    enabled: isSignedIn && isLoaded && tokenReady,
-    retry: 2,
-    retryDelay: 1000,
+    enabled: isSignedIn && isLoaded,
+    retry: false, // Don't retry on failure
     staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 
-  console.log('[useAuthNative] State:', {
-    isSignedIn,
-    isLoaded,
-    tokenReady,
-    hasUser: !!user,
-    userLoading,
-    hasError: !!error,
-    queryEnabled: isSignedIn && isLoaded && tokenReady,
-    isAuthenticated: isSignedIn && !!user
-  });
+  // CRITICAL: On mobile, loading state is ONLY based on initial auth check
+  // Don't wait for user data - that can load in background
+  // This prevents the flashing between loading and content
+  const isLoading = !isLoaded;
 
   return {
     user,
-    isLoading: !isLoaded || !tokenReady || (isSignedIn && userLoading),
+    isLoading,
     isAuthenticated: isSignedIn && !!user,
-    isSignedIn, // Expose for mobile fallback routing
+    isSignedIn, // On mobile, use this for routing
     error,
   };
 }

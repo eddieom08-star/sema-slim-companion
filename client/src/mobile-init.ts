@@ -14,37 +14,58 @@ export async function initializeMobile() {
 
   console.log('[Mobile Init] Initializing mobile features...');
 
+  // CRITICAL: Set up auth token getter FIRST - this must happen before any API calls
+  // Do this before anything else that might fail
+  setAuthTokenGetter(async () => {
+    try {
+      const token = await clerkNative.getToken();
+      return token;
+    } catch (error) {
+      console.error('[Mobile Init] Token getter error:', error);
+      return null;
+    }
+  });
+  console.log('[Mobile Init] Auth token getter configured');
+
+  // Now initialize other mobile features (these can fail without breaking auth)
   try {
     // Configure status bar
     if (Capacitor.getPlatform() === 'ios') {
       await StatusBar.setStyle({ style: Style.Light });
     }
+  } catch (error) {
+    console.warn('[Mobile Init] StatusBar config error:', error);
+  }
 
+  try {
     // Hide splash screen after a delay
     setTimeout(async () => {
-      await SplashScreen.hide();
+      try {
+        await SplashScreen.hide();
+      } catch (e) {
+        console.warn('[Mobile Init] SplashScreen hide error:', e);
+      }
     }, 500);
+  } catch (error) {
+    console.warn('[Mobile Init] SplashScreen setup error:', error);
+  }
 
+  try {
     // Configure keyboard
     await Keyboard.setAccessoryBarVisible({ isVisible: true });
+  } catch (error) {
+    console.warn('[Mobile Init] Keyboard config error:', error);
+  }
 
+  try {
     // Initialize Clerk Native SDK
     await clerkNative.initialize();
     console.log('[Mobile Init] Clerk Native initialized');
-
-    // Set up auth token getter for API requests
-    setAuthTokenGetter(async () => {
-      console.log('[Mobile Init] Token getter called');
-      const token = await clerkNative.getToken();
-      console.log('[Mobile Init] Token result:', token ? `${token.substring(0, 20)}...` : 'null');
-      return token;
-    });
-    console.log('[Mobile Init] Auth token getter configured');
-
-    console.log('[Mobile Init] Mobile features initialized successfully');
   } catch (error) {
-    console.error('[Mobile Init] Error initializing mobile features:', error);
+    console.warn('[Mobile Init] Clerk init error:', error);
   }
+
+  console.log('[Mobile Init] Mobile features initialized');
 }
 
 // Helper function to check if running on mobile

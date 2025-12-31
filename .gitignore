@@ -8,3 +8,4 @@ vite.config.ts.*
 api/server.js
 .claude
 build/
+.vercel

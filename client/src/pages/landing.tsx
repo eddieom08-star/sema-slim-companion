@@ -1,218 +1,162 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-// import { useUser } from "@clerk/clerk-react"; // DISABLED - Using native SDK
 import { useLocation } from "wouter";
-import { useEffect, useRef, useState } from "react";
 import { Capacitor } from "@capacitor/core";
-import { Browser } from "@capacitor/browser";
 import { clerkNative } from "@/lib/clerkNative";
+import { useEffect } from "react";
+import { useAuthNative } from "@/hooks/useAuthNative";
 
 /**
  * Landing Page - Marketing site for unauthenticated users
  *
- * NATIVE AUTH ONLY:
- * - Uses ClerkNative plugin for authentication state
- * - No web-based Clerk React hooks
- * - Direct native sign-in/sign-up calls
- * - Optimized for mobile-first experience
+ * Auto-redirects to dashboard if user is already signed in.
  */
 export default function Landing() {
   const [, setLocation] = useLocation();
-  const [isSignedIn, setIsSignedIn] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [forceLoaded, setForceLoaded] = useState(false);
-  const [touchCount, setTouchCount] = useState(0);
-  const [justSignedIn, setJustSignedIn] = useState(false); // Track fresh sign-in to show "Let's go" button
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isMobile = Capacitor.isNativePlatform();
+  const { isSignedIn, isLoading } = useAuthNative();
 
-  // Check native auth status
+  // Auto-redirect to dashboard if already signed in
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const result = await clerkNative.isSignedIn();
-        setIsSignedIn(result.isSignedIn);
-        setIsLoaded(true);
-      } catch (error) {
-        console.error('[SemaSlim Landing] Auth check error:', error);
-        setIsLoaded(true);
-      }
-    };
-
-    checkAuth();
-  }, []);
-
-  // NOTE: Redirect handled by App.tsx router
-  // Landing page should not be accessible when authenticated
-  // If you see this page while signed in, there's a routing issue in App.tsx
-
-  // Mobile fix: Force show sign in button after timeout
-  useEffect(() => {
-    if (isMobile && !isLoaded) {
-      console.log('[SemaSlim Landing] Auth not loaded yet, starting timeout...');
-
-      if (!timeoutRef.current) {
-        timeoutRef.current = setTimeout(() => {
-          console.log('[SemaSlim Landing] Auth timeout reached - forcing sign in button to show');
-          setForceLoaded(true);
-        }, 2000);
-      }
-
-      return () => {
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-          timeoutRef.current = null;
-        }
-      };
+    if (isMobile && !isLoading && isSignedIn) {
+      console.log('[Landing] User is signed in, redirecting to dashboard');
+      setLocation('/dashboard');
     }
-  }, [isMobile, isLoaded]);
+  }, [isMobile, isLoading, isSignedIn, setLocation]);
 
-  // Log auth state changes for debugging
-  useEffect(() => {
-    if (isMobile) {
-      console.log('[SemaSlim Landing] Auth state:', { isLoaded, isSignedIn, forceLoaded, justSignedIn });
-    }
-  }, [isMobile, isLoaded, isSignedIn, forceLoaded, justSignedIn]);
+  // Show loading state while checking auth on mobile (prevents flash of landing page)
+  if (isMobile && isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-4">
+          <div className="w-10 h-10 bg-primary rounded-lg animate-pulse mx-auto"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
-  const showAuthButton = isLoaded || forceLoaded;
-
-  // Direct button handlers - Use native Clerk on mobile, navigate on web
   const handleSignInClick = async () => {
-    console.log('[SemaSlim Landing] Sign In button clicked', {
-      touchCount: touchCount + 1,
-      isMobile
-    });
-    setTouchCount(prev => prev + 1);
+    console.log('[Landing] Sign In clicked');
 
-    // MOBILE: Use native Clerk iOS SDK
     if (isMobile) {
-      console.log('[SemaSlim Landing] Opening native Clerk sign-in');
       try {
-        const result = await clerkNative.presentSignIn();
-        console.log('[SemaSlim Landing] Sign-in result:', result);
+        // Check if already signed in first to avoid "already signed in" error
+        const authStatus = await clerkNative.isSignedIn();
+        if (authStatus.isSignedIn) {
+          console.log('[Landing] Already signed in, setting state and redirecting');
+          if ((window as any).setSignedIn) {
+            (window as any).setSignedIn(true);
+          }
+          setLocation('/dashboard');
+          return;
+        }
 
-        // Check if sign-in was successful
-        if ((result as any).isSignedIn) {
-          console.log('[SemaSlim Landing] Sign-in successful, showing "Let\'s go" button');
-          // DON'T immediately redirect - this causes a race condition where the global
-          // auth state hasn't updated yet, sending user back to landing page.
-          // Instead, update local state to show "Let's go" button and let user click it
-          // after a brief moment (allowing global auth state to catch up via polling).
-          setIsSignedIn(true);
-          setJustSignedIn(true);
+        const result = await clerkNative.presentSignIn();
+        console.log('[Landing] Sign-in result:', result);
+
+        if (result.success || result.isSignedIn) {
+          console.log('[Landing] Sign-in successful');
+
+          // Set signed-in state directly (synchronous)
+          if ((window as any).setSignedIn) {
+            (window as any).setSignedIn(true);
+          }
+
+          // Navigate to dashboard
+          setLocation('/dashboard');
         } else {
-          console.log('[SemaSlim Landing] Sign-in cancelled or failed');
+          console.log('[Landing] Sign-in cancelled');
         }
       } catch (error) {
-        console.error('[SemaSlim Landing] Sign-in error:', error);
-        alert(`Sign-in error: ${(error as Error).message}`);
+        console.error('[Landing] Sign-in error:', error);
+        alert(`Sign-in failed: ${(error as Error).message}`);
       }
     } else {
-      // WEB: Navigate to sign-in page
+      // Web: Navigate to sign-in page
       setLocation('/sign-in');
     }
   };
 
   const handleSignUpClick = async () => {
-    console.log('[SemaSlim Landing] Sign Up button clicked', {
-      touchCount: touchCount + 1,
-      isMobile
-    });
-    setTouchCount(prev => prev + 1);
+    console.log('[Landing] Sign Up clicked');
 
-    // MOBILE: Use native Clerk iOS SDK
     if (isMobile) {
-      console.log('[SemaSlim Landing] Opening native Clerk sign-up');
       try {
-        const result = await clerkNative.presentSignUp();
-        console.log('[SemaSlim Landing] Sign-up result:', result);
+        // Check if already signed in first to avoid "already signed in" error
+        const authStatus = await clerkNative.isSignedIn();
+        if (authStatus.isSignedIn) {
+          console.log('[Landing] Already signed in, setting state and redirecting');
+          if ((window as any).setSignedIn) {
+            (window as any).setSignedIn(true);
+          }
+          setLocation('/dashboard');
+          return;
+        }
 
-        // Check if sign-up was successful
-        if ((result as any).isSignedIn) {
-          console.log('[SemaSlim Landing] Sign-up successful, showing "Let\'s go" button');
-          // DON'T immediately redirect - this causes a race condition where the global
-          // auth state hasn't updated yet, sending user back to landing page.
-          setIsSignedIn(true);
-          setJustSignedIn(true);
+        const result = await clerkNative.presentSignUp();
+        console.log('[Landing] Sign-up result:', result);
+
+        if (result.success || result.isSignedIn) {
+          console.log('[Landing] Sign-up successful');
+
+          // Set signed-in state directly (synchronous)
+          if ((window as any).setSignedIn) {
+            (window as any).setSignedIn(true);
+          }
+
+          // Navigate to dashboard
+          setLocation('/dashboard');
         } else {
-          console.log('[SemaSlim Landing] Sign-up cancelled or failed');
+          console.log('[Landing] Sign-up cancelled');
         }
       } catch (error) {
-        console.error('[SemaSlim Landing] Sign-up error:', error);
-        alert(`Sign-up error: ${(error as Error).message}`);
+        console.error('[Landing] Sign-up error:', error);
+        alert(`Sign-up failed: ${(error as Error).message}`);
       }
     } else {
-      // WEB: Navigate to sign-up page
+      // Web: Navigate to sign-up page
       setLocation('/sign-up');
     }
   };
 
-  const handleDashboardClick = () => {
-    console.log('[SemaSlim Landing] Dashboard button clicked');
-    setLocation("/dashboard");
-  };
-
-  // Handler for "Let's go" button after fresh sign-in
-  const handleLetsGoClick = () => {
-    console.log('[SemaSlim Landing] "Let\'s go" button clicked, navigating to dashboard');
-    setLocation("/dashboard");
-  };
-
-  // Auto-redirect after fresh sign-in with a delay to let global auth state catch up
-  useEffect(() => {
-    if (justSignedIn && isMobile) {
-      console.log('[SemaSlim Landing] Just signed in, waiting for auth state to propagate...');
-
-      // Wait 1.5 seconds for the global auth state (useAuthNative) to catch up via polling
-      // This prevents the race condition where we redirect before App.tsx knows we're authenticated
-      const autoRedirectTimeout = setTimeout(() => {
-        console.log('[SemaSlim Landing] Auto-redirecting to dashboard after auth state propagation');
-        setLocation('/dashboard');
-      }, 1500);
-
-      return () => clearTimeout(autoRedirectTimeout);
-    }
-  }, [justSignedIn, isMobile, setLocation]);
-
-  const handleLogoutClick = async () => {
-    console.log('[SemaSlim Landing] Logout button clicked');
+  const handleSignOutClick = async () => {
+    console.log('[Landing] Debug Sign Out clicked');
 
     if (isMobile) {
       try {
         await clerkNative.signOut();
-        console.log('[SemaSlim Landing] Signed out successfully');
-        // Force reload to clear all state
-        window.location.reload();
+        console.log('[Landing] Sign-out successful');
+
+        // Trigger auth refresh
+        if ((window as any).refreshAuth) {
+          (window as any).refreshAuth();
+        }
+
+        alert('Signed out successfully. Try signing in again.');
       } catch (error) {
-        console.error('[SemaSlim Landing] Logout error:', error);
-        alert(`Logout error: ${(error as Error).message}`);
+        console.error('[Landing] Sign-out error:', error);
+        alert(`Sign-out failed: ${(error as Error).message}`);
       }
     }
   };
 
-  // Log touch events for debugging
-  useEffect(() => {
-    if (isMobile) {
-      const logTouch = (e: TouchEvent) => {
-        console.log('[SemaSlim Landing] Touch detected:', {
-          type: e.type,
-          touches: e.touches.length,
-          target: (e.target as HTMLElement)?.tagName
-        });
-      };
-
-      window.addEventListener('touchstart', logTouch);
-      window.addEventListener('touchend', logTouch);
-
-      return () => {
-        window.removeEventListener('touchstart', logTouch);
-        window.removeEventListener('touchend', logTouch);
-      };
-    }
-  }, [isMobile]);
-
   return (
     <div className="min-h-screen bg-background">
+      {/* Debug section - Mobile only */}
+      {isMobile && (
+        <div className="fixed top-0 left-0 right-0 bg-yellow-500/90 text-black p-2 z-50 text-xs text-center">
+          Debug Mode
+          <Button
+            size="sm"
+            variant="outline"
+            className="ml-2 h-6 text-xs"
+            onClick={handleSignOutClick}
+          >
+            Sign Out
+          </Button>
+        </div>
+      )}
       {/* Header */}
       <header className="bg-card border-b border-border sticky top-0 z-50 safe-area-top">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -227,47 +171,12 @@ export default function Landing() {
               </div>
             </div>
 
-            {!showAuthButton ? (
-              <Button disabled data-testid="button-loading">
-                Loading...
-              </Button>
-            ) : justSignedIn ? (
-              // User just signed in - show "Let's go" button while auth state propagates
-              <Button
-                onClick={handleLetsGoClick}
-                data-testid="button-lets-go"
-                className="bg-green-600 hover:bg-green-700 text-white animate-pulse"
-                style={{ touchAction: 'manipulation' }}
-              >
-                Let's go! 🎉
-              </Button>
-            ) : isSignedIn ? (
-              <div className="flex gap-2">
-                <Button
-                  onClick={handleLogoutClick}
-                  variant="outline"
-                  data-testid="button-logout"
-                  style={{ touchAction: 'manipulation' }}
-                >
-                  Log Out
-                </Button>
-                <Button
-                  onClick={handleDashboardClick}
-                  data-testid="button-dashboard"
-                  style={{ touchAction: 'manipulation' }}
-                >
-                  Dashboard
-                </Button>
-              </div>
-            ) : (
-              <Button
-                onClick={handleSignInClick}
-                data-testid="button-login"
-                style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
-              >
-                Sign In {isMobile && touchCount > 0 && `(${touchCount})`}
-              </Button>
-            )}
+            <Button
+              onClick={handleSignInClick}
+              data-testid="button-login"
+            >
+              Sign In
+            </Button>
           </div>
         </div>
       </header>
@@ -286,21 +195,17 @@ export default function Landing() {
                   The only weight management app designed specifically for semaglutide users. Track nutrition, manage medications, and achieve sustainable results.
                 </p>
               </div>
-              
+
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button
                   onClick={handleSignUpClick}
                   className="bg-card text-primary px-8 py-4 rounded-lg font-semibold hover:bg-card/90 transition-colors"
-                  data-testid="button-start-trial"
-                  style={{ touchAction: 'manipulation' }}
                 >
                   Start Free Trial
                 </Button>
                 <Button
                   onClick={handleSignUpClick}
                   className="bg-blue-600 text-white px-8 py-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-                  data-testid="button-view-demo"
-                  style={{ touchAction: 'manipulation' }}
                 >
                   Try it for Free
                 </Button>
@@ -308,102 +213,17 @@ export default function Landing() {
 
               <div className="flex items-center justify-center sm:justify-start space-x-4 sm:space-x-8 pt-4">
                 <div className="text-center">
-                  <div className="text-xl sm:text-2xl font-bold text-black" data-testid="text-users-count">500K+</div>
+                  <div className="text-xl sm:text-2xl font-bold text-black">500K+</div>
                   <div className="text-xs sm:text-sm text-black">Active Users</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-xl sm:text-2xl font-bold text-black" data-testid="text-app-rating">4.9★</div>
+                  <div className="text-xl sm:text-2xl font-bold text-black">4.9★</div>
                   <div className="text-xs sm:text-sm text-black">App Rating</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-xl sm:text-2xl font-bold text-black" data-testid="text-avg-loss">18 lbs</div>
+                  <div className="text-xl sm:text-2xl font-bold text-black">18 lbs</div>
                   <div className="text-xs sm:text-sm text-black">Avg. Loss</div>
                 </div>
-              </div>
-            </div>
-
-            <div className="relative hidden lg:flex justify-center lg:justify-end">
-              <div className="relative mx-auto w-[320px]" data-testid="phone-mockup">
-                {/* Phone Frame */}
-                <div className="relative bg-gray-900 rounded-[3rem] p-3 shadow-2xl">
-                  {/* Phone Notch/Dynamic Island */}
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-7 bg-gray-900 rounded-b-3xl z-10"></div>
-                  
-                  {/* Phone Screen */}
-                  <div className="relative w-full h-[600px] bg-card rounded-[2.5rem] overflow-hidden">
-                    {/* Status Bar */}
-                    <div className="absolute top-0 left-0 right-0 h-12 flex items-center justify-between px-8 text-xs text-muted-foreground z-20">
-                      <span className="font-semibold">9:41</span>
-                      <div className="flex items-center space-x-1">
-                        <i className="fas fa-signal text-xs"></i>
-                        <i className="fas fa-wifi text-xs"></i>
-                        <i className="fas fa-battery-three-quarters text-xs"></i>
-                      </div>
-                    </div>
-
-                    {/* App Content */}
-                    <div className="pt-12 p-6 space-y-4 h-full overflow-hidden">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-semibold text-foreground">Today's Overview</h3>
-                        <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                          <i className="fas fa-user text-primary-foreground text-sm"></i>
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-muted rounded-lg p-3">
-                          <div className="text-xs text-muted-foreground">Calories</div>
-                          <div className="text-lg font-bold text-foreground">1,247</div>
-                          <div className="text-xs text-secondary">-453 remaining</div>
-                        </div>
-                        <div className="bg-muted rounded-lg p-3">
-                          <div className="text-xs text-muted-foreground">Weight</div>
-                          <div className="text-lg font-bold text-foreground">162.4 lbs</div>
-                          <div className="text-xs text-secondary">-2.1 this week</div>
-                        </div>
-                      </div>
-                      
-                      <div className="bg-accent/10 rounded-lg p-4">
-                        <div className="flex items-center space-x-2">
-                          <i className="fas fa-syringe text-accent"></i>
-                          <span className="text-sm font-medium">Medication Reminder</span>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">Ozempic injection due in 2 hours</p>
-                      </div>
-
-                      {/* Additional preview content */}
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="font-medium text-foreground">Recent Meals</span>
-                          <span className="text-xs text-primary">View All</span>
-                        </div>
-                        <div className="space-y-2">
-                          <div className="bg-muted/50 rounded-lg p-3 flex items-center justify-between">
-                            <div>
-                              <p className="text-sm font-medium text-foreground">Grilled Chicken Salad</p>
-                              <p className="text-xs text-muted-foreground">Lunch • 420 cal</p>
-                            </div>
-                            <i className="fas fa-utensils text-secondary"></i>
-                          </div>
-                          <div className="bg-muted/50 rounded-lg p-3 flex items-center justify-between">
-                            <div>
-                              <p className="text-sm font-medium text-foreground">Greek Yogurt</p>
-                              <p className="text-xs text-muted-foreground">Snack • 150 cal</p>
-                            </div>
-                            <i className="fas fa-utensils text-secondary"></i>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Home Indicator */}
-                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-gray-400 rounded-full"></div>
-                  </div>
-                </div>
-                
-                {/* Floating Elements for Visual Appeal */}
-                <div className="absolute -top-4 -right-4 w-20 h-20 bg-accent/20 rounded-full blur-2xl animate-pulse"></div>
-                <div className="absolute -bottom-4 -left-4 w-24 h-24 bg-primary/20 rounded-full blur-2xl animate-pulse delay-1000"></div>
               </div>
             </div>
           </div>
@@ -447,7 +267,7 @@ export default function Landing() {
                 features: ["Daily pill reminders", "Timing optimization", "Food interactions"]
               }
             ].map((plan, index) => (
-              <Card key={index} className="card-hover" data-testid={`card-medication-${plan.name.toLowerCase()}`}>
+              <Card key={index} className="card-hover">
                 <CardContent className="p-6">
                   <div className="w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center mb-4">
                     <i className={`${plan.icon} text-accent text-xl`}></i>
@@ -485,8 +305,6 @@ export default function Landing() {
               <Button
                 onClick={handleSignUpClick}
                 className="bg-card text-primary px-6 sm:px-8 py-3 sm:py-4 rounded-lg font-semibold hover:bg-card/90 transition-colors w-full sm:w-auto sm:min-w-48"
-                data-testid="button-start-trial-cta"
-                style={{ touchAction: 'manipulation' }}
               >
                 Start Free 14-Day Trial
               </Button>

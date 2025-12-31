@@ -1,28 +1,85 @@
-import { clerkClient, clerkMiddleware, getAuth } from '@clerk/express';
+import { clerkClient, clerkMiddleware, getAuth, verifyToken } from '@clerk/express';
 import type { RequestHandler } from 'express';
 import { storage } from './storage';
 import { logger } from './logger';
 
 export { clerkMiddleware };
 
-export const requireAuth: RequestHandler = async (req: any, res, next) => {
-  const auth = getAuth(req);
+/**
+ * Extract and verify Bearer token from Authorization header
+ * Used as fallback when clerkMiddleware doesn't set auth (e.g., mobile apps)
+ */
+async function verifyBearerToken(authHeader: string | undefined): Promise<{ userId: string; sessionId?: string } | null> {
+  if (!authHeader?.startsWith('Bearer ')) {
+    return null;
+  }
 
-  // Enhanced logging for debugging auth issues
+  const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+
+  try {
+    const secretKey = process.env.CLERK_SECRET_KEY;
+    if (!secretKey) {
+      logger.error('CLERK_SECRET_KEY not configured');
+      return null;
+    }
+
+    // Verify the JWT token using Clerk's verifyToken
+    const payload = await verifyToken(token, {
+      secretKey,
+    });
+
+    if (payload.sub) {
+      logger.info('Bearer token verified successfully', {
+        userId: payload.sub,
+        sessionId: payload.sid,
+      });
+      return {
+        userId: payload.sub,
+        sessionId: payload.sid as string | undefined
+      };
+    }
+
+    return null;
+  } catch (error) {
+    logger.warn('Bearer token verification failed', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      tokenLength: token.length,
+    });
+    return null;
+  }
+}
+
+export const requireAuth: RequestHandler = async (req: any, res, next) => {
   const authHeader = req.headers.authorization;
+
+  // First try getAuth (works for session-based auth from web)
+  let auth = getAuth(req);
+
+  // Log initial auth state
   logger.info('Auth request received', {
     path: req.path,
     hasAuthHeader: !!authHeader,
-    authHeaderPrefix: authHeader?.substring(0, 20),
+    authHeaderPrefix: authHeader?.substring(0, 30),
     authHeaderLength: authHeader?.length,
-    authObject: {
+    initialAuthObject: {
       hasUserId: !!auth.userId,
-      hasSessionId: !!auth.sessionId,
       userId: auth.userId || 'null',
-      sessionId: auth.sessionId || 'null',
     },
-    allHeaders: Object.keys(req.headers),
   });
+
+  // If no userId from middleware, try to verify Bearer token directly (for mobile)
+  if (!auth.userId && authHeader) {
+    logger.info('No userId from middleware, attempting Bearer token verification');
+    const bearerAuth = await verifyBearerToken(authHeader);
+    if (bearerAuth) {
+      auth = {
+        ...auth,
+        userId: bearerAuth.userId,
+        sessionId: bearerAuth.sessionId || null
+      } as any;
+      logger.info('Bearer token auth successful', { userId: bearerAuth.userId });
+    }
+  }
 
   if (!auth.userId) {
     logger.warn('Auth check failed: no userId', {
@@ -51,7 +108,7 @@ export const requireAuth: RequestHandler = async (req: any, res, next) => {
       return res.status(401).json({ message: 'Email address required' });
     }
 
-    // Upsert user with Clerk data - DB will use default for onboardingCompleted if not present
+    // Upsert user with Clerk data
     logger.info('Upserting user to database', { userId: auth.userId, email });
     const dbUser = await storage.upsertUser({
       id: auth.userId,
@@ -64,7 +121,7 @@ export const requireAuth: RequestHandler = async (req: any, res, next) => {
     req.auth = {
       userId: auth.userId,
       sessionId: auth.sessionId,
-      user: dbUser,  // Return DB user with full profile including onboardingCompleted
+      user: dbUser,
     };
 
     logger.info('Auth successful', {

@@ -16,32 +16,58 @@ struct ClerkAuthView: View {
     // Track if we've already notified about auth completion
     @State private var hasNotifiedCompletion = false
 
+    // Timer to poll for session changes (more reliable than .onChange for OAuth)
+    @State private var sessionCheckTimer: Timer?
+
     var body: some View {
         NavigationView {
             AuthView()
                 .toolbar {
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button("Close") {
+                            stopSessionCheck()
                             dismiss()
                             if !hasNotifiedCompletion {
+                                hasNotifiedCompletion = true
                                 onAuthComplete(clerk.session != nil)
                             }
                         }
                     }
                 }
         }
-        // Observe session changes - auto-dismiss when user signs in (e.g., after Google OAuth)
-        .onChange(of: clerk.session != nil) { wasSignedIn, isSignedIn in
-            if isSignedIn && !hasNotifiedCompletion {
-                print("[ClerkAuthView] Session detected after OAuth, auto-dismissing")
+        .onAppear {
+            startSessionCheck()
+        }
+        .onDisappear {
+            stopSessionCheck()
+            // Fallback: if we haven't notified yet, check session and notify
+            if !hasNotifiedCompletion {
                 hasNotifiedCompletion = true
-                // Small delay to let the UI update, then auto-dismiss
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                onAuthComplete(clerk.session != nil)
+            }
+        }
+    }
+
+    private func startSessionCheck() {
+        // Poll every 0.5 seconds to detect when OAuth completes
+        sessionCheckTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
+            if clerk.session != nil && !hasNotifiedCompletion {
+                print("[ClerkAuthView] Session detected via polling, auto-dismissing")
+                hasNotifiedCompletion = true
+                stopSessionCheck()
+
+                // Dismiss on main thread after a brief delay for UI to settle
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                     dismiss()
                     onAuthComplete(true)
                 }
             }
         }
+    }
+
+    private func stopSessionCheck() {
+        sessionCheckTimer?.invalidate()
+        sessionCheckTimer = nil
     }
 }
 

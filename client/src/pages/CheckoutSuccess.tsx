@@ -4,14 +4,16 @@
  * Displayed after successful Stripe checkout, then redirects back to the mobile app.
  */
 
-import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useEffect, useState, useMemo } from 'react';
 
 export default function CheckoutSuccess() {
-  const [searchParams] = useSearchParams();
   const [countdown, setCountdown] = useState(3);
 
-  const returnUrl = searchParams.get('return_url') || 'semaslim://checkout-complete';
+  // Use native URLSearchParams instead of react-router-dom (project uses wouter)
+  const returnUrl = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('return_url') || 'semaslim://checkout-complete';
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => {

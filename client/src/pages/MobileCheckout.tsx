@@ -16,8 +16,7 @@
  * 4. Mobile app checks for updated entitlements via API
  */
 
-import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@clerk/clerk-react';
 import { TOKEN_PRODUCTS, SUBSCRIPTION_PRODUCTS } from '@shared/features';
 
@@ -29,7 +28,8 @@ interface CheckoutState {
 }
 
 export default function MobileCheckout() {
-  const [searchParams] = useSearchParams();
+  // Use native URLSearchParams instead of react-router-dom (project uses wouter)
+  const searchParams = useMemo(() => new URLSearchParams(window.location.search), []);
   const { isSignedIn, getToken } = useAuth();
   const [state, setState] = useState<CheckoutState>({
     loading: true,

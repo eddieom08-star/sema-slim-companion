@@ -123,7 +123,7 @@ Reaches 7-day streak           → Streak protection offer      High (28%)
 Unlocks first achievement      → Show "Pro achievements"      Medium (18%)
                                  collection preview
 
-Uses AI meal planning          → 3 free/month limit reached   Very High (35%)
+Uses AI meal planning          → 2 free/month limit reached   Very High (35%)
                                  → Token purchase or Pro
 
 Records first weight loss      → "Unlock predictive insights" High (30%)
@@ -176,7 +176,7 @@ Shows churn signals            → Win-back offer               Medium (25%)
 - Push notifications for medication reminders
 
 **Limited Features:**
-- 3 AI meal plan generations/month
+- 2 AI meal plan generations/month
 - Basic recipe browsing (community recipes)
 - Weekly progress summary (basic)
 - Standard food database (50,000 items)
@@ -191,7 +191,7 @@ Shows churn signals            → Win-back offer               Medium (25%)
 | Barcode scans | 3/day | Unlimited | "Never manually enter again" |
 | Food database | 50K items | 2M+ verified | "Find any food, accurate macros" |
 | Historical data | 2 weeks | Forever | "See your complete journey" |
-| AI meal plans | 3/month | 30/month | "Personalized plans weekly" |
+| AI meal plans | 2/month | 30/month | "Personalized plans weekly" |
 | Progress insights | Basic | Predictive | "Know when you'll hit goals" |
 
 **Advanced Analytics:**
@@ -292,7 +292,7 @@ Shows churn signals            → Win-back offer               Medium (25%)
 ```
 ┌─────────────────────────────────────────────┐
 │                                             │
-│  You've used your 3 free AI meal plans     │
+│  You've used your 2 free AI meal plans     │
 │  this month                                 │
 │                                             │
 │  Your next free plan refreshes in 18 days  │
@@ -652,7 +652,7 @@ Tokens serve users who want specific premium features without commitment. They a
 - Family sharing
 
 ### Token-Gated (Consumable)
-- AI meal plans (beyond 3/month)
+- AI meal plans (beyond 2/month)
 - AI recipe generation
 - PDF exports
 - Streak shields

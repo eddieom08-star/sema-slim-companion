@@ -249,7 +249,7 @@ export interface FeatureLimits {
 
 export const TIER_LIMITS: Record<'free' | 'pro', FeatureLimits> = {
   free: {
-    aiMealPlansPerMonth: 3,
+    aiMealPlansPerMonth: 2,
     aiRecipeSuggestionsPerMonth: 5,
     barcodeScansPerDay: 3,
     foodDatabaseTier: 'basic',
@@ -784,6 +784,493 @@ export const MONETIZATION_EVENTS = {
   COSMETIC_PURCHASED: 'cosmetic_purchased',
   COSMETIC_EQUIPPED: 'cosmetic_equipped',
 };
+```
+
+---
+
+## PDF Export for Healthcare Providers
+
+### Overview
+
+The PDF export feature generates comprehensive health reports for users to share with their healthcare providers. This is a **high-value monetization feature** (40% conversion on side effect export trigger) that pulls data from multiple tables to create a clinically useful document.
+
+### Data Sources (Mapped to Schema)
+
+The PDF report pulls from these tables in `shared/schema.ts`:
+
+| Section | Source Table(s) | Key Fields |
+|---------|-----------------|------------|
+| Patient Info | `users` | firstName, lastName, dateOfBirth, gender, height, currentWeight, targetWeight |
+| Medication Summary | `medications`, `doseEscalations` | medicationType, dosage, frequency, startDate, adherenceScore, escalation history |
+| Side Effects | `medicationLogs` | nausea, vomiting, diarrhea, constipation, heartburn (0-5 scale), takenAt |
+| Weight Progress | `weightLogs` | weight, bodyFat, muscleMass, loggedAt |
+| Body Measurements | `bodyMeasurements` | waist, chest, hips, thigh, arm, neck, measuredAt |
+| Nutrition Summary | `foodEntries` | Aggregated: avg calories, protein, carbs, fat per day |
+| Appetite Response | `hungerLogs` | hungerBefore, hungerAfter, fullnessDuration, cravingIntensity |
+| Adherence Metrics | `streaks`, `medicationLogs` | medication streak, tracking consistency, adherence % |
+| Goals Progress | `userGoals` | goalType, targetValue, currentValue, progress % |
+
+### Report Sections
+
+```typescript
+// server/services/pdf-export.ts
+
+interface HealthcareProviderReport {
+  // Header
+  generatedAt: Date;
+  reportPeriod: { start: Date; end: Date };
+
+  // Section 1: Patient Demographics
+  patient: {
+    name: string;
+    dateOfBirth: Date;
+    age: number;
+    gender: string;
+    height: { value: number; unit: 'cm' | 'in' };
+  };
+
+  // Section 2: Medication Overview
+  medication: {
+    type: 'ozempic' | 'mounjaro' | 'wegovy' | 'rybelsus';
+    currentDose: string;
+    frequency: 'weekly' | 'daily';
+    startDate: Date;
+    weeksOnMedication: number;
+    overallAdherenceScore: number; // 0-100%
+    doseEscalationHistory: {
+      date: Date;
+      previousDose: string;
+      newDose: string;
+      reason?: string;
+    }[];
+  };
+
+  // Section 3: Side Effects Profile
+  sideEffects: {
+    reportingPeriod: string;
+    summary: {
+      nausea: { average: number; trend: 'improving' | 'stable' | 'worsening' };
+      vomiting: { average: number; trend: string };
+      diarrhea: { average: number; trend: string };
+      constipation: { average: number; trend: string };
+      heartburn: { average: number; trend: string };
+    };
+    // Last 4 weeks of injection logs with side effects
+    weeklyBreakdown: {
+      weekOf: Date;
+      dose: string;
+      sideEffectScores: Record<string, number>;
+      notes?: string;
+    }[];
+  };
+
+  // Section 4: Weight & Body Composition
+  weightProgress: {
+    startWeight: number;
+    currentWeight: number;
+    targetWeight: number;
+    totalLost: number;
+    percentToGoal: number;
+    weeklyAverage: number; // lbs/week lost
+    trend: Array<{ date: Date; weight: number }>;
+    bodyComposition?: {
+      bodyFatStart?: number;
+      bodyFatCurrent?: number;
+      muscleMassStart?: number;
+      muscleMassCurrent?: number;
+    };
+  };
+
+  // Section 5: Body Measurements (if available)
+  measurements?: {
+    current: Record<'waist' | 'chest' | 'hips' | 'thigh' | 'arm' | 'neck', number>;
+    change: Record<string, number>; // Change from first measurement
+    measurementDate: Date;
+  };
+
+  // Section 6: Nutrition Summary
+  nutrition: {
+    averageDailyCalories: number;
+    averageDailyProtein: number;
+    averageDailyCarbs: number;
+    averageDailyFat: number;
+    trackingConsistency: number; // % of days tracked
+    comparedToTarget: {
+      calories: { target: number; actual: number; variance: number };
+      protein: { target: number; actual: number; variance: number };
+    };
+  };
+
+  // Section 7: Appetite & Satiety Response
+  appetiteResponse: {
+    averageHungerBefore: number; // 1-10
+    averageHungerAfter: number;  // 1-10
+    appetiteSuppression: number; // % reduction
+    averageFullnessDuration: number; // hours
+    cravingFrequency: 'rare' | 'occasional' | 'frequent';
+    dominantCravingType?: 'sweet' | 'salty' | 'savory';
+  };
+
+  // Section 8: Adherence & Engagement
+  adherence: {
+    medicationAdherence: number; // %
+    trackingStreak: number; // days
+    longestStreak: number;
+    missedDoses: number;
+    consistencyScore: number; // Composite score
+  };
+
+  // Section 9: Goals & Recommendations
+  goals: {
+    active: Array<{
+      type: string;
+      target: number;
+      current: number;
+      unit: string;
+      progressPercent: number;
+    }>;
+    achieved: string[];
+  };
+}
+```
+
+### API Endpoint
+
+```typescript
+// server/routes/exports.ts
+
+// POST /api/exports/healthcare-pdf
+interface GeneratePdfRequest {
+  reportPeriod: '30days' | '60days' | '90days' | 'all';
+  sections?: string[]; // Optional: specific sections to include
+  format?: 'detailed' | 'summary'; // Default: detailed
+}
+
+interface GeneratePdfResponse {
+  // If user has export tokens or Pro subscription
+  success: true;
+  downloadUrl: string; // Signed URL, expires in 1 hour
+  expiresAt: string;
+
+  // If user needs to purchase
+  success: false;
+  reason: 'no_tokens';
+  tokensRequired: 1;
+  upsellOptions: {
+    singleExport: { price: 199, productId: string };
+    fivePack: { price: 699, productId: string };
+    proPlan: { price: 999, includesExports: 5 };
+  };
+}
+```
+
+### PDF Generation Service
+
+```typescript
+// server/services/pdf-generator.ts
+
+import PDFDocument from 'pdfkit';
+
+export class HealthcarePdfGenerator {
+  async generateReport(
+    userId: string,
+    options: { period: string; format: string }
+  ): Promise<Buffer> {
+
+    // 1. Fetch all required data in parallel
+    const [
+      user,
+      medications,
+      medicationLogs,
+      doseEscalations,
+      weightLogs,
+      bodyMeasurements,
+      foodEntries,
+      hungerLogs,
+      streaks,
+      goals
+    ] = await Promise.all([
+      this.storage.getUser(userId),
+      this.storage.getMedications(userId),
+      this.storage.getMedicationLogs(userId, options.period),
+      this.storage.getDoseEscalations(userId),
+      this.storage.getWeightLogs(userId, options.period),
+      this.storage.getBodyMeasurements(userId),
+      this.storage.getFoodEntries(userId, options.period),
+      this.storage.getHungerLogs(userId, options.period),
+      this.storage.getStreaks(userId),
+      this.storage.getUserGoals(userId)
+    ]);
+
+    // 2. Transform into report structure
+    const report = this.buildReportData({
+      user, medications, medicationLogs, doseEscalations,
+      weightLogs, bodyMeasurements, foodEntries, hungerLogs,
+      streaks, goals
+    });
+
+    // 3. Generate PDF
+    return this.renderPdf(report, options.format);
+  }
+
+  private calculateSideEffectTrends(logs: MedicationLog[]): SideEffectSummary {
+    // Compare last 2 weeks vs previous 2 weeks
+    const recent = logs.filter(l => isWithinLastNDays(l.takenAt, 14));
+    const previous = logs.filter(l =>
+      isWithinLastNDays(l.takenAt, 28) && !isWithinLastNDays(l.takenAt, 14)
+    );
+
+    const effects = ['nausea', 'vomiting', 'diarrhea', 'constipation', 'heartburn'];
+
+    return effects.reduce((acc, effect) => {
+      const recentAvg = average(recent.map(l => l[effect] || 0));
+      const previousAvg = average(previous.map(l => l[effect] || 0));
+
+      acc[effect] = {
+        average: recentAvg,
+        trend: recentAvg < previousAvg - 0.5 ? 'improving' :
+               recentAvg > previousAvg + 0.5 ? 'worsening' : 'stable'
+      };
+      return acc;
+    }, {});
+  }
+
+  private calculateAppetiteResponse(hungerLogs: HungerLog[]): AppetiteResponse {
+    const avgBefore = average(hungerLogs.map(l => l.hungerBefore));
+    const avgAfter = average(hungerLogs.map(l => l.hungerAfter));
+
+    return {
+      averageHungerBefore: round(avgBefore, 1),
+      averageHungerAfter: round(avgAfter, 1),
+      appetiteSuppression: round((avgBefore - avgAfter) / avgBefore * 100, 0),
+      averageFullnessDuration: round(average(hungerLogs.map(l => l.fullnessDuration)), 1),
+      cravingFrequency: this.categorizeCravingFrequency(hungerLogs),
+      dominantCravingType: this.findDominantCravingType(hungerLogs)
+    };
+  }
+}
+```
+
+### PDF Layout Specification
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  SEMASLIM HEALTH REPORT                                     │
+│  Patient Progress Summary for Healthcare Provider           │
+│                                                             │
+│  Generated: January 21, 2026                                │
+│  Report Period: December 22, 2025 - January 21, 2026        │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  PATIENT INFORMATION                                        │
+│  ──────────────────                                         │
+│  Name: Jane Smith              DOB: March 15, 1985 (40y)   │
+│  Height: 5'6" (168 cm)         Starting Weight: 195 lbs    │
+│                                                             │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  MEDICATION SUMMARY                                         │
+│  ──────────────────                                         │
+│  Medication: Ozempic (semaglutide)                         │
+│  Current Dose: 1.0 mg weekly                               │
+│  Treatment Duration: 16 weeks                               │
+│  Overall Adherence: 94%                                     │
+│                                                             │
+│  Dose Escalation History:                                   │
+│  • Week 1-4:   0.25 mg (initiation)                        │
+│  • Week 5-8:   0.5 mg                                      │
+│  • Week 9+:    1.0 mg (current)                            │
+│                                                             │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  SIDE EFFECTS (Last 30 Days)                               │
+│  ──────────────────────────                                 │
+│                     Avg Score (0-5)    Trend               │
+│  Nausea:                 1.2          ↓ Improving          │
+│  Vomiting:               0.1          → Stable             │
+│  Diarrhea:               0.8          ↓ Improving          │
+│  Constipation:           1.5          → Stable             │
+│  Heartburn:              0.3          → Stable             │
+│                                                             │
+│  Notes: Side effects well-tolerated. Nausea decreased      │
+│  significantly after week 4.                                │
+│                                                             │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  WEIGHT PROGRESS                                            │
+│  ───────────────                                            │
+│  Starting Weight:    195.0 lbs     Target: 155 lbs         │
+│  Current Weight:     178.5 lbs     To Goal: 23.5 lbs       │
+│  Total Lost:         16.5 lbs (8.5% body weight)           │
+│  Weekly Average:     1.0 lbs/week                          │
+│                                                             │
+│  [Weight Trend Chart - 30 day line graph]                  │
+│                                                             │
+│  Body Composition (if available):                          │
+│  • Body Fat: 38% → 34% (-4%)                               │
+│  • Muscle Mass: Maintained                                  │
+│                                                             │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  NUTRITION SUMMARY (Daily Averages)                        │
+│  ──────────────────────────────────                         │
+│  Calories:  1,450 / 1,500 target (97%)                     │
+│  Protein:   95g / 100g target (95%)                        │
+│  Carbs:     145g                                            │
+│  Fat:       52g                                             │
+│                                                             │
+│  Tracking Consistency: 89% of days logged                  │
+│                                                             │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  APPETITE RESPONSE TO MEDICATION                           │
+│  ───────────────────────────────                            │
+│  Pre-meal Hunger (avg):    6.2 / 10                        │
+│  Post-meal Hunger (avg):   2.1 / 10                        │
+│  Appetite Suppression:     66% reduction                   │
+│  Avg Fullness Duration:    4.2 hours                       │
+│  Cravings:                 Occasional (mostly sweet)       │
+│                                                             │
+│  Interpretation: Strong appetite response to medication.   │
+│  Patient reports sustained fullness between meals.         │
+│                                                             │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ADHERENCE & ENGAGEMENT                                     │
+│  ──────────────────────                                     │
+│  Medication Doses Taken:   13/14 (93%)                     │
+│  Tracking Streak:          18 days (current)               │
+│  Longest Streak:           32 days                         │
+│  Consistency Score:        A (Excellent)                   │
+│                                                             │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  GOALS PROGRESS                                             │
+│  ──────────────                                             │
+│  ✓ Lose 15 lbs - ACHIEVED (16.5 lbs lost)                 │
+│  ◐ Reach 170 lbs - 72% complete                           │
+│  ◐ Daily protein 100g - 95% average                        │
+│                                                             │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  This report was generated by SemaSlim, a patient-managed  │
+│  GLP-1 medication companion app. Data is self-reported.    │
+│                                                             │
+│  For questions: support@semaslim.com                       │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Storage Queries for PDF Export
+
+```typescript
+// server/storage.ts - Add these methods to IStorage interface
+
+interface IStorage {
+  // Existing methods...
+
+  // PDF Export specific queries
+  getMedicationLogsForExport(
+    userId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<MedicationLogWithDetails[]>;
+
+  getWeightLogsForExport(
+    userId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<WeightLog[]>;
+
+  getAggregatedNutrition(
+    userId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<{
+    avgCalories: number;
+    avgProtein: number;
+    avgCarbs: number;
+    avgFat: number;
+    daysTracked: number;
+    totalDays: number;
+  }>;
+
+  getHungerLogsForExport(
+    userId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<HungerLog[]>;
+}
+```
+
+### Export Token Consumption Flow
+
+```typescript
+// server/routes/exports.ts
+
+router.post('/healthcare-pdf', requireAuth, async (req, res) => {
+  const userId = req.auth.userId;
+  const { reportPeriod, sections, format } = req.body;
+
+  // 1. Check entitlements
+  const entitlements = await entitlementsService.getUserEntitlements(userId);
+
+  // Pro users with included exports
+  if (entitlements.tier === 'pro' && entitlements.pdfExportsIncluded > 0) {
+    // Consume from Pro allowance
+    await entitlementsService.consumeProExport(userId);
+  }
+  // Users with purchased export tokens
+  else if (entitlements.exportTokens > 0) {
+    await tokenService.consumeToken(userId, 'export_tokens', 1, 'pdf_export');
+  }
+  // No access - return upsell
+  else {
+    // Track upsell event
+    await analyticsService.track('FEATURE_LIMIT_HIT', {
+      userId,
+      feature: 'pdf_export',
+      trigger: 'healthcare_pdf_attempt'
+    });
+
+    return res.status(402).json({
+      success: false,
+      reason: 'no_tokens',
+      tokensRequired: 1,
+      upsellOptions: {
+        singleExport: { price: 199, productId: 'prod_export_1' },
+        fivePack: { price: 699, productId: 'prod_export_5' },
+        proPlan: { price: 999, includesExports: 5 }
+      }
+    });
+  }
+
+  // 2. Generate PDF
+  const pdfBuffer = await pdfGenerator.generateReport(userId, {
+    period: reportPeriod,
+    format: format || 'detailed'
+  });
+
+  // 3. Upload to temporary storage and return signed URL
+  const downloadUrl = await storageService.uploadTemporaryFile(
+    pdfBuffer,
+    `health-report-${userId}-${Date.now()}.pdf`,
+    { expiresIn: 3600 } // 1 hour
+  );
+
+  // 4. Track successful export
+  await analyticsService.track('PDF_EXPORT_COMPLETED', {
+    userId,
+    reportPeriod,
+    format
+  });
+
+  res.json({
+    success: true,
+    downloadUrl,
+    expiresAt: new Date(Date.now() + 3600000).toISOString()
+  });
+});
 ```
 
 ---

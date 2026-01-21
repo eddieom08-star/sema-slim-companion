@@ -5,6 +5,7 @@
 	<key>com.apple.developer.associated-domains</key>
 	<array>
 		<string>webcredentials:complete-bullfrog-71.clerk.accounts.dev</string>
+		<string>applinks:complete-bullfrog-71.clerk.accounts.dev</string>
 	</array>
 </dict>
 </plist>

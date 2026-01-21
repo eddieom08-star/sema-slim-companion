@@ -59,10 +59,13 @@ Then:
 
 5. Click **"+"** under Associated Domains
 
-6. Add this entry:
+6. Add these entries:
    ```
    webcredentials:complete-bullfrog-71.clerk.accounts.dev
+   applinks:complete-bullfrog-71.clerk.accounts.dev
    ```
+
+   **Note:** `webcredentials` is for password autofill, `applinks` is required for OAuth callbacks (Google, Apple, etc.)
 
 ---
 

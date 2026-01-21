@@ -17,6 +17,8 @@ import Medication from "@/pages/medication";
 import Progress from "@/pages/progress";
 import Profile from "@/pages/profile";
 import Recipes from "@/pages/recipes";
+import MobileCheckout from "@/pages/MobileCheckout";
+import CheckoutSuccess from "@/pages/CheckoutSuccess";
 import { PWAInstallPrompt } from "@/components/pwa-install-prompt";
 import { OfflineIndicator } from "@/components/offline-indicator";
 import { NetworkAwareIndicator } from "@/components/network-aware";
@@ -115,6 +117,10 @@ function Router() {
 
   return (
     <Switch key={routeKey}>
+      {/* Checkout routes - accessible regardless of auth (for mobile deep linking) */}
+      <Route path="/checkout/success" component={CheckoutSuccess} />
+      <Route path="/checkout" component={MobileCheckout} />
+
       {!canAccessApp ? (
         <>
           {/* Not authenticated: show auth pages */}

@@ -6,6 +6,36 @@ This guide walks through setting up RevenueCat for SemaSlim's mobile in-app purc
 
 **Your API Key:** `sk_FRrSVmwxtNfetWtdsRCCbFeRVrrIP`
 
+> **RECOMMENDED: Web-First Payments**
+> To avoid the 30% Apple/Google platform fees, we recommend using the web-first payment strategy.
+> Mobile users are directed to Stripe web checkout instead of IAP.
+> See [WEB_FIRST_PAYMENTS.md](./WEB_FIRST_PAYMENTS.md) for implementation details.
+
+---
+
+## CLI Tools
+
+Run the interactive setup wizard:
+```bash
+node scripts/setup-revenuecat.js setup
+```
+
+Other CLI commands:
+```bash
+# Test API connection
+node scripts/setup-revenuecat.js test
+
+# Check user subscription status
+node scripts/setup-revenuecat.js check user_abc123
+
+# Grant promotional Pro access (for testing/support)
+node scripts/setup-revenuecat.js grant user_abc123 pro monthly
+node scripts/setup-revenuecat.js grant user_abc123 pro lifetime
+
+# Revoke promotional access
+node scripts/setup-revenuecat.js revoke user_abc123 pro
+```
+
 ---
 
 ## Step 1: Create Products in App Stores

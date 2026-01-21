@@ -2,6 +2,7 @@ import { Router, Request, Response, raw } from 'express';
 import { requireAuth, clerkClient } from '@clerk/express';
 import { entitlementsService } from '../services/entitlements';
 import { stripeService } from '../services/stripe';
+import { revenueCatService } from '../services/revenuecat';
 import { pdfExportService } from '../services/pdf-export';
 import { db } from '../db';
 import { eq } from 'drizzle-orm';
@@ -553,5 +554,91 @@ router.post(
     }
   }
 );
+
+// ============================================
+// REVENUECAT ENDPOINTS (MOBILE)
+// ============================================
+
+/**
+ * POST /api/mobile/sync-purchases
+ * Sync mobile purchases from RevenueCat to local database
+ * Called by mobile app after purchase to ensure server is in sync
+ */
+router.post('/mobile/sync-purchases', requireAuth(), async (req: Request, res: Response) => {
+  try {
+    const userId = req.auth?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Sync subscription status from RevenueCat
+    await revenueCatService.syncSubscriptionStatus(userId);
+
+    // Return updated entitlements
+    const entitlements = await entitlementsService.getUserEntitlements(userId);
+
+    res.json({
+      success: true,
+      entitlements,
+    });
+  } catch (error) {
+    console.error('Error syncing mobile purchases:', error);
+    res.status(500).json({ error: 'Failed to sync purchases' });
+  }
+});
+
+/**
+ * GET /api/mobile/subscriber
+ * Get RevenueCat subscriber info for mobile app
+ */
+router.get('/mobile/subscriber', requireAuth(), async (req: Request, res: Response) => {
+  try {
+    const userId = req.auth?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const subscriber = await revenueCatService.getSubscriber(userId);
+
+    res.json({
+      hasSubscriber: !!subscriber,
+      subscriber: subscriber?.subscriber || null,
+    });
+  } catch (error) {
+    console.error('Error fetching subscriber:', error);
+    res.status(500).json({ error: 'Failed to fetch subscriber info' });
+  }
+});
+
+/**
+ * POST /api/webhooks/revenuecat
+ * Handle RevenueCat webhook events (mobile purchases)
+ */
+router.post('/webhooks/revenuecat', async (req: Request, res: Response) => {
+  const authHeader = req.headers.authorization;
+  const webhookSecret = process.env.REVENUECAT_WEBHOOK_SECRET;
+
+  // Verify webhook authenticity
+  if (webhookSecret && authHeader !== `Bearer ${webhookSecret}`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const event = req.body;
+
+    if (!event || !event.event) {
+      return res.status(400).json({ error: 'Invalid webhook payload' });
+    }
+
+    console.log('RevenueCat webhook received:', event.event.type);
+
+    await revenueCatService.handleWebhook(event);
+
+    res.json({ received: true });
+  } catch (error) {
+    console.error('RevenueCat webhook error:', error);
+    res.status(500).json({ error: 'Webhook processing failed' });
+  }
+});
 
 export default router;

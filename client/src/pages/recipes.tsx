@@ -4,13 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import Navigation from "@/components/ui/navigation";
-import { Bot, ScanLine, Send, Loader2, BookOpen, Trash2, ChefHat, Zap } from "lucide-react";
+import { Bot, ScanLine, Send, Loader2, BookOpen, Trash2, ChefHat, Zap, ChevronDown, ChevronUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { resizeImageForClaude, type ProcessedImage } from "@/lib/image-utils";
 
 interface Message {
   role: "user" | "assistant";
@@ -25,6 +25,7 @@ interface ParsedRecipe {
   protein: number;
   carbs?: number;
   fat?: number;
+  fiber?: number;
   prepTime: number;
   cookTime: number;
   servings: number;
@@ -75,78 +76,284 @@ EXAMPLES OF NATURAL QUESTIONS:
 ❌ Avoid: "Select your preparation difficulty level from the following options"
 ✅ Use: "Are you comfortable with more involved cooking, or should I keep it simple?"`;
 
+// RecipeCard component for expandable recipe display
+function RecipeCard({ recipe, onSave, isSaving }: {
+  recipe: ParsedRecipe;
+  onSave: () => void;
+  isSaving: boolean;
+}) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <Card className="bg-background border overflow-hidden w-full max-w-full">
+      <CardContent className="p-3 overflow-hidden">
+        {/* Header - always visible */}
+        <div className="flex items-center justify-between gap-2 w-full">
+          <div className="flex-1 min-w-0 overflow-hidden">
+            <h4 className="font-semibold text-sm truncate">{recipe.name}</h4>
+            <div className="flex flex-wrap gap-1 mt-1">
+              <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full whitespace-nowrap">
+                {recipe.calories} cal
+              </span>
+              <span className="text-xs bg-secondary/10 text-secondary px-2 py-0.5 rounded-full whitespace-nowrap">
+                {recipe.protein}g protein
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Button
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSave();
+              }}
+              disabled={isSaving}
+              className="h-9 px-3 bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <BookOpen className="h-4 w-4 mr-1" />
+                  Save
+                </>
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="h-9 px-2"
+            >
+              {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </Button>
+          </div>
+        </div>
+
+        {/* Expanded content */}
+        {isExpanded && (
+          <div className="mt-3 pt-3 border-t space-y-3">
+            {/* All macros */}
+            <div className="flex flex-wrap gap-2">
+              {recipe.carbs && (
+                <span className="text-xs bg-accent/10 text-accent px-2 py-0.5 rounded-full">
+                  {recipe.carbs}g carbs
+                </span>
+              )}
+              {recipe.fat && (
+                <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">
+                  {recipe.fat}g fat
+                </span>
+              )}
+              {recipe.isHighProtein && (
+                <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                  High Protein
+                </span>
+              )}
+              {recipe.isGlp1Friendly && (
+                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+                  GLP-1 Friendly
+                </span>
+              )}
+            </div>
+
+            {/* Prep time */}
+            <p className="text-xs text-muted-foreground">
+              Prep: {recipe.prepTime} min | Servings: {recipe.servings}
+            </p>
+
+            {/* Ingredients */}
+            {recipe.ingredients.length > 0 && recipe.ingredients[0] !== 'See recipe details above' && recipe.ingredients[0] !== 'See recipe details in message' && (
+              <div className="overflow-hidden">
+                <p className="text-xs font-medium mb-1">Ingredients:</p>
+                <ul className="text-xs text-muted-foreground space-y-0.5">
+                  {recipe.ingredients.slice(0, 6).map((ing, i) => (
+                    <li key={i} className="break-words">• {ing}</li>
+                  ))}
+                  {recipe.ingredients.length > 6 && (
+                    <li className="text-primary">+ {recipe.ingredients.length - 6} more...</li>
+                  )}
+                </ul>
+              </div>
+            )}
+
+            {/* Instructions */}
+            {recipe.instructions.length > 0 && recipe.instructions[0] !== 'See preparation steps in message' && (
+              <div className="overflow-hidden">
+                <p className="text-xs font-medium mb-1">Instructions:</p>
+                <ol className="text-xs text-muted-foreground space-y-1">
+                  {recipe.instructions.slice(0, 5).map((step, i) => (
+                    <li key={i} className="break-words">{i + 1}. {step}</li>
+                  ))}
+                  {recipe.instructions.length > 5 && (
+                    <li className="text-primary">+ {recipe.instructions.length - 5} more steps...</li>
+                  )}
+                </ol>
+              </div>
+            )}
+
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 // Helper function to parse recipes from AI response
+// Returns at most ONE recipe per AI response - treats the whole response as a single recipe
 function parseRecipesFromText(text: string): ParsedRecipe[] {
-  const recipes: ParsedRecipe[] = [];
+  console.log('[Recipe Parse] Input text length:', text?.length, 'First 300 chars:', text?.substring(0, 300));
 
-  // Split by numbered recipes (e.g., "1. Recipe Name" or "1) Recipe Name")
-  const recipeMatches = text.match(/(\d+[\.)]\s+)([^\n]+(?:\n(?!\d+[\.)]\s+).*)*)/g);
+  // Check if text contains recipe-like content (nutritional info)
+  // Support many formats: "330 calories", "Calories: 330", "- Calories: 330", "**Calories:** 330", etc.
+  const caloriePatterns = [
+    /(\d+)\s*(?:calories|cal|kcal)/i,
+    /calories?[:\s*~-]+\s*(\d+)/i,
+    /[-•*]\s*calories?[:\s*~-]+\s*(\d+)/i,  // Bullet point format: "- Calories: 360"
+    /\*\*calories?\*\*[:\s*~-]+\s*(\d+)/i,
+    /energy[:\s*~-]+\s*(\d+)/i,
+  ];
+  const proteinPatterns = [
+    /(\d+)\s*g?\s*(?:of\s+)?protein/i,
+    /protein[:\s*~-]+\s*(\d+)/i,
+    /[-•*]\s*protein[:\s*~-]+\s*(\d+)/i,  // Bullet point format: "- Protein: 42g"
+    /\*\*protein\*\*[:\s*~-]+\s*(\d+)/i,
+  ];
 
-  if (!recipeMatches) return recipes;
+  const hasCalories = caloriePatterns.some(p => p.test(text));
+  const hasProtein = proteinPatterns.some(p => p.test(text));
 
-  recipeMatches.forEach((recipeBlock) => {
-    try {
-      // Extract recipe name (first line after number)
-      const nameMatch = recipeBlock.match(/^\d+[\.)]\s+(.+?)(?:\n|$)/);
-      if (!nameMatch) return;
+  // Also check for recipe indicators even without exact nutrition
+  const hasRecipeIndicators = /ingredients?|instructions?|directions?|steps?|prep\s*time|cook\s*time|servings?/i.test(text);
 
-      const name = nameMatch[1].trim();
+  // Check for recipe name patterns (bold title followed by recipe content)
+  const hasRecipeTitle = /\*\*[A-Z][^*]+\*\*/i.test(text) || /^#+\s+[A-Z]/m.test(text);
 
-      // Extract calories (e.g., "300 calories", "calories: 400", "400 cal")
-      const calorieMatch = recipeBlock.match(/(\d+)\s*(?:calories|cal)/i);
-      const calories = calorieMatch ? parseInt(calorieMatch[1]) : 400;
+  // Check for food-related terms that suggest a recipe
+  const hasFoodTerms = /chicken|salmon|salad|steak|pasta|rice|quinoa|vegetables?|beef|pork|tofu|eggs?|oatmeal|smoothie|soup|stir.?fry/i.test(text);
 
-      // Extract protein (e.g., "30g protein", "protein: 25g")
-      const proteinMatch = recipeBlock.match(/(\d+)\s*g?\s*protein/i);
-      const protein = proteinMatch ? parseInt(proteinMatch[1]) : 25;
+  // Debug logging
+  console.log('[Recipe Parse] hasCalories:', hasCalories, 'hasProtein:', hasProtein, 'hasRecipeIndicators:', hasRecipeIndicators, 'hasRecipeTitle:', hasRecipeTitle, 'hasFoodTerms:', hasFoodTerms);
 
-      // Extract carbs
-      const carbMatch = recipeBlock.match(/(\d+)\s*g?\s*carbs?/i);
-      const carbs = carbMatch ? parseInt(carbMatch[1]) : undefined;
+  // If no nutritional info AND no recipe indicators AND no recipe title with food terms, not a recipe
+  if (!hasCalories && !hasProtein && !hasRecipeIndicators && !(hasRecipeTitle && hasFoodTerms)) {
+    return [];
+  }
 
-      // Extract fat
-      const fatMatch = recipeBlock.match(/(\d+)\s*g?\s*fat/i);
-      const fat = fatMatch ? parseInt(fatMatch[1]) : undefined;
-
-      // Extract prep/cook time (e.g., "15 minutes", "under 15 min")
-      const prepMatch = recipeBlock.match(/(?:quick|make|prep).*?(\d+)\s*(?:minutes|min)/i);
-      const prepTime = prepMatch ? parseInt(prepMatch[1]) : 15;
-
-      // Extract ingredients (lines starting with -)
-      const ingredients = recipeBlock.match(/^[\s-]*(.+?)$/gm)
-        ?.filter(line => line.trim().startsWith('-'))
-        .map(line => line.replace(/^[\s-]+/, '').trim())
-        .filter(Boolean) || [];
-
-      // Determine if high protein (>25g)
-      const isHighProtein = protein >= 25;
-
-      // Determine if GLP-1 friendly (lower fat, high protein)
-      const isGlp1Friendly = protein >= 20 && (!fat || fat < 15);
-
-      recipes.push({
-        name,
-        description: recipeBlock.substring(0, 200).trim(),
-        calories,
-        protein,
-        carbs,
-        fat,
-        prepTime,
-        cookTime: 0,
-        servings: 1,
-        difficulty: 'medium',
-        ingredients: ingredients.length > 0 ? ingredients : ['See recipe details above'],
-        instructions: ['Follow the preparation steps outlined above'],
-        isGlp1Friendly,
-        isHighProtein,
-        isLowCarb: carbs ? carbs < 30 : false
-      });
-    } catch (error) {
-      console.error('Error parsing recipe:', error);
+  // Extract nutrition from the ENTIRE text (single recipe)
+  // Support many formats: "330 calories", "Calories: 330", "**Calories:** 330", etc.
+  const extractNumber = (patterns: RegExp[]): number | null => {
+    for (const pattern of patterns) {
+      const match = text.match(pattern);
+      if (match) return parseInt(match[1]);
     }
-  });
+    return null;
+  };
 
-  return recipes;
+  const calorieMatch = extractNumber([
+    /(\d+)\s*(?:calories|cal|kcal)/i,
+    /calories?[:\s*~-]+\s*(\d+)/i,
+    /[-•*]\s*calories?[:\s*~-]+\s*(\d+)/i,  // "- Calories: 360"
+    /\*\*calories?\*\*[:\s*~-]+\s*(\d+)/i,
+  ]);
+  const proteinMatch = extractNumber([
+    /(\d+)\s*g?\s*(?:of\s+)?protein/i,
+    /protein[:\s*~-]+\s*(\d+)/i,
+    /[-•*]\s*protein[:\s*~-]+\s*(\d+)/i,  // "- Protein: 42g"
+    /\*\*protein\*\*[:\s*~-]+\s*(\d+)/i,
+  ]);
+  const carbMatch = extractNumber([
+    /(\d+)\s*g?\s*(?:of\s+)?carbs?/i,
+    /carbs?[:\s*~-]+\s*(\d+)/i,
+    /[-•*]\s*carbs?[:\s*~-]+\s*(\d+)/i,  // "- Carbs: 10g"
+    /\*\*carbs?\*\*[:\s*~-]+\s*(\d+)/i,
+    /carbohydrates?[:\s*~-]+\s*(\d+)/i,
+  ]);
+  const fatMatch = extractNumber([
+    /(\d+)\s*g?\s*(?:of\s+)?fat/i,
+    /fat[:\s*~-]+\s*(\d+)/i,
+    /[-•*]\s*fat[:\s*~-]+\s*(\d+)/i,  // "- Fat: 16g"
+    /\*\*fat\*\*[:\s*~-]+\s*(\d+)/i,
+  ]);
+  const fiberMatch = extractNumber([
+    /(\d+)\s*g?\s*(?:of\s+)?fiber/i,
+    /fiber[:\s*~-]+\s*(\d+)/i,
+    /[-•*]\s*fiber[:\s*~-]+\s*(\d+)/i,  // "- Fiber: 5g"
+    /\*\*fiber\*\*[:\s*~-]+\s*(\d+)/i,
+  ]);
+  const prepMatch = extractNumber([
+    /prep[^:]*[:\s]+(\d+)/i,
+    /(\d+)\s*(?:minutes?|min)\s*(?:prep|preparation)/i,
+    /(\d+)\s*(?:minutes?|min)/i,
+  ]);
+
+  const calories = calorieMatch ?? 400;
+  const protein = proteinMatch ?? 25;
+  const carbs = carbMatch ?? undefined;
+  const fat = fatMatch ?? undefined;
+  const fiber = fiberMatch ?? undefined;
+  const prepTime = prepMatch ?? 15;
+
+  // Find recipe name - look for bold text, title-like line, or common patterns
+  let recipeName = 'Recipe';
+
+  // Try bold/header patterns first
+  const boldMatch = text.match(/\*\*([^*]+)\*\*/);
+  const headerMatch = text.match(/^###?\s*(.+)$/m);
+
+  if (boldMatch) {
+    recipeName = boldMatch[1].trim();
+  } else if (headerMatch) {
+    recipeName = headerMatch[1].trim();
+  } else {
+    // Look for a line that looks like a recipe name (capitalized, food-related words)
+    const lines = text.split('\n').filter(l => l.trim());
+    const foodWords = /chicken|salmon|salad|bowl|stir|grill|baked|roast|steam|vegetable|rice|quinoa|protein|healthy|low|high/i;
+    const nameLine = lines.find(l =>
+      l.length > 5 &&
+      l.length < 80 &&
+      !l.match(/^\d+[.)]/) && // Not a numbered step
+      !l.match(/^[-•*]/) && // Not a bullet point
+      !l.match(/calories|protein|carbs|fat|fiber/i) && // Not nutrition info
+      (l.match(foodWords) || l.match(/^[A-Z]/)) // Has food word or starts with capital
+    );
+    if (nameLine) {
+      recipeName = nameLine.replace(/[*#:]/g, '').trim();
+    }
+  }
+
+  // Extract ingredients (lines with bullets or dashes)
+  const ingredients = text.match(/^[\s]*[-•*]\s*(.+)$/gm)
+    ?.map(line => line.replace(/^[\s]*[-•*]\s*/, '').trim())
+    .filter(Boolean) || [];
+
+  // Extract instructions (numbered steps) - handle various formats
+  // Matches: "1. Step", "1) Step", "1: Step", with optional leading whitespace
+  const instructions = text.match(/^[\s]*\d+[.):\s]+.+$/gm)
+    ?.map(line => line.replace(/^[\s]*\d+[.):\s]+/, '').trim())
+    .filter(line => line.length > 5) || [];
+
+  const isHighProtein = protein >= 25;
+  const isGlp1Friendly = protein >= 20 && (!fat || fat < 15);
+
+  return [{
+    name: recipeName,
+    description: text.substring(0, 300).replace(/\n/g, ' ').trim(),
+    calories,
+    protein,
+    carbs,
+    fat,
+    fiber,
+    prepTime,
+    cookTime: 0,
+    servings: 1,
+    difficulty: 'medium',
+    ingredients: ingredients.length > 0 ? ingredients : ['See recipe details in message'],
+    instructions: instructions.length > 0 ? instructions : ['See preparation steps in message'],
+    isGlp1Friendly,
+    isHighProtein,
+    isLowCarb: carbs ? carbs < 30 : false
+  }];
 }
 
 export default function Recipes() {
@@ -163,6 +370,7 @@ export default function Recipes() {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [processedImage, setProcessedImage] = useState<ProcessedImage | null>(null);
   const [selectedRecipe, setSelectedRecipe] = useState<any>(null);
   const [isRecipeDetailOpen, setIsRecipeDetailOpen] = useState(false);
   const [recipeToDelete, setRecipeToDelete] = useState<string | null>(null);
@@ -232,7 +440,7 @@ export default function Recipes() {
     scrollToBottom();
   }, [messages]);
 
-  const handleSendMessage = async (customMessage?: string) => {
+  const handleSendMessage = async (customMessage?: string, useInstantMode?: boolean) => {
     const messageToSend = customMessage || inputMessage;
     if (!messageToSend.trim() || isLoading) return;
 
@@ -246,58 +454,74 @@ export default function Recipes() {
     setIsLoading(true);
 
     try {
-      // Build enhanced system prompt with user's medication info
+      // Build system prompt based on mode
       const medicationType = (userProfile as any)?.medicationType;
-      let enhancedPrompt = SYSTEM_PROMPT;
+      let enhancedPrompt: string;
 
-      if (medicationType) {
-        const medicationContext = `\n\nIMPORTANT CONTEXT: The user is currently taking ${medicationType.toUpperCase()} (a GLP-1 medication). When recommending recipes:
+      if (useInstantMode) {
+        // Direct system prompt for instant recipes - no conversation, just generate
+        enhancedPrompt = `You are a recipe generator. Generate ONE complete recipe immediately without asking ANY questions.
+
+CRITICAL RULES:
+- DO NOT ask clarifying questions
+- DO NOT ask about preferences, dietary restrictions, or requirements
+- DO NOT engage in conversation
+- IMMEDIATELY provide a complete recipe
+
+OUTPUT FORMAT (follow exactly):
+**[Recipe Name]**
+
+Ingredients:
+- [ingredient 1]
+- [ingredient 2]
+...
+
+Instructions:
+1. [step 1]
+2. [step 2]
+...
+
+Nutrition Info (per serving):
+- Calories: [number]
+- Protein: [number]g
+- Carbs: [number]g
+- Fat: [number]g
+
+Prep Time: [number] minutes
+Servings: [number]`;
+
+        if (medicationType) {
+          enhancedPrompt += `\n\nNote: User takes ${medicationType} (GLP-1). Prioritize high-protein (25g+), easy-to-digest meals.`;
+        }
+      } else {
+        // Conversational mode
+        enhancedPrompt = SYSTEM_PROMPT;
+        if (medicationType) {
+          const medicationContext = `\n\nIMPORTANT CONTEXT: The user is currently taking ${medicationType.toUpperCase()} (a GLP-1 medication). When recommending recipes:
 - Prioritize high-protein meals (25g+ protein per serving)
 - Suggest smaller portion sizes as GLP-1 medications reduce appetite
 - Recommend foods that are gentle on the stomach (avoid very fatty, spicy, or rich foods)
 - Include foods that help with common GLP-1 side effects like nausea (ginger, bland carbs, clear soups)
 - Focus on nutrient-dense options since the user will eat less overall
 - Suggest meals that are easy to digest`;
-        enhancedPrompt += medicationContext;
+          enhancedPrompt += medicationContext;
+        }
       }
 
-      // Call Claude API through our backend
-      const response = await fetch('/api/ai/recipe-chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messages: [...messages, userMessage],
-          systemPrompt: enhancedPrompt
-        }),
+      // Call Claude API through our backend (apiRequest handles auth headers)
+      const response = await apiRequest('POST', '/api/ai/recipe-chat', {
+        messages: useInstantMode ? [userMessage] : [...messages, userMessage],
+        systemPrompt: enhancedPrompt
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-        console.error('AI API error:', errorData);
-        console.error('Full error details:', {
-          status: response.status,
-          statusText: response.statusText,
-          errorData
-        });
-
-        // Create detailed error message
-        let errorMessage = errorData.message || 'Failed to get AI response';
-        if (errorData.error) {
-          errorMessage += `: ${errorData.error}`;
-        }
-        if (errorData.details) {
-          errorMessage += ` (${errorData.details})`;
-        }
-
-        throw new Error(errorMessage);
-      }
 
       const data = await response.json();
 
       // Parse recipes from the AI response
       const parsedRecipes = parseRecipesFromText(data.message);
+
+      // Debug: log parsing results
+      console.log('[Recipe Debug] AI Response:', data.message?.substring(0, 200));
+      console.log('[Recipe Debug] Parsed recipes:', parsedRecipes.length, parsedRecipes);
 
       const assistantMessage: Message = {
         role: "assistant",
@@ -319,24 +543,56 @@ export default function Recipes() {
   };
 
   const handleInstantRecipe = () => {
-    const instantRecipePrompt = "Generate a single low-calorie, high-protein recipe immediately. No questions needed. Requirements: under 400 calories, 25g+ protein, quick to prepare (under 20 minutes). Skip all clarification questions and provide the recipe now with full nutritional details.";
-    handleSendMessage(instantRecipePrompt);
+    const instantRecipePrompt = "Generate a quick, healthy recipe: under 400 calories, 25g+ protein, under 20 minutes prep time.";
+    handleSendMessage(instantRecipePrompt, true); // true = instant mode
   };
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       setSelectedImage(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      try {
+        // Resize image to stay under Claude's 2000px limit
+        const processed = await resizeImageForClaude(file, {
+          maxDimension: 1920,  // Leave margin below 2000px limit
+          quality: 0.9,
+          format: 'jpeg'
+        });
+        setProcessedImage(processed);
+        setImagePreview(processed.base64WithPrefix);
+
+        if (processed.wasResized) {
+          toast({
+            title: "Image optimized",
+            description: `Resized to ${processed.width}x${processed.height} for best results.`,
+          });
+        }
+      } catch (error) {
+        console.error('Error processing image:', error);
+        // Fallback to original method if resize fails
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setImagePreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      }
     }
   };
 
   const handleSaveRecipe = async (recipe: ParsedRecipe) => {
     try {
+      // Convert arrays to proper format for database
+      const ingredientsFormatted = recipe.ingredients.map(ing => ({
+        name: ing,
+        quantity: '',
+        unit: ''
+      }));
+
+      // Instructions must be a string (not array) per schema
+      const instructionsText = Array.isArray(recipe.instructions)
+        ? recipe.instructions.join('\n')
+        : recipe.instructions;
+
       const recipeData = {
         name: recipe.name,
         description: recipe.description,
@@ -345,8 +601,8 @@ export default function Recipes() {
         prepTime: recipe.prepTime,
         cookTime: recipe.cookTime,
         servings: recipe.servings,
-        ingredients: recipe.ingredients,
-        instructions: recipe.instructions,
+        ingredients: ingredientsFormatted,
+        instructions: instructionsText,
         calories: recipe.calories,
         protein: recipe.protein.toString(),
         carbs: recipe.carbs?.toString() || '0',
@@ -373,7 +629,7 @@ export default function Recipes() {
   };
 
   const handleScanReceipt = async () => {
-    if (!selectedImage) {
+    if (!selectedImage || !processedImage) {
       toast({
         title: "No image selected",
         description: "Please upload a receipt image first.",
@@ -384,26 +640,45 @@ export default function Recipes() {
 
     setIsLoading(true);
     try {
-      // TODO: Implement receipt scanning with OCR/AI
       toast({
-        title: "Receipt scanned!",
-        description: "Extracting recipe information...",
+        title: "Scanning...",
+        description: "Extracting recipe information from image...",
       });
 
-      // Simulate processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      toast({
-        title: "Recipe extracted",
-        description: "Your recipe has been added to your collection!",
+      // Send image to Claude for recipe extraction
+      const response = await apiRequest('POST', '/api/ai/scan-recipe', {
+        image: {
+          base64: processedImage.base64,
+          mediaType: processedImage.mediaType,
+        }
       });
+
+      const data = await response.json();
+
+      if (data.recipe) {
+        // Save the extracted recipe
+        await saveRecipe.mutateAsync(data.recipe);
+
+        toast({
+          title: "Recipe extracted!",
+          description: `"${data.recipe.name}" has been added to your collection.`,
+        });
+      } else if (data.message) {
+        // Show the AI's response if no structured recipe was extracted
+        toast({
+          title: "Scan complete",
+          description: data.message,
+        });
+      }
 
       setSelectedImage(null);
       setImagePreview(null);
-    } catch (error) {
+      setProcessedImage(null);
+    } catch (error: any) {
+      console.error('Recipe scan error:', error);
       toast({
         title: "Error",
-        description: "Failed to scan receipt. Please try again.",
+        description: error.message || "Failed to scan receipt. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -439,8 +714,8 @@ export default function Recipes() {
           </TabsList>
 
           {/* AI Recipe Creator Tab */}
-          <TabsContent value="ai-creator" className="mt-6">
-            <Card className="flex flex-col overflow-hidden h-[600px]">
+          <TabsContent value="ai-creator" className="mt-6 overflow-hidden">
+            <Card className="flex flex-col overflow-hidden h-[calc(100vh-280px)] min-h-[400px] max-h-[600px] w-full max-w-full">
               <CardHeader className="flex-shrink-0 p-4 md:p-6">
                 <CardTitle className="flex items-center gap-2">
                   <Bot className="h-5 w-5" />
@@ -449,76 +724,37 @@ export default function Recipes() {
               </CardHeader>
               <CardContent className="flex-1 flex flex-col p-0 overflow-hidden min-h-0">
                 {/* Messages Area */}
-                <ScrollArea className="flex-1 px-4 h-full">
-                  <div className="space-y-4 py-4">
+                <div className="flex-1 overflow-y-auto overflow-x-hidden px-4">
+                  <div className="space-y-4 py-4" style={{ maxWidth: 'calc(100vw - 56px)' }}>
                     {messages.map((message, index) => (
                       <div key={index} className="space-y-2">
-                        <div
-                          className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
-                        >
+                        {/* Hide text bubble for assistant messages that have recipe cards */}
+                        {!(message.role === "assistant" && message.recipes && message.recipes.length > 0) && (
                           <div
-                            className={`max-w-[80%] rounded-lg p-3 ${
-                              message.role === "user"
+                            className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                          >
+                            <div
+                              className={`max-w-[85%] rounded-lg p-3 ${message.role === "user"
                                 ? "bg-primary text-primary-foreground"
                                 : "bg-muted"
-                            }`}
-                          >
-                            <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                                }`}
+                              style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
+                            >
+                              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                            </div>
                           </div>
-                        </div>
+                        )}
 
-                        {/* Recipe Cards with Save Buttons */}
+                        {/* Recipe Cards with Save Buttons - replaces text bubble for recipe responses */}
                         {message.recipes && message.recipes.length > 0 && (
-                          <div className="space-y-2 ml-4">
+                          <div className="space-y-2" style={{ maxWidth: 'calc(100vw - 56px)' }}>
                             {message.recipes.map((recipe, recipeIndex) => (
-                              <Card key={recipeIndex} className="bg-background border-2">
-                                <CardContent className="p-2 md:p-3 space-y-2">
-                                  <div className="flex items-start justify-between gap-2">
-                                    <div className="flex-1 min-w-0">
-                                      <h4 className="font-semibold text-sm">{recipe.name}</h4>
-                                      <div className="flex flex-wrap gap-2 mt-1">
-                                        <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                                          {recipe.calories} cal
-                                        </span>
-                                        <span className="text-xs bg-secondary/10 text-secondary px-2 py-0.5 rounded-full">
-                                          {recipe.protein}g protein
-                                        </span>
-                                        {recipe.carbs && (
-                                          <span className="text-xs bg-accent/10 text-accent px-2 py-0.5 rounded-full">
-                                            {recipe.carbs}g carbs
-                                          </span>
-                                        )}
-                                        {recipe.isHighProtein && (
-                                          <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
-                                            High Protein
-                                          </span>
-                                        )}
-                                        {recipe.isGlp1Friendly && (
-                                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
-                                            GLP-1 Friendly
-                                          </span>
-                                        )}
-                                      </div>
-                                    </div>
-                                    <Button
-                                      size="sm"
-                                      variant="default"
-                                      onClick={() => handleSaveRecipe(recipe)}
-                                      disabled={saveRecipe.isPending}
-                                      className="flex-shrink-0"
-                                    >
-                                      {saveRecipe.isPending ? (
-                                        <Loader2 className="h-3 w-3 animate-spin" />
-                                      ) : (
-                                        <>
-                                          <BookOpen className="h-3 w-3 mr-1" />
-                                          Save
-                                        </>
-                                      )}
-                                    </Button>
-                                  </div>
-                                </CardContent>
-                              </Card>
+                              <RecipeCard
+                                key={recipeIndex}
+                                recipe={recipe}
+                                onSave={() => handleSaveRecipe(recipe)}
+                                isSaving={saveRecipe.isPending}
+                              />
                             ))}
                           </div>
                         )}
@@ -533,29 +769,19 @@ export default function Recipes() {
                     )}
                     <div ref={messagesEndRef} />
                   </div>
-                </ScrollArea>
+                </div>
 
                 {/* Input Area */}
-                <div className="flex-shrink-0 border-t p-4">
+                <div className="flex-shrink-0 border-t p-4 space-y-3">
+                  <Button
+                    onClick={handleInstantRecipe}
+                    disabled={isLoading}
+                    className="w-full bg-primary text-white hover:bg-primary/90"
+                  >
+                    <Zap className="h-4 w-4 mr-2" />
+                    Instant Recipe
+                  </Button>
                   <div className="flex gap-2">
-                    <Button
-                      onClick={() => handleSendMessage()}
-                      disabled={!inputMessage.trim() || isLoading}
-                      size="icon"
-                      variant="default"
-                    >
-                      <Send className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      onClick={handleInstantRecipe}
-                      disabled={isLoading}
-                      size="sm"
-                      variant="outline"
-                      className="flex-shrink-0"
-                    >
-                      <Zap className="h-4 w-4 mr-2" />
-                      Instant Recipe
-                    </Button>
                     <Input
                       placeholder="Type your message..."
                       value={inputMessage}
@@ -568,7 +794,19 @@ export default function Recipes() {
                       }}
                       disabled={isLoading}
                       className="flex-1"
+                      inputMode="text"
+                      autoComplete="off"
+                      autoCorrect="on"
+                      enterKeyHint="send"
                     />
+                    <Button
+                      onClick={() => handleSendMessage()}
+                      disabled={!inputMessage.trim() || isLoading}
+                      size="icon"
+                      variant="default"
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               </CardContent>
@@ -838,8 +1076,8 @@ export default function Recipes() {
                 <div className="text-sm text-muted-foreground whitespace-pre-wrap">
                   {Array.isArray(selectedRecipe.instructions)
                     ? selectedRecipe.instructions.map((step: string, index: number) => (
-                        <p key={index} className="mb-2">{index + 1}. {step}</p>
-                      ))
+                      <p key={index} className="mb-2">{index + 1}. {step}</p>
+                    ))
                     : selectedRecipe.instructions}
                 </div>
               </div>

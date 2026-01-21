@@ -16,7 +16,13 @@
     "mobile:ios": "npm run mobile:sync:ios && npx cap open ios",
     "mobile:android": "npm run mobile:sync && npx cap open android",
     "mobile:run:ios": "npm run mobile:sync:ios && npx cap run ios",
-    "mobile:run:android": "npm run mobile:sync && npx cap run android"
+    "mobile:run:android": "npm run mobile:sync && npx cap run android",
+    "mobile:watch": "node scripts/watch-and-sync.cjs",
+    "mobile:clean": "rm -rf ios/App/App/public && rm -rf dist/public",
+    "mobile:fresh": "npm run mobile:clean && npm run mobile:sync:ios",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.65.0",
@@ -125,10 +131,13 @@
     "zod-validation-error": "^3.4.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.57.0",
     "@replit/vite-plugin-cartographer": "^0.3.1",
     "@replit/vite-plugin-dev-banner": "^0.1.1",
     "@replit/vite-plugin-runtime-error-modal": "^0.0.3",
     "@tailwindcss/vite": "^4.1.3",
+    "chokidar": "^5.0.0",
+    "concurrently": "^9.2.1",
     "drizzle-kit": "^0.31.4",
     "tsx": "^4.20.5",
     "xcode": "^3.0.1"

@@ -49,6 +49,8 @@ export function FoodEntryForm() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/food-entries"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+      // Preserve meal type for consecutive entries
+      const currentMealType = formData.mealType;
       setFormData({
         foodName: "",
         brand: "",
@@ -62,8 +64,11 @@ export function FoodEntryForm() {
         fiber: "",
         sugar: "",
         sodium: "",
-        mealType: "breakfast",
+        mealType: currentMealType,
       });
+      setSelectedFood(null);
+      setSearchQuery("");
+      setSearchResults([]);
       toast({
         title: "Food entry added",
         description: "Your food has been logged successfully.",
@@ -84,7 +89,7 @@ export function FoodEntryForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.foodName || !formData.quantity || !formData.calories) {
       toast({
         title: "Missing information",
@@ -94,10 +99,22 @@ export function FoodEntryForm() {
       return;
     }
 
+    const quantity = parseFloat(formData.quantity);
+    const calories = parseInt(formData.calories);
+
+    if (isNaN(quantity) || isNaN(calories) || quantity < 0 || calories < 0) {
+      toast({
+        title: "Invalid input",
+        description: "Quantity and calories must be valid positive numbers.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     createFoodEntry.mutate({
       ...formData,
-      quantity: parseFloat(formData.quantity).toString(),
-      calories: parseInt(formData.calories),
+      quantity: quantity.toString(),
+      calories: calories,
       protein: (parseFloat(formData.protein) || 0).toString(),
       carbs: (parseFloat(formData.carbs) || 0).toString(),
       fat: (parseFloat(formData.fat) || 0).toString(),
@@ -110,25 +127,9 @@ export function FoodEntryForm() {
   const handleBarcodeScanned = async (barcode: string) => {
     setIsSearchingBarcode(true);
     setBarcodeSearchResult(null);
-    
+
     try {
-      const response = await fetch(`/api/food-database/barcode/${barcode}`, {
-        credentials: "include",
-      });
-      
-      if (response.status === 401) {
-        toast({
-          title: "Authentication required",
-          description: "Please log in to use barcode scanning.",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      if (!response.ok) {
-        throw new Error("Food not found");
-      }
-      
+      const response = await apiRequest("GET", `/api/food-database/barcode/${barcode}`);
       const food = await response.json();
       setBarcodeSearchResult(food);
       
@@ -177,16 +178,12 @@ export function FoodEntryForm() {
 
       setIsSearching(true);
       try {
-        const response = await fetch(`/api/food-database/search?q=${encodeURIComponent(searchQuery)}&limit=15`, {
-          credentials: "include",
-        });
-        
-        if (response.ok) {
-          const results = await response.json();
-          setSearchResults(results);
-        }
+        const response = await apiRequest("GET", `/api/food-database/search?q=${encodeURIComponent(searchQuery)}&limit=15`);
+        const results = await response.json();
+        setSearchResults(results);
       } catch (error) {
         console.error("Search error:", error);
+        setSearchResults([]);
       } finally {
         setIsSearching(false);
       }
@@ -220,18 +217,18 @@ export function FoodEntryForm() {
 
   const handlePortionAdjustment = (multiplier: number) => {
     if (!selectedFood) return;
-    
+
     setPortionMultiplier(multiplier);
     setFormData(prev => ({
       ...prev,
-      quantity: (selectedFood.servingSize * multiplier).toFixed(1),
-      calories: Math.round(selectedFood.calories * multiplier).toString(),
-      protein: (selectedFood.protein * multiplier).toFixed(1),
-      carbs: (selectedFood.carbs * multiplier).toFixed(1),
-      fat: (selectedFood.fat * multiplier).toFixed(1),
-      fiber: (selectedFood.fiber * multiplier).toFixed(1),
-      sugar: (selectedFood.sugar * multiplier).toFixed(1),
-      sodium: Math.round(selectedFood.sodium * multiplier).toString(),
+      quantity: ((selectedFood.servingSize || 100) * multiplier).toFixed(1),
+      calories: Math.round((selectedFood.calories || 0) * multiplier).toString(),
+      protein: ((selectedFood.protein || 0) * multiplier).toFixed(1),
+      carbs: ((selectedFood.carbs || 0) * multiplier).toFixed(1),
+      fat: ((selectedFood.fat || 0) * multiplier).toFixed(1),
+      fiber: ((selectedFood.fiber || 0) * multiplier).toFixed(1),
+      sugar: ((selectedFood.sugar || 0) * multiplier).toFixed(1),
+      sodium: Math.round((selectedFood.sodium || 0) * multiplier).toString(),
     }));
   };
 
@@ -312,7 +309,11 @@ export function FoodEntryForm() {
                 <button
                   key={`${food.id}-${index}`}
                   onClick={() => handleSelectFood(food)}
-                  className="w-full p-3 border border-border rounded-lg hover:bg-accent text-left transition-colors"
+                  className={`w-full p-3 border-2 rounded-lg text-left transition-all touch-manipulation cursor-pointer ${
+                    selectedFood?.id === food.id
+                      ? "border-primary bg-primary/10 ring-2 ring-primary/20"
+                      : "border-border hover:bg-muted hover:border-muted-foreground/30 active:bg-muted"
+                  }`}
                   data-testid={`food-result-${index}`}
                 >
                   <div className="flex items-start space-x-3">
@@ -354,8 +355,8 @@ export function FoodEntryForm() {
           )}
 
           {selectedFood && (
-            <div className="space-y-4 pt-4 border-t border-border">
-              <div className="bg-accent/20 rounded-lg p-4">
+            <div className="space-y-4 pt-4 border-t-2 border-primary/30">
+              <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
                 <div className="flex items-start space-x-3 mb-4">
                   {selectedFood.imageUrl && (
                     <img 
@@ -435,25 +436,30 @@ export function FoodEntryForm() {
                     <div className="text-xs text-muted-foreground">cal</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-lg font-bold text-secondary">{formData.protein}g</div>
+                    <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{formData.protein}g</div>
                     <div className="text-xs text-muted-foreground">protein</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-lg font-bold text-accent">{formData.carbs}g</div>
+                    <div className="text-lg font-bold text-amber-600 dark:text-amber-400">{formData.carbs}g</div>
                     <div className="text-xs text-muted-foreground">carbs</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-lg font-bold text-destructive">{formData.fat}g</div>
+                    <div className="text-lg font-bold text-rose-600 dark:text-rose-400">{formData.fat}g</div>
                     <div className="text-xs text-muted-foreground">fat</div>
                   </div>
                 </div>
               </div>
 
-              {/* Meal Type Selection */}
-              <div>
-                <Label htmlFor="mealType">Meal Type</Label>
+              {/* Meal Type Selection - Prominent placement for mobile visibility */}
+              <div className="bg-muted/50 rounded-lg p-4 border border-border">
+                <Label htmlFor="mealType" className="text-sm font-semibold text-foreground mb-2 block">
+                  Add to which meal?
+                </Label>
                 <Select value={formData.mealType} onValueChange={(value) => handleInputChange("mealType", value)}>
-                  <SelectTrigger data-testid="select-meal-type-search">
+                  <SelectTrigger
+                    className="h-12 text-base font-medium bg-background border-2 border-primary/30 focus:border-primary"
+                    data-testid="select-meal-type-search"
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -520,6 +526,7 @@ export function FoodEntryForm() {
                   <Input
                     id="quantity"
                     type="number"
+                    min="0"
                     step="0.1"
                     placeholder="100"
                     value={formData.quantity}
@@ -573,6 +580,7 @@ export function FoodEntryForm() {
                 <Input
                   id="calories"
                   type="number"
+                  min="0"
                   placeholder="250"
                   value={formData.calories}
                   onChange={(e) => handleInputChange("calories", e.target.value)}
@@ -587,6 +595,7 @@ export function FoodEntryForm() {
                   <Input
                     id="protein"
                     type="number"
+                    min="0"
                     step="0.1"
                     placeholder="25"
                     value={formData.protein}
@@ -600,6 +609,7 @@ export function FoodEntryForm() {
                   <Input
                     id="carbs"
                     type="number"
+                    min="0"
                     step="0.1"
                     placeholder="0"
                     value={formData.carbs}
@@ -613,6 +623,7 @@ export function FoodEntryForm() {
                   <Input
                     id="fat"
                     type="number"
+                    min="0"
                     step="0.1"
                     placeholder="5"
                     value={formData.fat}
@@ -655,6 +666,7 @@ export function FoodEntryForm() {
                   <Input
                     id="fiber"
                     type="number"
+                    min="0"
                     step="0.1"
                     placeholder="0"
                     value={formData.fiber}
@@ -668,6 +680,7 @@ export function FoodEntryForm() {
                   <Input
                     id="sugar"
                     type="number"
+                    min="0"
                     step="0.1"
                     placeholder="0"
                     value={formData.sugar}
@@ -681,6 +694,7 @@ export function FoodEntryForm() {
                   <Input
                     id="sodium"
                     type="number"
+                    min="0"
                     step="1"
                     placeholder="0"
                     value={formData.sodium}

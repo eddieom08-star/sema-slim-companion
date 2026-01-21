@@ -189,6 +189,7 @@ export const clerkNative = {
 
   /**
    * Check if user is signed in
+   * IMPORTANT: Also verifies the session is valid by checking if we can get a token
    */
   async isSignedIn(): Promise<{ isSignedIn: boolean; message?: string }> {
     if (!this.isNativePlatform()) {
@@ -196,11 +197,41 @@ export const clerkNative = {
     }
 
     try {
+      // Check if the native plugin is available
+      if (!ClerkNative || typeof ClerkNative.isSignedIn !== 'function') {
+        console.error('[ClerkNative] isSignedIn: Plugin not available');
+        return { isSignedIn: false, message: 'Plugin not available' };
+      }
+
+      console.log('[ClerkNative] Calling native isSignedIn...');
       const result = await ClerkNative.isSignedIn();
+      console.log('[ClerkNative] isSignedIn returned:', result);
+
+      // CRITICAL: If SDK says signed in, verify by checking if we can actually get a token
+      // This catches stale sessions where isSignedIn=true but getToken fails
+      if (result.isSignedIn) {
+        console.log('[ClerkNative] Verifying session by attempting to get token...');
+        try {
+          const tokenResult = await ClerkNative.getToken();
+          if (!tokenResult.token) {
+            console.warn('[ClerkNative] Session invalid: isSignedIn=true but no token available');
+            return { isSignedIn: false, message: 'Session expired - please sign in again' };
+          }
+          console.log('[ClerkNative] Session verified - token available');
+        } catch (tokenError: any) {
+          console.warn('[ClerkNative] Session invalid: isSignedIn=true but getToken failed:', tokenError?.message);
+          return { isSignedIn: false, message: 'Session expired - please sign in again' };
+        }
+      }
+
       return result;
-    } catch (error) {
-      console.error('[ClerkNative] isSignedIn check failed:', error);
-      return { isSignedIn: false };
+    } catch (error: any) {
+      console.error('[ClerkNative] isSignedIn check failed:', {
+        name: error?.name,
+        message: error?.message,
+        code: error?.code
+      });
+      return { isSignedIn: false, message: error?.message || 'Unknown error' };
     }
   },
 
@@ -213,10 +244,25 @@ export const clerkNative = {
     }
 
     try {
+      console.log('[ClerkNative] Requesting session token...');
       const result = await ClerkNative.getToken();
+      console.log('[ClerkNative] getToken result:', {
+        hasToken: !!result.token,
+        tokenLength: result.token?.length,
+        message: result.message
+      });
+      if (result.token) {
+        console.log('[ClerkNative] Token preview:', result.token.substring(0, 30) + '...');
+      }
       return result.token || null;
-    } catch (error) {
-      console.error('[ClerkNative] getToken failed:', error);
+    } catch (error: any) {
+      console.error('[ClerkNative] getToken failed:', {
+        name: error?.name,
+        message: error?.message,
+        code: error?.code,
+        stack: error?.stack,
+        error: JSON.stringify(error)
+      });
       return null;
     }
   },

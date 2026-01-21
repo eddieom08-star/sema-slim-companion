@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { refreshNativeAuth } from "@/hooks/useAuthNative";
 import Navigation from "@/components/ui/navigation";
 import { ProgressChart } from "@/components/progress-chart";
 import { AppetiteChart } from "@/components/appetite-chart";
@@ -49,12 +50,14 @@ const MOCK_USER_PROFILE = {
 
 const MOCK_ACHIEVEMENTS = [];
 
-// Check if we're bypassing auth on mobile
-const isBypassingAuth = Capacitor.isNativePlatform();
+// Auth bypass flag - set to false for production/TestFlight
+// Only enable for local development debugging
+const isBypassingAuth = false;
 
 export default function Dashboard() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const hasShownUnauthorizedRef = useRef(false);
 
   const { data: dashboardData, isLoading: isDashboardLoading } = useQuery({
     queryKey: ["/api/dashboard"],
@@ -95,16 +98,24 @@ export default function Dashboard() {
   const effectiveIsLoading = isBypassingAuth ? false : (isDashboardLoading || isStreaksLoading || isAchievementsLoading || isGamificationLoading || isProfileLoading);
 
   useEffect(() => {
-    // Only redirect if not bypassing auth
-    if (!isBypassingAuth && !isDashboardLoading && !dashboardData) {
-      toast({
-        title: "Unauthorized",
-        description: "You are logged out. Logging in again...",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/login";
-      }, 500);
+    // Only handle unauthorized if not bypassing auth and data fetch completed without data
+    // Use a ref to prevent multiple toasts/refreshes
+    if (!isBypassingAuth && !isDashboardLoading && !dashboardData && !hasShownUnauthorizedRef.current) {
+      hasShownUnauthorizedRef.current = true;
+
+      // Add a small delay before refreshing auth - this gives React Query's retry logic time to work
+      // and prevents race conditions right after sign-in when token might still be syncing
+      const timeoutId = setTimeout(() => {
+        toast({
+          title: "Unauthorized",
+          description: "Please sign in to continue.",
+          variant: "destructive",
+        });
+        // Clear the native auth state so Router shows sign-in page
+        refreshNativeAuth();
+      }, 2000); // 2 second delay to allow retries
+
+      return () => clearTimeout(timeoutId);
     }
   }, [isDashboardLoading, dashboardData, toast]);
 

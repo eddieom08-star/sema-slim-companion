@@ -83,23 +83,18 @@ export default function Medication() {
   const [selectedLog, setSelectedLog] = useState<any>(null);
   const [isViewLogDialogOpen, setIsViewLogDialogOpen] = useState(false);
 
-  // Check if we're bypassing auth (mobile platform)
-  const isBypassingAuth = Capacitor.isNativePlatform();
-
   const { data: medications, isLoading: medicationsLoading } = useQuery({
     queryKey: ["/api/medications"],
-    enabled: !isBypassingAuth, // Disable query when bypassing auth
   });
 
   const { data: medicationLogs, isLoading: logsLoading } = useQuery({
     queryKey: ["/api/medication-logs"],
-    enabled: !isBypassingAuth, // Disable query when bypassing auth
   });
 
-  // Use effective data - mock when bypassing auth, real data otherwise
-  const effectiveMedications = isBypassingAuth ? MOCK_MEDICATIONS : medications;
-  const effectiveMedicationLogs = isBypassingAuth ? MOCK_MEDICATION_LOGS : medicationLogs;
-  const effectiveIsLoading = isBypassingAuth ? false : (medicationsLoading || logsLoading);
+  // Use real data (mock data fallback removed - we want real API data)
+  const effectiveMedications = medications || [];
+  const effectiveMedicationLogs = medicationLogs || [];
+  const effectiveIsLoading = medicationsLoading || logsLoading;
 
   const logMedication = useMutation({
     mutationFn: async (data: any) => {

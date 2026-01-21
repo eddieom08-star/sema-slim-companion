@@ -38,6 +38,12 @@ if (Capacitor.isNativePlatform()) {
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
+    console.error('[QueryClient] API Error:', {
+      status: res.status,
+      statusText: res.statusText,
+      url: res.url,
+      responseText: text.substring(0, 200)
+    });
     throw new Error(`${res.status}: ${text}`);
   }
 }
@@ -122,11 +128,12 @@ export const queryClient = new QueryClient({
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
-      staleTime: Infinity,
-      retry: false,
+      staleTime: 5 * 60 * 1000, // 5 minutes (was Infinity - caused stale data issues)
+      retry: 2, // Retry twice for network resilience on mobile
+      retryDelay: 1000,
     },
     mutations: {
-      retry: false,
+      retry: 1, // Single retry for mutations
     },
   },
 });

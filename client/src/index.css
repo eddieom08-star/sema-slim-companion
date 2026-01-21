@@ -93,13 +93,31 @@
     @apply border-border;
   }
 
+  html {
+    /* Black background behind dynamic island/notch for smooth scrolling */
+    background-color: #000000;
+    min-height: 100%;
+  }
+
   body {
     @apply font-sans antialiased bg-background text-foreground;
+    min-height: 100%;
+    /* Safe area padding - top handled by sticky header, bottom/sides here */
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
 
   /* Ensure touch events work on iOS */
   * {
     -webkit-tap-highlight-color: transparent;
+  }
+
+  /* iOS input focus handling */
+  input, select, textarea {
+    font-size: 16px; /* Prevents iOS zoom on focus */
+    -webkit-appearance: none;
+    appearance: none;
   }
 
   button, a, input, select, textarea {
@@ -132,4 +150,20 @@
 
 .safe-area-inset-bottom {
   padding-bottom: calc(env(safe-area-inset-bottom) + 1rem);
+}
+
+/* iOS Keyboard appearance fix */
+@supports (-webkit-touch-callout: none) {
+  /* iOS specific styles */
+  input, textarea, select {
+    /* Ensure keyboard appears on iOS */
+    -webkit-user-select: text;
+    user-select: text;
+  }
+}
+
+/* Text overflow utility */
+.overflow-wrap-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }

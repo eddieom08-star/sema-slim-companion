@@ -407,9 +407,8 @@ export default function Profile() {
                 </CardContent>
               </Card>
 
-              {/* Account Actions - Mobile Only */}
-              {isMobile && (
-                <Card className="md:col-span-2">
+              {/* Account Actions */}
+              <Card className="md:col-span-2">
                   <CardHeader className="p-4 md:p-6">
                     <CardTitle>Account Actions</CardTitle>
                     <CardDescription>Manage your account</CardDescription>
@@ -436,8 +435,7 @@ export default function Profile() {
                     </Button>
                   </CardContent>
                 </Card>
-              )}
-            </div>
+              </div>
 
             {isEditing && (
               <div className="mt-6 flex justify-end space-x-4">

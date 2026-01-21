@@ -26,7 +26,7 @@ import {
 async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs: number = 5000): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-  
+
   try {
     const response = await fetch(url, {
       ...options,
@@ -94,7 +94,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check database connection with retry
       const { pool, withRetry } = await import('./db');
       await withRetry(() => pool.query('SELECT 1'), 2, 500);
-      
+
       res.status(200).json({
         status: 'healthy',
         database: 'connected',
@@ -401,10 +401,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.auth.userId;
       const validatedData = insertMedicationLogSchema.parse({ ...req.body, userId });
       const log = await storage.createMedicationLog(validatedData);
-      
+
       // Award points for taking medication
       await storage.addPoints(userId, 5, 'medication_taken', 'Logged medication');
-      
+
       res.json(log);
     } catch (error: any) {
       if (error.name === 'ZodError') {
@@ -453,13 +453,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.auth.userId;
       const validatedData = insertFoodEntrySchema.parse({ ...req.body, userId });
       const entry = await storage.createFoodEntry(validatedData);
-      
+
       // Update food tracking streak
       await storage.updateStreak(userId, 'food_tracking', true);
-      
+
       // Award points for logging food
       await storage.addPoints(userId, 3, 'food_logged', 'Logged food entry');
-      
+
       res.json(entry);
     } catch (error: any) {
       if (error.name === 'ZodError') {
@@ -497,7 +497,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/food-database/search', isAuthenticated, async (req: any, res) => {
     try {
       const { q, limit = 20 } = req.query;
-      
+
       if (!q || typeof q !== 'string') {
         return res.status(400).json({ message: "Search query is required" });
       }
@@ -506,7 +506,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // First, search our local database
       const localFoods = await storage.searchFoodByName(q, searchLimit);
-      
+
       // Transform local foods to match response format
       const localResults = localFoods.map((food) => ({
         id: food.id,
@@ -531,46 +531,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(localResults.slice(0, searchLimit));
       }
 
-      // Otherwise, supplement with Open Food Facts API
-      const searchUrl = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=${searchLimit - localResults.length}`;
-      
+      // Use USDA FoodData Central API (more reliable than Open Food Facts)
+      // DEMO_KEY has rate limits - consider registering for a free API key at https://fdc.nal.usda.gov/api-key-signup.html
+      const usdaApiKey = process.env.USDA_API_KEY || 'DEMO_KEY';
+      const searchUrl = `https://api.nal.usda.gov/fdc/v1/foods/search?api_key=${usdaApiKey}&query=${encodeURIComponent(q)}&pageSize=${searchLimit - localResults.length}&dataType=Branded,Foundation,SR%20Legacy`;
+
       const response = await fetchWithTimeout(searchUrl, {
         headers: {
-          'User-Agent': 'SemaSlim/1.0 (Weight Management App)'
+          'Content-Type': 'application/json'
         }
-      }, 8000); // 8 second timeout for search
+      }, 10000); // 10 second timeout for search
 
       if (!response.ok) {
         // If API fails, just return local results
+        console.log('USDA API failed, returning local results only');
         return res.json(localResults);
       }
 
       const data = await response.json();
-      
-      // Transform Open Food Facts data to our format
-      const remoteProducts = data.products?.map((product: any) => ({
-        id: product.code,
-        barcode: product.code,
-        name: product.product_name || product.product_name_en || 'Unknown Product',
-        brand: product.brands || '',
-        imageUrl: product.image_url || product.image_small_url || null,
-        servingSize: product.serving_quantity || 100,
-        servingUnit: product.serving_quantity_unit || 'g',
-        calories: Math.round(product.nutriments?.['energy-kcal_100g'] || 0),
-        protein: product.nutriments?.proteins_100g || 0,
-        carbs: product.nutriments?.carbohydrates_100g || 0,
-        fat: product.nutriments?.fat_100g || 0,
-        fiber: product.nutriments?.fiber_100g || 0,
-        sugar: product.nutriments?.sugars_100g || 0,
-        sodium: product.nutriments?.sodium_100g ? product.nutriments.sodium_100g * 1000 : 0, // Convert g to mg
-        source: 'openfoodfacts'
-      })) || [];
+
+      // Transform USDA FoodData to our format
+      const remoteProducts = data.foods?.map((food: any) => {
+        // Get nutrients - USDA provides per 100g values
+        const nutrients = food.foodNutrients || [];
+        const getNutrient = (name: string) => {
+          const nutrient = nutrients.find((n: any) =>
+            n.nutrientName?.toLowerCase().includes(name.toLowerCase()) ||
+            n.nutrientNumber === name
+          );
+          return nutrient?.value || 0;
+        };
+
+        return {
+          id: food.fdcId?.toString(),
+          barcode: food.gtinUpc || '',
+          name: food.description || food.lowercaseDescription || 'Unknown Food',
+          brand: food.brandOwner || food.brandName || '',
+          imageUrl: null, // USDA doesn't provide images
+          servingSize: food.servingSize || 100,
+          servingUnit: food.servingSizeUnit || 'g',
+          calories: Math.round(getNutrient('Energy') || getNutrient('208')),
+          protein: Number((getNutrient('Protein') || getNutrient('203')).toFixed(1)),
+          carbs: Number((getNutrient('Carbohydrate') || getNutrient('205')).toFixed(1)),
+          fat: Number((getNutrient('Total lipid') || getNutrient('204')).toFixed(1)),
+          fiber: Number((getNutrient('Fiber') || getNutrient('291')).toFixed(1)),
+          sugar: Number((getNutrient('Sugars') || getNutrient('269')).toFixed(1)),
+          sodium: Math.round(getNutrient('Sodium') || getNutrient('307')),
+          source: 'usda'
+        };
+      }) || [];
 
       // Merge local and remote results, prioritizing local foods
       // Deduplicate by barcode if present
       const seen = new Set(localResults.map(f => f.barcode).filter(Boolean));
       const uniqueRemoteProducts = remoteProducts.filter((food: any) => !food.barcode || !seen.has(food.barcode));
-      
+
       const mergedResults = [...localResults, ...uniqueRemoteProducts].slice(0, searchLimit);
 
       res.json(mergedResults);
@@ -608,7 +623,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // If not found locally, search Open Food Facts
       const offUrl = `https://world.openfoodfacts.org/api/v2/product/${barcode}.json`;
-      
+
       const response = await fetchWithTimeout(offUrl, {
         headers: {
           'User-Agent': 'SemaSlim/1.0 (Weight Management App)'
@@ -620,13 +635,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const data = await response.json();
-      
+
       if (data.status === 0 || !data.product) {
         return res.status(404).json({ message: "Product not found" });
       }
 
       const product = data.product;
-      
+
       // Save to local database for future lookups
       try {
         await storage.addFoodToDatabase({
@@ -715,13 +730,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.auth.userId;
       const validatedData = insertWeightLogSchema.parse({ ...req.body, userId });
       const log = await storage.createWeightLog(validatedData);
-      
+
       // Update weight logging streak
       await storage.updateStreak(userId, 'weight_logging', true);
-      
+
       // Award points for logging weight
       await storage.addPoints(userId, 5, 'weight_logged', 'Logged weight');
-      
+
       res.json(log);
     } catch (error: any) {
       if (error.name === 'ZodError') {
@@ -822,7 +837,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/dose-escalations', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.auth.userId;
-      
+
       // Verify medication belongs to user
       const { medicationId } = req.body;
       const medications = await storage.getUserMedications(userId);
@@ -830,7 +845,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!medication) {
         return res.status(404).json({ message: "Medication not found" });
       }
-      
+
       const validatedData = insertDoseEscalationSchema.parse({ ...req.body, userId });
       const escalation = await storage.createDoseEscalation(validatedData);
       res.json(escalation);
@@ -847,14 +862,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.auth.userId;
       const { id } = req.params;
-      
+
       // Verify medication belongs to user
       const medications = await storage.getUserMedications(userId);
       const medication = medications.find(m => m.id === id);
       if (!medication) {
         return res.status(404).json({ message: "Medication not found" });
       }
-      
+
       const history = await storage.getMedicationDoseHistory(id);
       res.json(history);
     } catch (error) {
@@ -869,10 +884,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.auth.userId;
       const validatedData = insertHungerLogSchema.parse({ ...req.body, userId });
       const log = await storage.createHungerLog(validatedData);
-      
+
       // Award points for logging hunger
       await storage.addPoints(userId, 5, 'hunger_logged', 'Logged hunger/satiety data');
-      
+
       res.json(log);
     } catch (error: any) {
       if (error.name === 'ZodError') {
@@ -1162,14 +1177,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!q) {
         return res.status(400).json({ message: "Search query is required" });
       }
-      
+
       const response = await fetch(`https://www.themealdb.com/api/json/v1/1/search.php?s=${encodeURIComponent(q as string)}`);
       const data = await response.json();
-      
+
       if (!data.meals) {
         return res.json([]);
       }
-      
+
       const formattedRecipes = data.meals.map((meal: any) => ({
         externalId: meal.idMeal,
         name: meal.strMeal,
@@ -1189,7 +1204,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         youtube: meal.strYoutube,
         source: meal.strSource
       }));
-      
+
       res.json(formattedRecipes);
     } catch (error) {
       console.error("Error searching external recipes:", error);
@@ -1214,20 +1229,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!category) {
         return res.status(400).json({ message: "Category is required" });
       }
-      
+
       const response = await fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?c=${encodeURIComponent(category as string)}`);
       const data = await response.json();
-      
+
       if (!data.meals) {
         return res.json([]);
       }
-      
+
       const formattedRecipes = data.meals.map((meal: any) => ({
         externalId: meal.idMeal,
         name: meal.strMeal,
         image: meal.strMealThumb
       }));
-      
+
       res.json(formattedRecipes);
     } catch (error) {
       console.error("Error fetching recipes by category:", error);
@@ -1240,11 +1255,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const response = await fetch(`https://www.themealdb.com/api/json/v1/1/lookup.php?i=${id}`);
       const data = await response.json();
-      
+
       if (!data.meals || data.meals.length === 0) {
         return res.status(404).json({ message: "Recipe not found" });
       }
-      
+
       const meal = data.meals[0];
       const formattedRecipe = {
         externalId: meal.idMeal,
@@ -1265,7 +1280,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         youtube: meal.strYoutube,
         source: meal.strSource
       };
-      
+
       res.json(formattedRecipe);
     } catch (error) {
       console.error("Error fetching external recipe details:", error);
@@ -1277,14 +1292,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.auth.userId;
       const { externalId } = req.params;
-      
+
       const response = await fetch(`https://www.themealdb.com/api/json/v1/1/lookup.php?i=${externalId}`);
       const data = await response.json();
-      
+
       if (!data.meals || data.meals.length === 0) {
         return res.status(404).json({ message: "Recipe not found" });
       }
-      
+
       const meal = data.meals[0];
       const ingredients = Array.from({ length: 20 }, (_, i) => i + 1)
         .map(i => ({
@@ -1293,7 +1308,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }))
         .filter(item => item.ingredient && item.ingredient.trim())
         .map(item => `${item.measure} ${item.ingredient}`.trim());
-      
+
       const recipeData = {
         userId,
         name: meal.strMeal,
@@ -1314,7 +1329,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isLowCarb: false,
         isPublic: false
       };
-      
+
       const validatedData = insertRecipeSchema.parse(recipeData);
       const recipe = await storage.createRecipe(validatedData);
       res.status(201).json(recipe);
@@ -1680,6 +1695,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw lastError;
       }
 
+      if (!response) {
+        return res.status(500).json({ message: "Failed to get response from AI service" });
+      }
+
       // Extract the text response
       const assistantMessage = response.content[0].type === 'text'
         ? response.content[0].text
@@ -1730,6 +1749,189 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
+  // AI Recipe Scan endpoint - Claude vision integration for extracting recipes from images
+  app.post('/api/ai/scan-recipe', isAuthenticated, async (req: any, res) => {
+    try {
+      logger.info('Recipe scan endpoint called', {
+        userId: req.auth?.userId,
+        hasImage: !!req.body.image
+      });
+
+      const { image } = req.body;
+
+      if (!image || !image.base64 || !image.mediaType) {
+        return res.status(400).json({ message: "Image data is required (base64 and mediaType)" });
+      }
+
+      const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+      if (!anthropicApiKey || anthropicApiKey === 'your_anthropic_api_key_here') {
+        logger.error('Anthropic API key not configured');
+        return res.status(500).json({
+          message: "AI service is not configured. Please add your Anthropic API key to the environment variables."
+        });
+      }
+
+      // Initialize Anthropic client
+      let anthropic;
+      try {
+        const anthropicModule = await import('@anthropic-ai/sdk');
+        const Anthropic = anthropicModule.Anthropic || anthropicModule.default;
+        anthropic = new Anthropic({ apiKey: anthropicApiKey });
+      } catch (initError: any) {
+        logger.error('Failed to initialize Anthropic client', initError);
+        return res.status(500).json({
+          message: "Failed to initialize AI service",
+          error: initError.message
+        });
+      }
+
+      // System prompt for recipe extraction
+      const systemPrompt = `You are a recipe extraction assistant. Analyze the image provided and extract any recipe information you can find.
+
+If this is a recipe image, cookbook page, or food receipt, extract the following in JSON format:
+{
+  "found": true,
+  "recipe": {
+    "name": "Recipe name",
+    "description": "Brief description",
+    "recipeType": "breakfast|lunch|dinner|snack",
+    "difficulty": "beginner|medium|advanced",
+    "prepTime": 15,
+    "cookTime": 30,
+    "servings": 4,
+    "ingredients": [{"name": "ingredient", "quantity": "1", "unit": "cup"}],
+    "instructions": "Step by step instructions as a string",
+    "calories": 300,
+    "protein": "25",
+    "carbs": "30",
+    "fat": "10",
+    "isGlp1Friendly": false,
+    "isHighProtein": false,
+    "isLowCarb": false,
+    "isPublic": false
+  }
+}
+
+If the image doesn't contain recipe information, respond with:
+{
+  "found": false,
+  "message": "Brief explanation of what was found instead"
+}
+
+Always respond with valid JSON only, no additional text.`;
+
+      // Call Claude API with image
+      const modelPriority = [
+        'claude-3-5-sonnet-20241022',
+        'claude-3-5-sonnet-20240620',
+        'claude-3-sonnet-20240229',
+        'claude-3-haiku-20240307'
+      ];
+
+      let response;
+      let lastError;
+
+      for (const model of modelPriority) {
+        try {
+          logger.info(`Trying model for image scan: ${model}`);
+          response = await anthropic.messages.create({
+            model,
+            max_tokens: 2048,
+            system: systemPrompt,
+            messages: [{
+              role: 'user',
+              content: [
+                {
+                  type: 'image',
+                  source: {
+                    type: 'base64',
+                    media_type: image.mediaType,
+                    data: image.base64,
+                  },
+                },
+                {
+                  type: 'text',
+                  text: 'Please analyze this image and extract any recipe information. Respond with JSON only.'
+                }
+              ],
+            }],
+          });
+          logger.info(`Image scan successful with model: ${model}`);
+          break;
+        } catch (apiError: any) {
+          lastError = apiError;
+          logger.warn(`Model ${model} failed for image scan: ${apiError.message}`);
+
+          // If it's a 404 (model not found), try the next model
+          if (apiError.status === 404) {
+            continue;
+          }
+
+          // For image dimension errors, provide a helpful message
+          if (apiError.message?.includes('image dimensions') || apiError.message?.includes('2000 pixels')) {
+            return res.status(400).json({
+              message: "Image is too large. Please use an image with dimensions under 2000x2000 pixels.",
+              error: apiError.message
+            });
+          }
+
+          throw apiError;
+        }
+      }
+
+      if (!response && lastError) {
+        throw lastError;
+      }
+
+      if (!response) {
+        return res.status(500).json({ message: "Failed to get response from AI service" });
+      }
+
+      // Extract the text response
+      const textContent = response.content[0];
+      if (textContent.type !== 'text') {
+        return res.status(500).json({ message: "Unexpected response format from AI" });
+      }
+
+      // Parse the JSON response
+      try {
+        const parsed = JSON.parse(textContent.text);
+
+        if (parsed.found && parsed.recipe) {
+          res.json({ recipe: parsed.recipe });
+        } else {
+          res.json({ message: parsed.message || "No recipe found in the image" });
+        }
+      } catch (parseError) {
+        // If JSON parsing fails, return the raw message
+        logger.warn('Failed to parse recipe JSON, returning raw message');
+        res.json({ message: textContent.text });
+      }
+    } catch (error: any) {
+      console.error("Error scanning recipe:", error);
+      logger.error('Recipe scan error:', error);
+
+      if (error.status === 401) {
+        return res.status(500).json({
+          message: "AI service authentication failed. Please check the API key.",
+          error: error.message
+        });
+      } else if (error.status === 429) {
+        return res.status(429).json({
+          message: "AI service rate limit exceeded. Please try again later.",
+          error: error.message
+        });
+      }
+
+      res.status(500).json({
+        message: "Failed to scan recipe",
+        error: error.message
+      });
+    }
+  });
+
   const httpServer = createServer(app);
+
   return httpServer;
 }

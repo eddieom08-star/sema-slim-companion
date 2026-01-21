@@ -105,8 +105,9 @@ export default function Progress() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Check if we're bypassing auth (mobile platform)
-  const isBypassingAuth = Capacitor.isNativePlatform();
+  // Auth bypass flag - set to false for production/TestFlight
+  // Only enable for local development debugging
+  const isBypassingAuth = false;
 
   const { data: weightLogs, isLoading: weightLogsLoading } = useQuery({
     queryKey: ["/api/weight-logs"],

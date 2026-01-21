@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -20,178 +20,125 @@ import Recipes from "@/pages/recipes";
 import { PWAInstallPrompt } from "@/components/pwa-install-prompt";
 import { OfflineIndicator } from "@/components/offline-indicator";
 import { NetworkAwareIndicator } from "@/components/network-aware";
+// import { DebugPanel } from "@/components/debug-panel"; // Disabled for production
 import { Redirect } from "@/components/redirect";
 import { Capacitor } from "@capacitor/core";
 
 // TEMPORARY: Bypass authentication on mobile for testing
 const BYPASS_AUTH_ON_MOBILE = false;
 
-// Debug logging helper for mobile
+// Debug logging helper for mobile with persistent storage
+const debugLogs: string[] = [];
 const mobileLog = (...args: any[]) => {
   if (Capacitor.isNativePlatform()) {
+    const message = `[${new Date().toISOString().split('T')[1].split('.')[0]}] [SemaSlim Mobile] ${JSON.stringify(args)}`;
     console.log('[SemaSlim Mobile]', ...args);
+    debugLogs.push(message);
+
+    // Keep only last 100 logs
+    if (debugLogs.length > 100) {
+      debugLogs.shift();
+    }
+
+    // Store in localStorage
+    try {
+      localStorage.setItem('semaslim_debug_logs', JSON.stringify(debugLogs));
+    } catch (e) {
+      // Ignore localStorage errors
+    }
   }
 };
 
+// Expose log retrieval globally for debugging
+if (Capacitor.isNativePlatform()) {
+  (window as any).getDebugLogs = () => {
+    console.log('=== DEBUG LOGS ===');
+    debugLogs.forEach(log => console.log(log));
+    return debugLogs.join('\n');
+  };
+  (window as any).clearDebugLogs = () => {
+    debugLogs.length = 0;
+    localStorage.removeItem('semaslim_debug_logs');
+    console.log('Debug logs cleared');
+  };
+}
+
 /**
- * Router component with robust mobile support
+ * Simplified Router component
  *
- * MOBILE IMPROVEMENTS:
- * - Proper timeout handling with ref to prevent race conditions
- * - Debug logging for Safari Web Inspector
- * - Graceful fallback to landing page if auth takes too long
- * - Error boundaries to catch Clerk/network failures
- * - TEMPORARY: Authentication bypass for testing
+ * LOGIC:
+ * 1. Show loading while checking auth
+ * 2. If not authenticated -> Landing/Sign-in pages
+ * 3. If authenticated without onboarding -> Onboarding page
+ * 4. If authenticated with onboarding -> App pages
  */
 function Router() {
-  const { isAuthenticated, isLoading, user, error, isSignedIn } = useAuth();
+  const { isAuthenticated, isLoading, user, isSignedIn } = useAuth();
   const isMobile = Capacitor.isNativePlatform();
+  const [location] = useLocation();
 
-  // TEMPORARY: Bypass auth on mobile
-  const shouldBypassAuth = isMobile && BYPASS_AUTH_ON_MOBILE;
-  // Allow access if either fully authenticated OR signed in natively (for mobile fallback)
-  const effectiveIsAuthenticated = shouldBypassAuth ? true : (isAuthenticated || (isMobile && isSignedIn));
-  const effectiveIsLoading = shouldBypassAuth ? false : isLoading;
-  const [hasTimedOut, setHasTimedOut] = useState(false);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Log auth bypass
-  useEffect(() => {
-    if (shouldBypassAuth) {
-      mobileLog('AUTH BYPASS ENABLED - Skipping authentication for testing');
-    }
-  }, [shouldBypassAuth]);
-
-  // Robust timeout mechanism for mobile
-  useEffect(() => {
-    if (isMobile && !shouldBypassAuth) {
-      mobileLog('Router mounted', { isLoading, isAuthenticated, hasUser: !!user });
-
-      // Start timeout only once when component mounts
-      if (!timeoutRef.current) {
-        mobileLog('Starting 3-second auth timeout...');
-        timeoutRef.current = setTimeout(() => {
-          mobileLog('Auth timeout reached - showing landing page');
-          setHasTimedOut(true);
-        }, 3000);
-      }
-
-      return () => {
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-          timeoutRef.current = null;
-        }
-      };
-    }
-  }, []); // Empty deps - only run once on mount
-
-  // Log auth state changes
+  // Log state for debugging
   useEffect(() => {
     if (isMobile) {
-      mobileLog('Auth state changed:', {
+      mobileLog('Router render:', {
+        location,
         isLoading,
+        isSignedIn,
         isAuthenticated,
         hasUser: !!user,
-        hasError: !!error,
-        hasTimedOut
       });
     }
-  }, [isLoading, isAuthenticated, user, error, hasTimedOut, isMobile]);
+  }, [location, isLoading, isSignedIn, isAuthenticated, user, isMobile]);
 
-  // If auth is still loading after timeout on mobile, show landing page
-  if (isMobile && hasTimedOut && effectiveIsLoading && !shouldBypassAuth) {
-    mobileLog('Rendering landing page (timeout + still loading)');
-    return (
-      <Switch>
-        <Route path="/" component={Landing} />
-        <Route path="/:any*" component={Landing} />
-      </Switch>
-    );
-  }
+  // Mobile: Allow access with just isSignedIn (don't require user data)
+  const canAccessApp = isMobile ? isSignedIn : isAuthenticated;
 
-  // Show loading spinner while auth is in progress (but only for first 3 seconds on mobile)
-  if (effectiveIsLoading && !(isMobile && hasTimedOut) && !shouldBypassAuth) {
-    mobileLog('Rendering loading spinner');
+  // Show loading spinner while initial auth check happens
+  if (isLoading) {
+    mobileLog('Showing loading spinner');
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center space-y-4">
           <div className="w-10 h-10 bg-primary rounded-lg animate-pulse mx-auto"></div>
           <p className="text-muted-foreground">Loading...</p>
-          {isMobile && (
-            <p className="text-xs text-muted-foreground">
-              {hasTimedOut ? 'Still loading...' : 'Checking authentication...'}
-            </p>
-          )}
         </div>
       </div>
     );
   }
 
-  // If there's an auth error on mobile, show landing page (unless bypassing auth)
-  if (isMobile && error && !shouldBypassAuth) {
-    mobileLog('Auth error detected, showing landing page:', error);
-    return (
-      <Switch>
-        <Route path="/" component={Landing} />
-        <Route path="/:any*" component={Landing} />
-      </Switch>
-    );
-  }
+  // Determine route key to force Switch re-render when auth state changes
+  const routeKey = canAccessApp ? 'authenticated' : 'unauthenticated';
 
-  mobileLog('Rendering main router', {
-    isAuthenticated: effectiveIsAuthenticated,
-    hasUser: !!user,
-    bypassEnabled: shouldBypassAuth
-  });
-
-  // When bypassing auth on mobile, go directly to dashboard
-  if (shouldBypassAuth) {
-    mobileLog('Rendering app with auth bypass - going to dashboard');
-    return (
-      <Switch>
-        <Route path="/" component={Dashboard} />
-        <Route path="/dashboard" component={Dashboard} />
-        <Route path="/food-tracking" component={FoodTracking} />
-        <Route path="/medication" component={Medication} />
-        <Route path="/recipes" component={Recipes} />
-        <Route path="/progress" component={Progress} />
-        <Route path="/profile" component={Profile} />
-        <Route component={NotFound} />
-      </Switch>
-    );
-  }
+  // For authenticated users, check onboarding
+  const needsOnboarding = canAccessApp && user && !(user as any).onboardingCompleted;
 
   return (
-    <Switch>
-      {!effectiveIsAuthenticated ? (
+    <Switch key={routeKey}>
+      {!canAccessApp ? (
         <>
-          {/* Not authenticated: show landing page for sign in */}
+          {/* Not authenticated: show auth pages */}
           <Route path="/" component={Landing} />
           <Route path="/sign-in" component={SignInPage} />
           <Route path="/sign-up" component={SignUpPage} />
           <Route path="/:any*" component={Landing} />
         </>
+      ) : needsOnboarding ? (
+        <>
+          {/* Onboarding not complete */}
+          <Route path="/" component={Onboarding} />
+          <Route path="/:any*" component={Onboarding} />
+        </>
       ) : (
         <>
-          {user && !(user as any).onboardingCompleted ? (
-            <>
-              {/* Authenticated but onboarding not complete: show onboarding */}
-              <Route path="/" component={Onboarding} />
-              <Route path="/:any*" component={Onboarding} />
-            </>
-          ) : (
-            <>
-              {/* Authenticated: go directly to dashboard (mobile fallback - skip onboarding check if no user data) */}
-              <Route path="/" component={Dashboard} />
-              <Route path="/dashboard" component={Dashboard} />
-              <Route path="/food-tracking" component={FoodTracking} />
-              <Route path="/medication" component={Medication} />
-              <Route path="/recipes" component={Recipes} />
-              <Route path="/progress" component={Progress} />
-              <Route path="/profile" component={Profile} />
-              <Route component={NotFound} />
-            </>
-          )}
+          {/* Authenticated with onboarding complete (or no user data yet on mobile) */}
+          <Route path="/" component={Dashboard} />
+          <Route path="/dashboard" component={Dashboard} />
+          <Route path="/food-tracking" component={FoodTracking} />
+          <Route path="/medication" component={Medication} />
+          <Route path="/recipes" component={Recipes} />
+          <Route path="/progress" component={Progress} />
+          <Route path="/profile" component={Profile} />
+          <Route component={NotFound} />
         </>
       )}
     </Switch>
@@ -264,6 +211,7 @@ function App() {
         <PWAInstallPrompt />
         <OfflineIndicator />
         <NetworkAwareIndicator />
+        {/* <DebugPanel /> */}
       </TooltipProvider>
     </QueryClientProvider>
   );

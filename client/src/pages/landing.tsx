@@ -3,8 +3,32 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useLocation } from "wouter";
 import { Capacitor } from "@capacitor/core";
 import { clerkNative } from "@/lib/clerkNative";
-import { useEffect } from "react";
-import { useAuthNative } from "@/hooks/useAuthNative";
+import { useEffect, useState } from "react";
+import { useAuthNative, setNativeAuthSignedIn } from "@/hooks/useAuthNative";
+
+/**
+ * Wait for Clerk session token to be available after sign-in
+ * The native SDK sometimes needs a moment to sync after presentSignIn returns
+ */
+async function waitForSessionToken(maxAttempts = 10, delayMs = 500): Promise<boolean> {
+  console.log('[Landing] Waiting for session token to be available...');
+  for (let i = 0; i < maxAttempts; i++) {
+    try {
+      const token = await clerkNative.getToken();
+      if (token) {
+        console.log(`[Landing] Session token available after ${i + 1} attempt(s)`);
+        return true;
+      }
+    } catch (error) {
+      console.log(`[Landing] Token attempt ${i + 1} failed:`, error);
+    }
+    if (i < maxAttempts - 1) {
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+  console.warn('[Landing] Session token not available after max attempts');
+  return false;
+}
 
 /**
  * Landing Page - Marketing site for unauthenticated users
@@ -15,6 +39,7 @@ export default function Landing() {
   const [, setLocation] = useLocation();
   const isMobile = Capacitor.isNativePlatform();
   const { isSignedIn, isLoading } = useAuthNative();
+  const [isSigningIn, setIsSigningIn] = useState(false);
 
   // Auto-redirect to dashboard if already signed in
   useEffect(() => {
@@ -40,14 +65,13 @@ export default function Landing() {
     console.log('[Landing] Sign In clicked');
 
     if (isMobile) {
+      setIsSigningIn(true);
       try {
         // Check if already signed in first to avoid "already signed in" error
         const authStatus = await clerkNative.isSignedIn();
         if (authStatus.isSignedIn) {
           console.log('[Landing] Already signed in, setting state and redirecting');
-          if ((window as any).setSignedIn) {
-            (window as any).setSignedIn(true);
-          }
+          setNativeAuthSignedIn(true);
           setLocation('/dashboard');
           return;
         }
@@ -56,21 +80,30 @@ export default function Landing() {
         console.log('[Landing] Sign-in result:', result);
 
         if (result.success || result.isSignedIn) {
-          console.log('[Landing] Sign-in successful');
+          console.log('[Landing] Sign-in successful, waiting for session to be ready...');
 
-          // Set signed-in state directly (synchronous)
-          if ((window as any).setSignedIn) {
-            (window as any).setSignedIn(true);
+          // CRITICAL: Wait for the session token to be available before navigating
+          // The Clerk SDK sometimes needs a moment to sync after sign-in
+          const tokenReady = await waitForSessionToken();
+
+          if (tokenReady) {
+            console.log('[Landing] Session ready, navigating to dashboard');
+            // Set signed-in state directly using exported function
+            setNativeAuthSignedIn(true);
+            // Navigate to dashboard
+            setLocation('/dashboard');
+          } else {
+            console.error('[Landing] Session token not available after sign-in');
+            alert('Sign-in completed but session sync failed. Please try again.');
           }
-
-          // Navigate to dashboard
-          setLocation('/dashboard');
         } else {
           console.log('[Landing] Sign-in cancelled');
         }
       } catch (error) {
         console.error('[Landing] Sign-in error:', error);
         alert(`Sign-in failed: ${(error as Error).message}`);
+      } finally {
+        setIsSigningIn(false);
       }
     } else {
       // Web: Navigate to sign-in page
@@ -82,14 +115,13 @@ export default function Landing() {
     console.log('[Landing] Sign Up clicked');
 
     if (isMobile) {
+      setIsSigningIn(true);
       try {
         // Check if already signed in first to avoid "already signed in" error
         const authStatus = await clerkNative.isSignedIn();
         if (authStatus.isSignedIn) {
           console.log('[Landing] Already signed in, setting state and redirecting');
-          if ((window as any).setSignedIn) {
-            (window as any).setSignedIn(true);
-          }
+          setNativeAuthSignedIn(true);
           setLocation('/dashboard');
           return;
         }
@@ -98,21 +130,30 @@ export default function Landing() {
         console.log('[Landing] Sign-up result:', result);
 
         if (result.success || result.isSignedIn) {
-          console.log('[Landing] Sign-up successful');
+          console.log('[Landing] Sign-up successful, waiting for session to be ready...');
 
-          // Set signed-in state directly (synchronous)
-          if ((window as any).setSignedIn) {
-            (window as any).setSignedIn(true);
+          // CRITICAL: Wait for the session token to be available before navigating
+          // The Clerk SDK sometimes needs a moment to sync after sign-up
+          const tokenReady = await waitForSessionToken();
+
+          if (tokenReady) {
+            console.log('[Landing] Session ready, navigating to dashboard');
+            // Set signed-in state directly using exported function
+            setNativeAuthSignedIn(true);
+            // Navigate to dashboard
+            setLocation('/dashboard');
+          } else {
+            console.error('[Landing] Session token not available after sign-up');
+            alert('Sign-up completed but session sync failed. Please try again.');
           }
-
-          // Navigate to dashboard
-          setLocation('/dashboard');
         } else {
           console.log('[Landing] Sign-up cancelled');
         }
       } catch (error) {
         console.error('[Landing] Sign-up error:', error);
         alert(`Sign-up failed: ${(error as Error).message}`);
+      } finally {
+        setIsSigningIn(false);
       }
     } else {
       // Web: Navigate to sign-up page
@@ -120,43 +161,8 @@ export default function Landing() {
     }
   };
 
-  const handleSignOutClick = async () => {
-    console.log('[Landing] Debug Sign Out clicked');
-
-    if (isMobile) {
-      try {
-        await clerkNative.signOut();
-        console.log('[Landing] Sign-out successful');
-
-        // Trigger auth refresh
-        if ((window as any).refreshAuth) {
-          (window as any).refreshAuth();
-        }
-
-        alert('Signed out successfully. Try signing in again.');
-      } catch (error) {
-        console.error('[Landing] Sign-out error:', error);
-        alert(`Sign-out failed: ${(error as Error).message}`);
-      }
-    }
-  };
-
   return (
     <div className="min-h-screen bg-background">
-      {/* Debug section - Mobile only */}
-      {isMobile && (
-        <div className="fixed top-0 left-0 right-0 bg-yellow-500/90 text-black p-2 z-50 text-xs text-center">
-          Debug Mode
-          <Button
-            size="sm"
-            variant="outline"
-            className="ml-2 h-6 text-xs"
-            onClick={handleSignOutClick}
-          >
-            Sign Out
-          </Button>
-        </div>
-      )}
       {/* Header */}
       <header className="bg-card border-b border-border sticky top-0 z-50 safe-area-top">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

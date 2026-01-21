@@ -13,6 +13,10 @@ import { format } from "date-fns";
 import { Brain, Zap, Pizza, IceCream, Cookie } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 
+// TODO: Remove this once mobile auth is fully stable
+// Currently used to show demo mode on mobile during testing
+const isBypassingAuth = false; // Set to Capacitor.isNativePlatform() to bypass auth on mobile
+
 // Mock data for testing without authentication
 const MOCK_FOOD_ENTRIES = [
   {
@@ -89,37 +93,26 @@ export default function FoodTracking() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Check if we're bypassing auth (mobile platform)
-  const isBypassingAuth = Capacitor.isNativePlatform();
-
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
   const { data: foodEntries, isLoading } = useQuery({
     queryKey: ["/api/food-entries", dateStr],
     queryFn: async () => {
-      const response = await fetch(`/api/food-entries?date=${dateStr}`, {
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to fetch food entries");
+      const response = await apiRequest("GET", `/api/food-entries?date=${dateStr}`);
       return response.json();
     },
-    enabled: !isBypassingAuth, // Disable query when bypassing auth
   });
 
   const { data: hungerLogs } = useQuery({
     queryKey: ["/api/hunger-logs"],
     queryFn: async () => {
-      const response = await fetch(`/api/hunger-logs?limit=10`, {
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to fetch hunger logs");
+      const response = await apiRequest("GET", `/api/hunger-logs?limit=10`);
       return response.json();
     },
-    enabled: !isBypassingAuth, // Disable query when bypassing auth
   });
 
-  // Use effective data - mock when bypassing auth, real data otherwise
-  const effectiveFoodEntries = isBypassingAuth ? MOCK_FOOD_ENTRIES : foodEntries;
-  const effectiveHungerLogs = isBypassingAuth ? MOCK_HUNGER_LOGS : hungerLogs;
+  // Use real data (mock data fallback removed - we want real API data)
+  const effectiveFoodEntries = foodEntries || [];
+  const effectiveHungerLogs = hungerLogs || [];
 
   const deleteFoodEntry = useMutation({
     mutationFn: async (id: string) => {

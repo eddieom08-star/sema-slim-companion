@@ -553,3 +553,296 @@ export const insertNutritionalRecommendationSchema = createInsertSchema(nutritio
   createdAt: true,
   updatedAt: true,
 });
+
+// ============================================
+// MONETIZATION TABLES
+// ============================================
+
+// Subscription tier enum
+export const subscriptionTierEnum = pgEnum("subscription_tier", ["free", "pro"]);
+export const subscriptionStatusEnum = pgEnum("subscription_status", ["active", "cancelled", "past_due", "trialing"]);
+export const billingPeriodEnum = pgEnum("billing_period", ["monthly", "annual"]);
+
+// Subscriptions table
+export const subscriptions = pgTable("subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id).unique(),
+
+  // Subscription details
+  tier: subscriptionTierEnum("tier").notNull().default("free"),
+  billingPeriod: billingPeriodEnum("billing_period"),
+  status: subscriptionStatusEnum("status").notNull().default("active"),
+
+  // Trial dates
+  trialStartDate: timestamp("trial_start_date"),
+  trialEndDate: timestamp("trial_end_date"),
+
+  // Billing period dates
+  currentPeriodStart: timestamp("current_period_start"),
+  currentPeriodEnd: timestamp("current_period_end"),
+  cancelledAt: timestamp("cancelled_at"),
+
+  // Stripe integration
+  stripeCustomerId: varchar("stripe_customer_id", { length: 255 }),
+  stripeSubscriptionId: varchar("stripe_subscription_id", { length: 255 }),
+  stripePriceId: varchar("stripe_price_id", { length: 255 }),
+
+  // RevenueCat integration (mobile)
+  revenuecatCustomerId: varchar("revenuecat_customer_id", { length: 255 }),
+  revenuecatEntitlementId: varchar("revenuecat_entitlement_id", { length: 255 }),
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_subscriptions_stripe_customer").on(table.stripeCustomerId),
+  index("idx_subscriptions_status").on(table.status),
+]);
+
+// Token balances table
+export const tokenBalances = pgTable("token_balances", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id).unique(),
+
+  // Token types
+  aiTokens: integer("ai_tokens").notNull().default(0),
+  exportTokens: integer("export_tokens").notNull().default(0),
+  streakShields: integer("streak_shields").notNull().default(0),
+
+  // Monthly allowances tracking (for Pro users)
+  aiTokensMonthlyUsed: integer("ai_tokens_monthly_used").notNull().default(0),
+  exportsMonthlyUsed: integer("exports_monthly_used").notNull().default(0),
+  streakShieldsMonthlyUsed: integer("streak_shields_monthly_used").notNull().default(0),
+  monthlyResetDate: date("monthly_reset_date"),
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Token type enum
+export const tokenTypeEnum = pgEnum("token_type", ["ai_tokens", "export_tokens", "streak_shields"]);
+export const tokenSourceEnum = pgEnum("token_source", ["purchase", "subscription", "reward", "usage", "refund"]);
+
+// Token transactions table
+export const tokenTransactions = pgTable("token_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+
+  // Transaction details
+  tokenType: tokenTypeEnum("token_type").notNull(),
+  amount: integer("amount").notNull(), // positive = credit, negative = debit
+  balanceAfter: integer("balance_after").notNull(),
+
+  // Source tracking
+  source: tokenSourceEnum("source").notNull(),
+  sourceReference: varchar("source_reference", { length: 255 }), // order ID, achievement ID, etc.
+
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_token_transactions_user_id").on(table.userId),
+  index("idx_token_transactions_created_at").on(table.createdAt),
+]);
+
+// Purchase status enum
+export const purchaseStatusEnum = pgEnum("purchase_status", ["pending", "completed", "refunded", "failed"]);
+export const productTypeEnum = pgEnum("product_type", ["token_pack", "cosmetic", "subscription"]);
+
+// Purchases table
+export const purchases = pgTable("purchases", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+
+  // Purchase details
+  productType: productTypeEnum("product_type").notNull(),
+  productId: varchar("product_id", { length: 100 }).notNull(), // e.g., 'ai_tokens_5', 'theme_dark_pro'
+  quantity: integer("quantity").notNull().default(1),
+
+  // Pricing
+  amountCents: integer("amount_cents").notNull(),
+  currency: varchar("currency", { length: 3 }).notNull().default("USD"),
+
+  // Status
+  status: purchaseStatusEnum("status").notNull().default("pending"),
+
+  // Payment provider details
+  stripePaymentIntentId: varchar("stripe_payment_intent_id", { length: 255 }),
+  stripeChargeId: varchar("stripe_charge_id", { length: 255 }),
+  appleTransactionId: varchar("apple_transaction_id", { length: 255 }),
+  googleOrderId: varchar("google_order_id", { length: 255 }),
+
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+}, (table) => [
+  index("idx_purchases_user_id").on(table.userId),
+  index("idx_purchases_status").on(table.status),
+  index("idx_purchases_stripe_payment").on(table.stripePaymentIntentId),
+]);
+
+// Cosmetic category enum
+export const cosmeticCategoryEnum = pgEnum("cosmetic_category", ["avatar_frame", "theme", "badge", "streak_flame"]);
+
+// Cosmetic items table
+export const cosmeticItems = pgTable("cosmetic_items", {
+  id: varchar("id", { length: 100 }).primaryKey(), // e.g., 'avatar_frame_gold', 'theme_midnight'
+
+  // Item details
+  category: cosmeticCategoryEnum("category").notNull(),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+
+  // Availability
+  priceCents: integer("price_cents"), // null = not purchasable (earned only)
+  proExclusive: boolean("pro_exclusive").notNull().default(false),
+  earnable: boolean("earnable").notNull().default(false), // can be earned through achievements
+  earnableAchievementId: varchar("earnable_achievement_id").references(() => achievements.id),
+
+  // Display
+  previewUrl: varchar("preview_url", { length: 500 }),
+  assetData: jsonb("asset_data"), // colors, images, etc.
+
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_cosmetic_items_category").on(table.category),
+]);
+
+// Cosmetic acquisition enum
+export const cosmeticAcquisitionEnum = pgEnum("cosmetic_acquisition", ["purchase", "achievement", "default", "gift", "pro_benefit"]);
+
+// User cosmetics table
+export const userCosmetics = pgTable("user_cosmetics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  cosmeticId: varchar("cosmetic_id", { length: 100 }).notNull().references(() => cosmeticItems.id),
+
+  // Acquisition
+  acquiredVia: cosmeticAcquisitionEnum("acquired_via").notNull(),
+  purchaseId: varchar("purchase_id").references(() => purchases.id),
+
+  // Status
+  isEquipped: boolean("is_equipped").notNull().default(false),
+
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_user_cosmetics_user_id").on(table.userId),
+]);
+
+// Upsell action enum
+export const upsellActionEnum = pgEnum("upsell_action", ["shown", "clicked", "dismissed", "converted"]);
+
+// Upsell events table (analytics)
+export const upsellEvents = pgTable("upsell_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+
+  // Event details
+  triggerType: varchar("trigger_type", { length: 50 }).notNull(), // 'ai_limit', 'history_limit', 'streak_risk', etc.
+  upsellType: varchar("upsell_type", { length: 30 }).notNull(), // 'pro_subscription', 'token_pack', 'trial'
+  placement: varchar("placement", { length: 50 }).notNull(), // 'modal', 'inline', 'notification', 'banner'
+
+  // Response
+  action: upsellActionEnum("action"),
+
+  // Context
+  contextData: jsonb("context_data"), // relevant state (streak length, feature used, etc.)
+
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_upsell_events_user_id").on(table.userId),
+  index("idx_upsell_events_trigger").on(table.triggerType),
+  index("idx_upsell_events_action").on(table.action),
+  index("idx_upsell_events_created_at").on(table.createdAt),
+]);
+
+// Feature usage tracking (for daily/monthly limits)
+export const featureUsage = pgTable("feature_usage", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+
+  // Usage tracking
+  featureType: varchar("feature_type", { length: 50 }).notNull(), // 'barcode_scan', 'ai_meal_plan', 'ai_recipe'
+  usageDate: date("usage_date").notNull(),
+  usageCount: integer("usage_count").notNull().default(1),
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_feature_usage_user_date").on(table.userId, table.usageDate),
+  index("idx_feature_usage_type").on(table.featureType),
+]);
+
+// ============================================
+// MONETIZATION TYPE EXPORTS
+// ============================================
+
+export type InsertSubscription = typeof subscriptions.$inferInsert;
+export type Subscription = typeof subscriptions.$inferSelect;
+
+export type InsertTokenBalance = typeof tokenBalances.$inferInsert;
+export type TokenBalance = typeof tokenBalances.$inferSelect;
+
+export type InsertTokenTransaction = typeof tokenTransactions.$inferInsert;
+export type TokenTransaction = typeof tokenTransactions.$inferSelect;
+
+export type InsertPurchase = typeof purchases.$inferInsert;
+export type Purchase = typeof purchases.$inferSelect;
+
+export type InsertCosmeticItem = typeof cosmeticItems.$inferInsert;
+export type CosmeticItem = typeof cosmeticItems.$inferSelect;
+
+export type InsertUserCosmetic = typeof userCosmetics.$inferInsert;
+export type UserCosmetic = typeof userCosmetics.$inferSelect;
+
+export type InsertUpsellEvent = typeof upsellEvents.$inferInsert;
+export type UpsellEvent = typeof upsellEvents.$inferSelect;
+
+export type InsertFeatureUsage = typeof featureUsage.$inferInsert;
+export type FeatureUsage = typeof featureUsage.$inferSelect;
+
+// ============================================
+// MONETIZATION ZOD SCHEMAS
+// ============================================
+
+export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTokenBalanceSchema = createInsertSchema(tokenBalances).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTokenTransactionSchema = createInsertSchema(tokenTransactions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPurchaseSchema = createInsertSchema(purchases).omit({
+  id: true,
+  createdAt: true,
+  completedAt: true,
+});
+
+export const insertCosmeticItemSchema = createInsertSchema(cosmeticItems).omit({
+  createdAt: true,
+});
+
+export const insertUserCosmeticSchema = createInsertSchema(userCosmetics).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertUpsellEventSchema = createInsertSchema(upsellEvents).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertFeatureUsageSchema = createInsertSchema(featureUsage).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});

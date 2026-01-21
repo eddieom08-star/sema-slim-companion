@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { logger } from "./logger";
 import { clerkMiddleware, requireAuth } from "./clerkAuth";
+import monetizationRoutes from "./routes/monetization";
 
 const isAuthenticated = requireAuth;
 import {
@@ -1749,7 +1750,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-
   // AI Recipe Scan endpoint - Claude vision integration for extracting recipes from images
   app.post('/api/ai/scan-recipe', isAuthenticated, async (req: any, res) => {
     try {
@@ -1930,6 +1930,9 @@ Always respond with valid JSON only, no additional text.`;
       });
     }
   });
+
+  // Mount monetization routes
+  app.use('/api', monetizationRoutes);
 
   const httpServer = createServer(app);
 

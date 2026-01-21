@@ -6,10 +6,15 @@ import SwiftUI
 
 /**
  * SwiftUI wrapper for Clerk's AuthView
+ * Observes Clerk session state to auto-dismiss on successful authentication
  */
 struct ClerkAuthView: View {
     @Environment(\.dismiss) private var dismiss
-    let onDismiss: () -> Void
+    @ObservedObject private var clerk = Clerk.shared
+    let onAuthComplete: (Bool) -> Void
+
+    // Track if we've already notified about auth completion
+    @State private var hasNotifiedCompletion = false
 
     var body: some View {
         NavigationView {
@@ -18,10 +23,24 @@ struct ClerkAuthView: View {
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button("Close") {
                             dismiss()
-                            onDismiss()
+                            if !hasNotifiedCompletion {
+                                onAuthComplete(clerk.session != nil)
+                            }
                         }
                     }
                 }
+        }
+        // Observe session changes - auto-dismiss when user signs in (e.g., after Google OAuth)
+        .onChange(of: clerk.session != nil) { wasSignedIn, isSignedIn in
+            if isSignedIn && !hasNotifiedCompletion {
+                print("[ClerkAuthView] Session detected after OAuth, auto-dismissing")
+                hasNotifiedCompletion = true
+                // Small delay to let the UI update, then auto-dismiss
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    dismiss()
+                    onAuthComplete(true)
+                }
+            }
         }
     }
 }
@@ -74,6 +93,7 @@ public class ClerkPlugin: CAPPlugin, CAPBridgedPlugin {
 
     /**
      * Present native sign-in UI using Clerk's AuthView
+     * Auto-dismisses and resolves when OAuth completes (e.g., Google sign-in)
      */
     @objc func presentSignIn(_ call: CAPPluginCall) {
         print("[ClerkPlugin] Presenting sign-in UI")
@@ -84,25 +104,26 @@ public class ClerkPlugin: CAPPlugin, CAPBridgedPlugin {
                 return
             }
 
+            // Track if we've already resolved the call (prevent double-resolution)
+            var hasResolved = false
+
             // Create SwiftUI AuthView and wrap in hosting controller
-            let authView = ClerkAuthView(onDismiss: { [weak self] in
-                print("[ClerkPlugin] Auth view dismissed")
+            let authView = ClerkAuthView(onAuthComplete: { [weak self] wasSuccessful in
+                // Prevent double-resolution if both dismiss and onChange fire
+                guard !hasResolved else { return }
+                hasResolved = true
 
-                // Check if user is now signed in
-                Task { @MainActor in
-                    let wasSuccessful = Clerk.shared.session != nil
-                    print("[ClerkPlugin] Auth result - signed in: \(wasSuccessful)")
+                print("[ClerkPlugin] Auth completed - signed in: \(wasSuccessful)")
 
-                    call.resolve([
-                        "success": wasSuccessful,
-                        "message": wasSuccessful ? "Sign-in successful" : "Sign-in cancelled",
-                        "isSignedIn": wasSuccessful
-                    ])
+                call.resolve([
+                    "success": wasSuccessful,
+                    "message": wasSuccessful ? "Sign-in successful" : "Sign-in cancelled",
+                    "isSignedIn": wasSuccessful
+                ])
 
-                    // Notify JS layer that auth state changed
-                    if wasSuccessful {
-                        self?.notifyListeners("authStateChanged", data: ["isSignedIn": true])
-                    }
+                // Notify JS layer that auth state changed
+                if wasSuccessful {
+                    self?.notifyListeners("authStateChanged", data: ["isSignedIn": true])
                 }
             })
 

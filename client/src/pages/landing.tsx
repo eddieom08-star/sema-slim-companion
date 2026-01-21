@@ -22,6 +22,7 @@ export default function Landing() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [forceLoaded, setForceLoaded] = useState(false);
   const [touchCount, setTouchCount] = useState(0);
+  const [justSignedIn, setJustSignedIn] = useState(false); // Track fresh sign-in to show "Let's go" button
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isMobile = Capacitor.isNativePlatform();
 
@@ -69,9 +70,9 @@ export default function Landing() {
   // Log auth state changes for debugging
   useEffect(() => {
     if (isMobile) {
-      console.log('[SemaSlim Landing] Auth state:', { isLoaded, isSignedIn, forceLoaded });
+      console.log('[SemaSlim Landing] Auth state:', { isLoaded, isSignedIn, forceLoaded, justSignedIn });
     }
-  }, [isMobile, isLoaded, isSignedIn, forceLoaded]);
+  }, [isMobile, isLoaded, isSignedIn, forceLoaded, justSignedIn]);
 
   const showAuthButton = isLoaded || forceLoaded;
 
@@ -92,8 +93,13 @@ export default function Landing() {
 
         // Check if sign-in was successful
         if ((result as any).isSignedIn) {
-          console.log('[SemaSlim Landing] Sign-in successful, redirecting to dashboard');
-          setLocation('/dashboard');
+          console.log('[SemaSlim Landing] Sign-in successful, showing "Let\'s go" button');
+          // DON'T immediately redirect - this causes a race condition where the global
+          // auth state hasn't updated yet, sending user back to landing page.
+          // Instead, update local state to show "Let's go" button and let user click it
+          // after a brief moment (allowing global auth state to catch up via polling).
+          setIsSignedIn(true);
+          setJustSignedIn(true);
         } else {
           console.log('[SemaSlim Landing] Sign-in cancelled or failed');
         }
@@ -123,8 +129,11 @@ export default function Landing() {
 
         // Check if sign-up was successful
         if ((result as any).isSignedIn) {
-          console.log('[SemaSlim Landing] Sign-up successful, redirecting to dashboard');
-          setLocation('/dashboard');
+          console.log('[SemaSlim Landing] Sign-up successful, showing "Let\'s go" button');
+          // DON'T immediately redirect - this causes a race condition where the global
+          // auth state hasn't updated yet, sending user back to landing page.
+          setIsSignedIn(true);
+          setJustSignedIn(true);
         } else {
           console.log('[SemaSlim Landing] Sign-up cancelled or failed');
         }
@@ -142,6 +151,28 @@ export default function Landing() {
     console.log('[SemaSlim Landing] Dashboard button clicked');
     setLocation("/dashboard");
   };
+
+  // Handler for "Let's go" button after fresh sign-in
+  const handleLetsGoClick = () => {
+    console.log('[SemaSlim Landing] "Let\'s go" button clicked, navigating to dashboard');
+    setLocation("/dashboard");
+  };
+
+  // Auto-redirect after fresh sign-in with a delay to let global auth state catch up
+  useEffect(() => {
+    if (justSignedIn && isMobile) {
+      console.log('[SemaSlim Landing] Just signed in, waiting for auth state to propagate...');
+
+      // Wait 1.5 seconds for the global auth state (useAuthNative) to catch up via polling
+      // This prevents the race condition where we redirect before App.tsx knows we're authenticated
+      const autoRedirectTimeout = setTimeout(() => {
+        console.log('[SemaSlim Landing] Auto-redirecting to dashboard after auth state propagation');
+        setLocation('/dashboard');
+      }, 1500);
+
+      return () => clearTimeout(autoRedirectTimeout);
+    }
+  }, [justSignedIn, isMobile, setLocation]);
 
   const handleLogoutClick = async () => {
     console.log('[SemaSlim Landing] Logout button clicked');
@@ -199,6 +230,16 @@ export default function Landing() {
             {!showAuthButton ? (
               <Button disabled data-testid="button-loading">
                 Loading...
+              </Button>
+            ) : justSignedIn ? (
+              // User just signed in - show "Let's go" button while auth state propagates
+              <Button
+                onClick={handleLetsGoClick}
+                data-testid="button-lets-go"
+                className="bg-green-600 hover:bg-green-700 text-white animate-pulse"
+                style={{ touchAction: 'manipulation' }}
+              >
+                Let's go! 🎉
               </Button>
             ) : isSignedIn ? (
               <div className="flex gap-2">

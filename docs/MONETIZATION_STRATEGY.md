@@ -167,7 +167,7 @@ Shows churn signals            → Win-back offer               Medium (25%)
 
 **Core Health Features (Never Paywalled):**
 - Unlimited medication logging & reminders
-- Basic food tracking (manual entry + 10 barcode scans/day)
+- Basic food tracking (manual entry + 3 barcode scans/day)
 - Weight logging (unlimited)
 - Side effect tracking
 - Basic dashboard with today's stats
@@ -188,7 +188,7 @@ Shows churn signals            → Win-back offer               Medium (25%)
 **Enhanced Tracking & Insights:**
 | Feature | Free | Pro | Value Proposition |
 |---------|------|-----|-------------------|
-| Barcode scans | 10/day | Unlimited | "Never manually enter again" |
+| Barcode scans | 3/day | Unlimited | "Never manually enter again" |
 | Food database | 50K items | 2M+ verified | "Find any food, accurate macros" |
 | Historical data | 2 weeks | Forever | "See your complete journey" |
 | AI meal plans | 3/month | 30/month | "Personalized plans weekly" |
@@ -476,7 +476,7 @@ Tokens serve users who want specific premium features without commitment. They a
 |--------------|--------|-------------|----------------|--------------|
 | Onboarding complete | Day 1 | None | None | N/A |
 | 3-day streak | Day 3 | Streak shields intro | Soft | 5% |
-| 5th barcode scan/day | Daily | Pro barcode upsell | Soft | 12% |
+| 4th barcode scan/day | Daily | Pro barcode upsell | Soft | 12% |
 | AI limit reached | Variable | Tokens or Pro | Medium | 35% |
 | First weight loss | Day 14-30 | Pro trial | Medium | 32% |
 | 7-day streak | Day 7 | Streak shields | Medium | 22% |

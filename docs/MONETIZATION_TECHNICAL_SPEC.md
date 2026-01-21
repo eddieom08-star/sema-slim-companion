@@ -251,7 +251,7 @@ export const TIER_LIMITS: Record<'free' | 'pro', FeatureLimits> = {
   free: {
     aiMealPlansPerMonth: 3,
     aiRecipeSuggestionsPerMonth: 5,
-    barcodeScansPerDay: 10,
+    barcodeScansPerDay: 3,
     foodDatabaseTier: 'basic',
     historyRetentionDays: 14,
     achievementsAvailable: 5,

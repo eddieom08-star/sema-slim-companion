@@ -191,7 +191,7 @@ export default function MobileCheckout() {
               </div>
               <div className="text-right">
                 <p className="text-2xl font-bold text-emerald-600">
-                  ${(state.product.price / 100).toFixed(2)}
+                  ${(state.product.amount / 100).toFixed(2)}
                 </p>
                 {state.productType === 'subscription' && (
                   <p className="text-xs text-gray-500">

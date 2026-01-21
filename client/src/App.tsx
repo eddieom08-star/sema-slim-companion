@@ -23,6 +23,7 @@ import { NetworkAwareIndicator } from "@/components/network-aware";
 // import { DebugPanel } from "@/components/debug-panel"; // Disabled for production
 import { Redirect } from "@/components/redirect";
 import { Capacitor } from "@capacitor/core";
+import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 
 // TEMPORARY: Bypass authentication on mobile for testing
 const BYPASS_AUTH_ON_MOBILE = false;
@@ -206,12 +207,13 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
-        <Router />
-        <PWAInstallPrompt />
-        <OfflineIndicator />
-        <NetworkAwareIndicator />
-        {/* <DebugPanel /> */}
+        <SubscriptionProvider>
+          <Toaster />
+          <Router />
+          <PWAInstallPrompt />
+          <OfflineIndicator />
+          <NetworkAwareIndicator />
+        </SubscriptionProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

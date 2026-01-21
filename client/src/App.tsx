@@ -17,6 +17,7 @@ import Medication from "@/pages/medication";
 import Progress from "@/pages/progress";
 import Profile from "@/pages/profile";
 import Recipes from "@/pages/recipes";
+import Prelim from "@/pages/prelim";
 import { PWAInstallPrompt } from "@/components/pwa-install-prompt";
 import { OfflineIndicator } from "@/components/offline-indicator";
 import { NetworkAwareIndicator } from "@/components/network-aware";
@@ -169,6 +170,8 @@ function Router() {
           <Route path="/" component={Landing} />
           <Route path="/sign-in" component={SignInPage} />
           <Route path="/sign-up" component={SignUpPage} />
+          {/* Prelim page - intermediate after login, before auth state propagates */}
+          <Route path="/prelim" component={Prelim} />
           <Route path="/:any*" component={Landing} />
         </>
       ) : (

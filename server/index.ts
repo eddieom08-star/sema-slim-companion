@@ -49,9 +49,12 @@ export async function createServer() {
         return;
       }
 
+      // Allow localhost, Replit, Vercel domains, and Capacitor native apps
       if (process.env.NODE_ENV === 'development' ||
           allowedOrigins.includes(origin) ||
           origin.includes('localhost') ||
+          origin.startsWith('capacitor://') ||
+          origin.startsWith('ionic://') ||
           origin.endsWith('.replit.app') ||
           origin.endsWith('.replit.dev') ||
           origin.endsWith('.vercel.app')) {

@@ -9,10 +9,35 @@ import {
 import { entitlementsService } from "./entitlements";
 import { SUBSCRIPTION_PRODUCTS, TOKEN_PRODUCTS } from "@shared/features";
 
-// Initialize Stripe with API key
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2024-12-18.acacia',
-});
+// Initialize Stripe with API key (lazy initialization to prevent crash if key is missing)
+let stripeClient: Stripe | null = null;
+
+function getStripe(): Stripe {
+  if (!stripeClient) {
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    if (!secretKey) {
+      throw new Error('STRIPE_SECRET_KEY is not configured');
+    }
+    stripeClient = new Stripe(secretKey, {
+      apiVersion: '2024-12-18.acacia',
+    });
+  }
+  return stripeClient;
+}
+
+// Legacy reference for compatibility
+const stripe = {
+  get customers() { return getStripe().customers; },
+  get checkout() { return getStripe().checkout; },
+  get subscriptions() { return getStripe().subscriptions; },
+  get billingPortal() { return getStripe().billingPortal; },
+  get prices() { return getStripe().prices; },
+  get products() { return getStripe().products; },
+  webhooks: {
+    constructEvent: (payload: string | Buffer, signature: string, secret: string) =>
+      getStripe().webhooks.constructEvent(payload, signature, secret)
+  }
+};
 
 export class StripeService {
   /**

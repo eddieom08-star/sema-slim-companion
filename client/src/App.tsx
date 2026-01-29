@@ -5,27 +5,40 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 // import { useAuth as useClerkAuth } from "@clerk/clerk-react"; // DISABLED - Using native SDK
 import { useAuthNative as useAuth } from "@/hooks/useAuthNative";
-import { useEffect, useState, useRef } from "react";
-import NotFound from "@/pages/not-found";
-import Landing from "@/pages/landing";
-import SignInPage from "@/pages/sign-in";
-import SignUpPage from "@/pages/sign-up";
-import Dashboard from "@/pages/dashboard";
-import Onboarding from "@/pages/onboarding";
-import FoodTracking from "@/pages/food-tracking";
-import Medication from "@/pages/medication";
-import Progress from "@/pages/progress";
-import Profile from "@/pages/profile";
-import Recipes from "@/pages/recipes";
-import MobileCheckout from "@/pages/MobileCheckout";
-import CheckoutSuccess from "@/pages/CheckoutSuccess";
-import { PWAInstallPrompt } from "@/components/pwa-install-prompt";
-import { OfflineIndicator } from "@/components/offline-indicator";
-import { NetworkAwareIndicator } from "@/components/network-aware";
-// import { DebugPanel } from "@/components/debug-panel"; // Disabled for production
-import { Redirect } from "@/components/redirect";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { Capacitor } from "@capacitor/core";
 import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
+import { ErrorBoundary } from "@/components/error-boundary";
+
+// Lazy load pages for code splitting
+const NotFound = lazy(() => import("@/pages/not-found"));
+const Landing = lazy(() => import("@/pages/landing"));
+const SignInPage = lazy(() => import("@/pages/sign-in"));
+const SignUpPage = lazy(() => import("@/pages/sign-up"));
+const Dashboard = lazy(() => import("@/pages/dashboard"));
+const Onboarding = lazy(() => import("@/pages/onboarding"));
+const FoodTracking = lazy(() => import("@/pages/food-tracking"));
+const Medication = lazy(() => import("@/pages/medication"));
+const Progress = lazy(() => import("@/pages/progress"));
+const Profile = lazy(() => import("@/pages/profile"));
+const Recipes = lazy(() => import("@/pages/recipes"));
+const MobileCheckout = lazy(() => import("@/pages/MobileCheckout"));
+const CheckoutSuccess = lazy(() => import("@/pages/CheckoutSuccess"));
+
+// Lazy load non-critical components
+const PWAInstallPrompt = lazy(() => import("@/components/pwa-install-prompt").then(m => ({ default: m.PWAInstallPrompt })));
+const OfflineIndicator = lazy(() => import("@/components/offline-indicator").then(m => ({ default: m.OfflineIndicator })));
+const NetworkAwareIndicator = lazy(() => import("@/components/network-aware").then(m => ({ default: m.NetworkAwareIndicator })));
+
+// Loading spinner component
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="text-center space-y-4">
+      <div className="w-10 h-10 bg-primary rounded-lg animate-pulse mx-auto"></div>
+      <p className="text-muted-foreground">Loading...</p>
+    </div>
+  </div>
+);
 
 // TEMPORARY: Bypass authentication on mobile for testing
 const BYPASS_AUTH_ON_MOBILE = false;
@@ -116,39 +129,41 @@ function Router() {
   const needsOnboarding = canAccessApp && user && !(user as any).onboardingCompleted;
 
   return (
-    <Switch key={routeKey}>
-      {/* Checkout routes - accessible regardless of auth (for mobile deep linking) */}
-      <Route path="/checkout/success" component={CheckoutSuccess} />
-      <Route path="/checkout" component={MobileCheckout} />
+    <Suspense fallback={<PageLoader />}>
+      <Switch key={routeKey}>
+        {/* Checkout routes - accessible regardless of auth (for mobile deep linking) */}
+        <Route path="/checkout/success" component={CheckoutSuccess} />
+        <Route path="/checkout" component={MobileCheckout} />
 
-      {!canAccessApp ? (
-        <>
-          {/* Not authenticated: show auth pages */}
-          <Route path="/" component={Landing} />
-          <Route path="/sign-in" component={SignInPage} />
-          <Route path="/sign-up" component={SignUpPage} />
-          <Route path="/:any*" component={Landing} />
-        </>
-      ) : needsOnboarding ? (
-        <>
-          {/* Onboarding not complete */}
-          <Route path="/" component={Onboarding} />
-          <Route path="/:any*" component={Onboarding} />
-        </>
-      ) : (
-        <>
-          {/* Authenticated with onboarding complete (or no user data yet on mobile) */}
-          <Route path="/" component={Dashboard} />
-          <Route path="/dashboard" component={Dashboard} />
-          <Route path="/food-tracking" component={FoodTracking} />
-          <Route path="/medication" component={Medication} />
-          <Route path="/recipes" component={Recipes} />
-          <Route path="/progress" component={Progress} />
-          <Route path="/profile" component={Profile} />
-          <Route component={NotFound} />
-        </>
-      )}
-    </Switch>
+        {!canAccessApp ? (
+          <>
+            {/* Not authenticated: show auth pages */}
+            <Route path="/" component={Landing} />
+            <Route path="/sign-in" component={SignInPage} />
+            <Route path="/sign-up" component={SignUpPage} />
+            <Route path="/:any*" component={Landing} />
+          </>
+        ) : needsOnboarding ? (
+          <>
+            {/* Onboarding not complete */}
+            <Route path="/" component={Onboarding} />
+            <Route path="/:any*" component={Onboarding} />
+          </>
+        ) : (
+          <>
+            {/* Authenticated with onboarding complete (or no user data yet on mobile) */}
+            <Route path="/" component={Dashboard} />
+            <Route path="/dashboard" component={Dashboard} />
+            <Route path="/food-tracking" component={FoodTracking} />
+            <Route path="/medication" component={Medication} />
+            <Route path="/recipes" component={Recipes} />
+            <Route path="/progress" component={Progress} />
+            <Route path="/profile" component={Profile} />
+            <Route component={NotFound} />
+          </>
+        )}
+      </Switch>
+    </Suspense>
   );
 }
 
@@ -211,17 +226,21 @@ function App() {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <SubscriptionProvider>
-          <Toaster />
-          <Router />
-          <PWAInstallPrompt />
-          <OfflineIndicator />
-          <NetworkAwareIndicator />
-        </SubscriptionProvider>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <SubscriptionProvider>
+            <Toaster />
+            <Router />
+            <Suspense fallback={null}>
+              <PWAInstallPrompt />
+              <OfflineIndicator />
+              <NetworkAwareIndicator />
+            </Suspense>
+          </SubscriptionProvider>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 

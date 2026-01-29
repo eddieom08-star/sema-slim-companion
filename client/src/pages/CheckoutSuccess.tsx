@@ -6,13 +6,41 @@
 
 import { useEffect, useState, useMemo } from 'react';
 
+// Allowed return URL patterns to prevent open redirect attacks
+const ALLOWED_URL_PATTERNS = [
+  /^semaslim:\/\//, // App deep links
+  /^https:\/\/(www\.)?semaslim\.com\//, // Production website
+  /^https:\/\/.*\.semaslim\.com\//, // Subdomains
+  /^http:\/\/localhost(:\d+)?\//, // Local development
+  /^https:\/\/.*\.replit\.dev\//, // Replit preview
+];
+
+/**
+ * Validate return URL against whitelist to prevent open redirect
+ */
+function validateReturnUrl(url: string | null): string {
+  const defaultUrl = 'semaslim://checkout-complete';
+
+  if (!url) return defaultUrl;
+
+  // Check against allowed patterns
+  const isAllowed = ALLOWED_URL_PATTERNS.some(pattern => pattern.test(url));
+
+  if (!isAllowed) {
+    console.warn(`[CheckoutSuccess] Blocked potentially malicious return_url: ${url}`);
+    return defaultUrl;
+  }
+
+  return url;
+}
+
 export default function CheckoutSuccess() {
   const [countdown, setCountdown] = useState(3);
 
-  // Use native URLSearchParams instead of react-router-dom (project uses wouter)
+  // Use native URLSearchParams with URL validation
   const returnUrl = useMemo(() => {
     const params = new URLSearchParams(window.location.search);
-    return params.get('return_url') || 'semaslim://checkout-complete';
+    return validateReturnUrl(params.get('return_url'));
   }, []);
 
   useEffect(() => {

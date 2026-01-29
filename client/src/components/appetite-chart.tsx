@@ -59,9 +59,10 @@ export function AppetiteChart() {
     .reverse()
     .map((log: any) => ({
       date: format(parseISO(log.loggedAt), 'MMM d'),
-      hungerLevel: log.hungerLevel,
-      fullnessLevel: log.fullnessLevel,
-      cravingIntensity: log.cravingIntensity,
+      // Use null instead of undefined for connectNulls to work properly
+      hungerLevel: log.hungerLevel ?? null,
+      fullnessLevel: log.fullnessLevel ?? null,
+      cravingIntensity: log.cravingIntensity ?? null,
       fullDate: log.loggedAt,
     }));
 
@@ -277,20 +278,20 @@ export function AppetiteChart() {
               type="monotone"
               dataKey="hungerLevel"
               name="Hunger Level"
-              stroke="hsl(var(--primary))"
+              stroke="#3b82f6"
               strokeWidth={3}
               connectNulls={true}
               isAnimationActive={false}
               dot={{
-                fill: 'hsl(var(--primary))',
+                fill: '#3b82f6',
                 strokeWidth: 2,
-                stroke: 'hsl(var(--background))',
+                stroke: '#f8fafc',
                 r: 5
               }}
               activeDot={{
                 r: 7,
-                fill: 'hsl(var(--primary))',
-                stroke: 'hsl(var(--background))',
+                fill: '#3b82f6',
+                stroke: '#f8fafc',
                 strokeWidth: 2
               }}
             />
@@ -298,20 +299,20 @@ export function AppetiteChart() {
               type="monotone"
               dataKey="fullnessLevel"
               name="Fullness Level"
-              stroke="hsl(var(--secondary))"
+              stroke="#16a34a"
               strokeWidth={3}
               connectNulls={true}
               isAnimationActive={false}
               dot={{
-                fill: 'hsl(var(--secondary))',
+                fill: '#16a34a',
                 strokeWidth: 2,
-                stroke: 'hsl(var(--background))',
+                stroke: '#f8fafc',
                 r: 5
               }}
               activeDot={{
                 r: 7,
-                fill: 'hsl(var(--secondary))',
-                stroke: 'hsl(var(--background))',
+                fill: '#16a34a',
+                stroke: '#f8fafc',
                 strokeWidth: 2
               }}
             />
@@ -319,21 +320,21 @@ export function AppetiteChart() {
               type="monotone"
               dataKey="cravingIntensity"
               name="Craving Intensity"
-              stroke="hsl(var(--accent))"
+              stroke="#8b5cf6"
               strokeWidth={3}
               strokeDasharray="5 5"
               connectNulls={true}
               isAnimationActive={false}
               dot={{
-                fill: 'hsl(var(--accent))',
+                fill: '#8b5cf6',
                 strokeWidth: 2,
-                stroke: 'hsl(var(--background))',
+                stroke: '#f8fafc',
                 r: 5
               }}
               activeDot={{
                 r: 7,
-                fill: 'hsl(var(--accent))',
-                stroke: 'hsl(var(--background))',
+                fill: '#8b5cf6',
+                stroke: '#f8fafc',
                 strokeWidth: 2
               }}
             />

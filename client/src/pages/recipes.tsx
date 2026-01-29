@@ -11,6 +11,8 @@ import { Bot, ScanLine, Send, Loader2, BookOpen, Trash2, ChefHat, Zap, ChevronDo
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { resizeImageForClaude, type ProcessedImage } from "@/lib/image-utils";
+import { ProUpsellModal } from "@/components/monetization/ProUpsellModal";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 
 interface Message {
   role: "user" | "assistant";
@@ -375,8 +377,10 @@ export default function Recipes() {
   const [isRecipeDetailOpen, setIsRecipeDetailOpen] = useState(false);
   const [recipeToDelete, setRecipeToDelete] = useState<string | null>(null);
   const [currentAIRecipe, setCurrentAIRecipe] = useState<any>(null);
+  const [showUpsellModal, setShowUpsellModal] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { refreshSubscription } = useSubscription();
 
   // Fetch user profile for medication info
   const { data: userProfile } = useQuery({
@@ -532,11 +536,19 @@ Servings: [number]`;
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error: any) {
       console.error('Recipe chat error:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to get response. Please try again.",
-        variant: "destructive"
-      });
+
+      // Check if this is a limit reached error (403)
+      if (error.message?.includes('limit') || error.message?.includes('403')) {
+        setShowUpsellModal(true);
+        // Refresh subscription to get updated usage counts
+        refreshSubscription();
+      } else {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to get response. Please try again.",
+          variant: "destructive"
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -1111,6 +1123,13 @@ Servings: [number]`;
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Pro Upsell Modal for Recipe Limit */}
+      <ProUpsellModal
+        isOpen={showUpsellModal}
+        onClose={() => setShowUpsellModal(false)}
+        trigger={{ type: 'ai_limit' }}
+      />
     </div>
   );
 }

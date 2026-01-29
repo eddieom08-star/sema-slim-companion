@@ -35,16 +35,29 @@ let globalIsSignedIn = getStoredAuthState();
 let globalIsLoaded = !isMobile;
 const listeners = new Set<() => void>();
 
+// Failsafe timer ID - can be cleared when auth completes
+let failsafeTimerId: ReturnType<typeof setTimeout> | null = null;
+
+// Clear failsafe timer when auth loads successfully
+function clearFailsafeTimer() {
+  if (failsafeTimerId !== null) {
+    clearTimeout(failsafeTimerId);
+    failsafeTimerId = null;
+    console.log('[useAuthNative] Failsafe timer cleared');
+  }
+}
+
 // Failsafe: Ensure loading state eventually resolves on mobile
 // This prevents infinite loading if the auth check never completes
 if (isMobile && !globalIsLoaded) {
   console.log('[useAuthNative] Starting failsafe timer (10s)');
-  setTimeout(() => {
+  failsafeTimerId = setTimeout(() => {
     if (!globalIsLoaded) {
       console.warn('[useAuthNative] Failsafe triggered: forcing isLoaded=true after 10s');
       globalIsLoaded = true;
       listeners.forEach(listener => listener());
     }
+    failsafeTimerId = null;
   }, 10000);
 }
 
@@ -61,6 +74,10 @@ function setGlobalSignedIn(signedIn: boolean) {
 
 function setGlobalLoaded(loaded: boolean) {
   globalIsLoaded = loaded;
+  // Clear failsafe timer when auth completes successfully
+  if (loaded) {
+    clearFailsafeTimer();
+  }
   notifyListeners();
 }
 
@@ -244,6 +261,7 @@ export function useAuthNative() {
 
   return {
     user,
+    userId: user?.id || null,
     isLoading,
     isAuthenticated: isSignedIn && !!user,
     isSignedIn, // On mobile, use this for routing

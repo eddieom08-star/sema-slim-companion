@@ -27,8 +27,8 @@ export interface FeatureLimits {
 export const TIER_LIMITS: Record<'free' | 'pro', FeatureLimits> = {
   free: {
     aiMealPlansPerMonth: 2,
-    aiRecipeSuggestionsPerMonth: 5,
-    barcodeScansPerDay: 3,
+    aiRecipeSuggestionsPerMonth: 2,
+    barcodeScansPerDay: 10,
     foodDatabaseTier: 'basic',
     historyRetentionDays: 14,
     achievementsAvailable: 5,

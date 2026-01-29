@@ -4,6 +4,8 @@ import { storage } from "./storage";
 import { logger } from "./logger";
 import { clerkMiddleware, requireAuth } from "./clerkAuth";
 import monetizationRoutes from "./routes/monetization";
+import { entitlementsService } from "./services/entitlements";
+import { FEATURE_TYPES } from "@shared/features";
 
 const isAuthenticated = requireAuth;
 import {
@@ -78,17 +80,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
-  // Debug endpoint to check what headers are being received (no auth required)
-  app.get('/api/debug/headers', async (req, res) => {
-    const authHeader = req.headers.authorization;
-    res.json({
-      hasAuthHeader: !!authHeader,
-      authHeaderPrefix: authHeader?.substring(0, 30),
-      authHeaderLength: authHeader?.length,
-      allHeaders: Object.keys(req.headers),
-      clerkAuth: (req as any).auth || 'not set by middleware',
+  // Debug endpoint - disabled in production for security
+  if (process.env.NODE_ENV !== 'production') {
+    app.get('/api/debug/headers', async (req, res) => {
+      const authHeader = req.headers.authorization;
+      res.json({
+        hasAuthHeader: !!authHeader,
+        authHeaderPrefix: authHeader?.substring(0, 30),
+        authHeaderLength: authHeader?.length,
+        allHeaders: Object.keys(req.headers),
+        clerkAuth: (req as any).auth || 'not set by middleware',
+      });
     });
-  });
+  }
 
   app.get('/api/health', async (_req, res) => {
     try {
@@ -256,17 +260,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Logout route - redirects to Clerk sign-out with proper return URL
-  app.get('/api/logout', (_req, res) => {
-    // Clerk handles session cleanup via their sign-out endpoint
-    // All data is automatically saved since it's persisted in the database on each request
-    const signOutUrl = process.env.CLERK_SIGN_OUT_URL || 'https://clerk.complete-bullfrog-71.accounts.dev/sign-out';
-    const returnUrl = process.env.NODE_ENV === 'production'
-      ? process.env.PRODUCTION_URL || 'http://localhost:3000'
-      : 'http://localhost:3000';
-
-    res.redirect(`${signOutUrl}?redirect_url=${encodeURIComponent(returnUrl)}`);
-  });
 
   // User profile routes
   app.put('/api/user/profile', isAuthenticated, async (req: any, res) => {
@@ -365,7 +358,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/medications/:id', isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
-      const medication = await storage.updateMedication(id, req.body);
+      const userId = req.auth.userId;
+      const medication = await storage.updateMedication(id, userId, req.body);
+      if (!medication) {
+        return res.status(404).json({ message: "Medication not found or access denied" });
+      }
       res.json(medication);
     } catch (error) {
       console.error("Error updating medication:", error);
@@ -376,7 +373,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/medications/:id', isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
-      await storage.deleteMedication(id);
+      const userId = req.auth.userId;
+      const deleted = await storage.deleteMedication(id, userId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Medication not found or access denied" });
+      }
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting medication:", error);
@@ -389,7 +390,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.auth.userId;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
-      const logs = await storage.getUserMedicationLogs(userId, limit);
+
+      // Get entitlements and calculate cutoff date for history filtering
+      const entitlements = await entitlementsService.getUserEntitlements(userId);
+      let cutoffDate: Date | undefined;
+      if (entitlements.historyRetentionDays !== -1) {
+        cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - entitlements.historyRetentionDays);
+      }
+
+      // Pass cutoff to database query for efficient filtering
+      const logs = await storage.getUserMedicationLogs(userId, limit, cutoffDate);
+
       res.json(logs);
     } catch (error) {
       console.error("Error fetching medication logs:", error);
@@ -439,8 +451,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get all food entries (no date filter for historical charting)
       const entries = await storage.getUserFoodEntries(userId, undefined);
 
+      // Apply history retention limit based on entitlements
+      const entitlements = await entitlementsService.getUserEntitlements(userId);
+      let filteredEntries = entries;
+      if (entitlements.historyRetentionDays !== -1) {
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - entitlements.historyRetentionDays);
+        filteredEntries = entries.filter((entry: any) => new Date(entry.consumedAt) >= cutoffDate);
+      }
+
       // Apply limit if specified
-      const limitedEntries = limit ? entries.slice(0, limit) : entries;
+      const limitedEntries = limit ? filteredEntries.slice(0, limit) : filteredEntries;
 
       res.json(limitedEntries);
     } catch (error) {
@@ -475,7 +496,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/food-entries/:id', isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
-      const entry = await storage.updateFoodEntry(id, req.body);
+      const userId = req.auth.userId;
+      const entry = await storage.updateFoodEntry(id, userId, req.body);
+      if (!entry) {
+        return res.status(404).json({ message: "Food entry not found or access denied" });
+      }
       res.json(entry);
     } catch (error) {
       console.error("Error updating food entry:", error);
@@ -486,7 +511,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/food-entries/:id', isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
-      await storage.deleteFoodEntry(id);
+      const userId = req.auth.userId;
+      const deleted = await storage.deleteFoodEntry(id, userId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Food entry not found or access denied" });
+      }
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting food entry:", error);
@@ -598,11 +627,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/food-database/barcode/:barcode', isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.auth?.userId;
       const { barcode } = req.params;
+
+      // Check barcode scan entitlement
+      const canScan = await entitlementsService.canUseFeature(userId, FEATURE_TYPES.BARCODE_SCAN, 1);
+      if (!canScan.allowed) {
+        logger.info('Barcode scan blocked - limit reached', { userId, reason: canScan.reason });
+        return res.status(403).json({
+          error: 'limit_reached',
+          reason: canScan.reason,
+          upsellType: canScan.upsellType,
+          message: 'You have reached your daily barcode scan limit. Upgrade to Pro for unlimited scanning.'
+        });
+      }
 
       // First, try to find in our local database
       const localFood = await storage.searchFoodByBarcode(barcode);
       if (localFood) {
+        // Record barcode scan usage
+        await entitlementsService.consumeFeature(userId, FEATURE_TYPES.BARCODE_SCAN, 1);
         return res.json({
           id: localFood.id,
           barcode: localFood.barcode,
@@ -664,6 +708,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Continue even if save fails
       }
 
+      // Record barcode scan usage
+      await entitlementsService.consumeFeature(userId, FEATURE_TYPES.BARCODE_SCAN, 1);
+
       res.json({
         id: product.code,
         barcode: product.code,
@@ -719,6 +766,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.auth.userId;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
       const logs = await storage.getUserWeightLogs(userId, limit);
+
+      // Apply history retention limit based on entitlements
+      const entitlements = await entitlementsService.getUserEntitlements(userId);
+      if (entitlements.historyRetentionDays !== -1) {
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - entitlements.historyRetentionDays);
+        const filteredLogs = logs.filter((log: any) => new Date(log.loggedAt) >= cutoffDate);
+        return res.json(filteredLogs);
+      }
+
       res.json(logs);
     } catch (error) {
       console.error("Error fetching weight logs:", error);
@@ -780,7 +837,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Achievement routes
   app.get('/api/achievements', isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.auth.userId;
       const achievements = await storage.getAllAchievements();
+
+      // Limit visible achievements based on entitlements
+      const entitlements = await entitlementsService.getUserEntitlements(userId);
+      if (entitlements.achievementsAvailable !== -1) {
+        const limitedAchievements = achievements.slice(0, entitlements.achievementsAvailable);
+        return res.json(limitedAchievements);
+      }
+
       res.json(achievements);
     } catch (error) {
       console.error("Error fetching achievements:", error);
@@ -792,6 +858,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.auth.userId;
       const userAchievements = await storage.getUserAchievements(userId);
+
+      // Limit visible achievements based on entitlements
+      const entitlements = await entitlementsService.getUserEntitlements(userId);
+      if (entitlements.achievementsAvailable !== -1) {
+        const limitedAchievements = userAchievements.slice(0, entitlements.achievementsAvailable);
+        return res.json(limitedAchievements);
+      }
+
       res.json(userAchievements);
     } catch (error) {
       console.error("Error fetching user achievements:", error);
@@ -904,6 +978,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.auth.userId;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 30;
       const logs = await storage.getUserHungerLogs(userId, limit);
+
+      // Apply history retention limit based on entitlements
+      const entitlements = await entitlementsService.getUserEntitlements(userId);
+      if (entitlements.historyRetentionDays !== -1) {
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - entitlements.historyRetentionDays);
+        const filteredLogs = logs.filter((log: any) => new Date(log.loggedAt) >= cutoffDate);
+        return res.json(filteredLogs);
+      }
+
       res.json(logs);
     } catch (error) {
       console.error("Error fetching hunger logs:", error);
@@ -1140,7 +1224,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/recipes/:id', isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
-      const recipe = await storage.updateRecipe(id, req.body);
+      const userId = req.auth.userId;
+      const recipe = await storage.updateRecipe(id, userId, req.body);
+      if (!recipe) {
+        return res.status(404).json({ message: "Recipe not found or access denied" });
+      }
       res.json(recipe);
     } catch (error) {
       console.error("Error updating recipe:", error);
@@ -1151,7 +1239,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/recipes/:id', isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
-      await storage.deleteRecipe(id);
+      const userId = req.auth.userId;
+      const deleted = await storage.deleteRecipe(id, userId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Recipe not found or access denied" });
+      }
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting recipe:", error);
@@ -1381,7 +1473,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/meal-plans/:id', isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
-      const mealPlan = await storage.updateMealPlan(id, req.body);
+      const userId = req.auth.userId;
+      const mealPlan = await storage.updateMealPlan(id, userId, req.body);
+      if (!mealPlan) {
+        return res.status(404).json({ message: "Meal plan not found or access denied" });
+      }
       res.json(mealPlan);
     } catch (error) {
       console.error("Error updating meal plan:", error);
@@ -1392,7 +1488,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/meal-plans/:id', isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
-      await storage.deleteMealPlan(id);
+      const userId = req.auth.userId;
+      const deleted = await storage.deleteMealPlan(id, userId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Meal plan not found or access denied" });
+      }
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting meal plan:", error);
@@ -1429,7 +1529,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/meal-plan-entries/:id', isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
-      const entry = await storage.updateMealPlanEntry(id, req.body);
+      const userId = req.auth.userId;
+      const entry = await storage.updateMealPlanEntry(id, userId, req.body);
+      if (!entry) {
+        return res.status(404).json({ message: "Meal plan entry not found or access denied" });
+      }
       res.json(entry);
     } catch (error) {
       console.error("Error updating meal plan entry:", error);
@@ -1440,7 +1544,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/meal-plan-entries/:id', isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
-      await storage.deleteMealPlanEntry(id);
+      const userId = req.auth.userId;
+      const deleted = await storage.deleteMealPlanEntry(id, userId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Meal plan entry not found or access denied" });
+      }
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting meal plan entry:", error);
@@ -1478,7 +1586,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/meal-prep/:id', isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
-      const schedule = await storage.updateMealPrepSchedule(id, req.body);
+      const userId = req.auth.userId;
+      const schedule = await storage.updateMealPrepSchedule(id, userId, req.body);
+      if (!schedule) {
+        return res.status(404).json({ message: "Meal prep schedule not found or access denied" });
+      }
       res.json(schedule);
     } catch (error) {
       console.error("Error updating meal prep schedule:", error);
@@ -1489,7 +1601,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/meal-prep/:id', isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
-      await storage.deleteMealPrepSchedule(id);
+      const userId = req.auth.userId;
+      const deleted = await storage.deleteMealPrepSchedule(id, userId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Meal prep schedule not found or access denied" });
+      }
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting meal prep schedule:", error);
@@ -1571,11 +1687,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // AI Recipe Chat endpoint - Claude integration
   app.post('/api/ai/recipe-chat', isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.auth?.userId;
       logger.info('Recipe chat endpoint called', {
-        userId: req.auth?.userId,
+        userId,
         hasMessages: !!req.body.messages,
         hasSystemPrompt: !!req.body.systemPrompt
       });
+
+      // Check entitlements before allowing recipe generation
+      const canUse = await entitlementsService.canUseFeature(userId, FEATURE_TYPES.AI_RECIPE, 1);
+      if (!canUse.allowed) {
+        logger.info('Recipe generation blocked - limit reached', { userId, reason: canUse.reason });
+        return res.status(403).json({
+          error: 'limit_reached',
+          reason: canUse.reason,
+          upsellType: canUse.upsellType,
+          message: 'You have reached your monthly recipe generation limit. Upgrade to Pro for more recipes or purchase AI tokens.'
+        });
+      }
 
       const { messages, systemPrompt } = req.body;
 
@@ -1705,6 +1834,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? response.content[0].text
         : 'I apologize, but I could not generate a response.';
 
+      // Record usage after successful generation
+      await entitlementsService.consumeFeature(userId, FEATURE_TYPES.AI_RECIPE, 1);
+
       res.json({ message: assistantMessage });
     } catch (error: any) {
       console.error("Error calling Claude API:", error);
@@ -1753,10 +1885,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // AI Recipe Scan endpoint - Claude vision integration for extracting recipes from images
   app.post('/api/ai/scan-recipe', isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.auth?.userId;
       logger.info('Recipe scan endpoint called', {
-        userId: req.auth?.userId,
+        userId,
         hasImage: !!req.body.image
       });
+
+      // Check AI recipe entitlement (uses same quota as recipe chat)
+      const canUse = await entitlementsService.canUseFeature(userId, FEATURE_TYPES.AI_RECIPE, 1);
+      if (!canUse.allowed) {
+        logger.info('Recipe scan blocked - limit reached', { userId, reason: canUse.reason });
+        return res.status(403).json({
+          error: 'limit_reached',
+          reason: canUse.reason,
+          upsellType: canUse.upsellType,
+          message: 'You have reached your monthly AI recipe limit. Upgrade to Pro for more or purchase AI tokens.'
+        });
+      }
 
       const { image } = req.body;
 
@@ -1893,6 +2038,9 @@ Always respond with valid JSON only, no additional text.`;
       if (textContent.type !== 'text') {
         return res.status(500).json({ message: "Unexpected response format from AI" });
       }
+
+      // Record AI usage after successful generation
+      await entitlementsService.consumeFeature(userId, FEATURE_TYPES.AI_RECIPE, 1);
 
       // Parse the JSON response
       try {

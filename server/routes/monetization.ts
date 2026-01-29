@@ -8,6 +8,12 @@ import { db } from '../db';
 import { eq } from 'drizzle-orm';
 import { subscriptions, upsellEvents } from '@shared/schema';
 import { SUBSCRIPTION_PRODUCTS, TOKEN_PRODUCTS, FEATURE_TYPES } from '@shared/features';
+import {
+  sendUnauthorizedError,
+  sendValidationError,
+  sendFeatureLimitError,
+  sendInternalError,
+} from '../lib/error-responses';
 
 const router = Router();
 
@@ -297,21 +303,50 @@ router.post('/tokens/use-shield', requireAuth(), async (req: Request, res: Respo
 // ============================================
 
 /**
+ * GET /api/features/:feature/check
+ * Check if user can use a feature (RESTful - read operation)
+ */
+router.get('/features/:feature/check', requireAuth(), async (req: Request, res: Response) => {
+  try {
+    const userId = req.auth?.userId;
+    if (!userId) {
+      return sendUnauthorizedError(res);
+    }
+
+    const { feature } = req.params;
+    const quantity = parseInt(req.query.quantity as string) || 1;
+
+    const validFeatures = Object.values(FEATURE_TYPES);
+    if (!validFeatures.includes(feature as any)) {
+      return sendValidationError(res, 'Invalid feature type', { validFeatures });
+    }
+
+    const result = await entitlementsService.canUseFeature(userId, feature as any, quantity);
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error checking feature:', error);
+    return sendInternalError(res, 'Failed to check feature');
+  }
+});
+
+/**
  * POST /api/features/check
- * Check if user can use a feature
+ * Check if user can use a feature (legacy - kept for backward compatibility)
+ * @deprecated Use GET /api/features/:feature/check instead
  */
 router.post('/features/check', requireAuth(), async (req: Request, res: Response) => {
   try {
     const userId = req.auth?.userId;
     if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return sendUnauthorizedError(res);
     }
 
     const { feature, quantity } = req.body;
 
     const validFeatures = Object.values(FEATURE_TYPES);
     if (!validFeatures.includes(feature)) {
-      return res.status(400).json({ error: 'Invalid feature type' });
+      return sendValidationError(res, 'Invalid feature type', { validFeatures });
     }
 
     const result = await entitlementsService.canUseFeature(userId, feature, quantity || 1);
@@ -319,7 +354,7 @@ router.post('/features/check', requireAuth(), async (req: Request, res: Response
     res.json(result);
   } catch (error) {
     console.error('Error checking feature:', error);
-    res.status(500).json({ error: 'Failed to check feature' });
+    return sendInternalError(res, 'Failed to check feature');
   }
 });
 
@@ -331,14 +366,14 @@ router.post('/features/consume', requireAuth(), async (req: Request, res: Respon
   try {
     const userId = req.auth?.userId;
     if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return sendUnauthorizedError(res);
     }
 
     const { feature, quantity, useTokens } = req.body;
 
     const validFeatures = Object.values(FEATURE_TYPES);
     if (!validFeatures.includes(feature)) {
-      return res.status(400).json({ error: 'Invalid feature type' });
+      return sendValidationError(res, 'Invalid feature type', { validFeatures });
     }
 
     const result = await entitlementsService.consumeFeature(
@@ -350,16 +385,18 @@ router.post('/features/consume', requireAuth(), async (req: Request, res: Respon
 
     if (!result.success) {
       const canUse = await entitlementsService.canUseFeature(userId, feature, quantity || 1);
-      return res.status(402).json({
-        error: 'Feature limit reached',
-        ...canUse,
-      });
+      return sendFeatureLimitError(
+        res,
+        canUse.reason || 'feature_limit_reached',
+        canUse.upsellType || 'pro',
+        canUse.remaining || 0
+      );
     }
 
     res.json(result);
   } catch (error) {
     console.error('Error consuming feature:', error);
-    res.status(500).json({ error: 'Failed to consume feature' });
+    return sendInternalError(res, 'Failed to consume feature');
   }
 });
 
@@ -618,8 +655,18 @@ router.post('/webhooks/revenuecat', async (req: Request, res: Response) => {
   const authHeader = req.headers.authorization;
   const webhookSecret = process.env.REVENUECAT_WEBHOOK_SECRET;
 
-  // Verify webhook authenticity
+  // Require webhook secret in production
+  if (!webhookSecret) {
+    if (process.env.NODE_ENV === 'production') {
+      console.error('REVENUECAT_WEBHOOK_SECRET not configured - rejecting webhook');
+      return res.status(503).json({ error: 'Webhook not configured' });
+    }
+    console.warn('REVENUECAT_WEBHOOK_SECRET not set - accepting webhook in development');
+  }
+
+  // Always verify webhook authenticity when secret is configured
   if (webhookSecret && authHeader !== `Bearer ${webhookSecret}`) {
+    console.warn('RevenueCat webhook auth failed - invalid secret');
     return res.status(401).json({ error: 'Unauthorized' });
   }
 

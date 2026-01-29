@@ -17,6 +17,7 @@ end
 target 'App' do
   capacitor_pods
   # Add your Pods here
+  pod 'RevenueCat', '~> 5.0'
 end
 
 post_install do |installer|

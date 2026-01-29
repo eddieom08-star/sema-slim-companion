@@ -75,24 +75,24 @@ export interface IStorage {
   // Medication operations
   createMedication(medication: InsertMedication): Promise<Medication>;
   getUserMedications(userId: string): Promise<Medication[]>;
-  updateMedication(id: string, data: Partial<Medication>): Promise<Medication>;
-  deleteMedication(id: string): Promise<void>;
+  updateMedication(id: string, userId: string, data: Partial<Medication>): Promise<Medication | null>;
+  deleteMedication(id: string, userId: string): Promise<boolean>;
 
   // Medication log operations
   createMedicationLog(log: InsertMedicationLog): Promise<MedicationLog>;
-  getUserMedicationLogs(userId: string, limit?: number): Promise<MedicationLog[]>;
+  getUserMedicationLogs(userId: string, limit?: number, cutoffDate?: Date): Promise<MedicationLog[]>;
   getMedicationLogsByDateRange(userId: string, startDate: Date, endDate: Date): Promise<MedicationLog[]>;
 
   // Food entry operations
   createFoodEntry(entry: InsertFoodEntry): Promise<FoodEntry>;
-  getUserFoodEntries(userId: string, date?: Date): Promise<FoodEntry[]>;
+  getUserFoodEntries(userId: string, date?: Date, cutoffDate?: Date): Promise<FoodEntry[]>;
   getFoodEntriesByDateRange(userId: string, startDate: Date, endDate: Date): Promise<FoodEntry[]>;
-  updateFoodEntry(id: string, data: Partial<FoodEntry>): Promise<FoodEntry>;
-  deleteFoodEntry(id: string): Promise<void>;
+  updateFoodEntry(id: string, userId: string, data: Partial<FoodEntry>): Promise<FoodEntry | null>;
+  deleteFoodEntry(id: string, userId: string): Promise<boolean>;
 
   // Weight log operations
   createWeightLog(log: InsertWeightLog): Promise<WeightLog>;
-  getUserWeightLogs(userId: string, limit?: number): Promise<WeightLog[]>;
+  getUserWeightLogs(userId: string, limit?: number, cutoffDate?: Date): Promise<WeightLog[]>;
   getLatestWeightLog(userId: string): Promise<WeightLog | undefined>;
 
   // Body measurement operations
@@ -127,7 +127,7 @@ export interface IStorage {
 
   // Hunger log operations
   createHungerLog(log: InsertHungerLog): Promise<HungerLog>;
-  getUserHungerLogs(userId: string, limit?: number): Promise<HungerLog[]>;
+  getUserHungerLogs(userId: string, limit?: number, cutoffDate?: Date): Promise<HungerLog[]>;
 
   // Food database operations
   searchFoodByBarcode(barcode: string): Promise<FoodDatabase | undefined>;
@@ -158,8 +158,8 @@ export interface IStorage {
   getRecipe(id: string): Promise<Recipe | undefined>;
   getUserRecipes(userId: string): Promise<Recipe[]>;
   getPublicRecipes(limit?: number, filters?: { isGlp1Friendly?: boolean; isHighProtein?: boolean; isLowCarb?: boolean }): Promise<Recipe[]>;
-  updateRecipe(id: string, data: Partial<Recipe>): Promise<Recipe>;
-  deleteRecipe(id: string): Promise<void>;
+  updateRecipe(id: string, userId: string, data: Partial<Recipe>): Promise<Recipe | null>;
+  deleteRecipe(id: string, userId: string): Promise<boolean>;
   searchRecipes(query: string, filters?: { isGlp1Friendly?: boolean; isHighProtein?: boolean; isLowCarb?: boolean }): Promise<Recipe[]>;
   toggleRecipeFavorite(userId: string, recipeId: string): Promise<void>;
   getUserFavoriteRecipes(userId: string): Promise<Recipe[]>;
@@ -168,21 +168,23 @@ export interface IStorage {
   createMealPlan(mealPlan: InsertMealPlan): Promise<MealPlan>;
   getUserMealPlans(userId: string): Promise<MealPlan[]>;
   getActiveMealPlan(userId: string): Promise<MealPlan | undefined>;
-  updateMealPlan(id: string, data: Partial<MealPlan>): Promise<MealPlan>;
-  deleteMealPlan(id: string): Promise<void>;
+  getMealPlanById(id: string, userId: string): Promise<MealPlan | undefined>;
+  updateMealPlan(id: string, userId: string, data: Partial<MealPlan>): Promise<MealPlan | null>;
+  deleteMealPlan(id: string, userId: string): Promise<boolean>;
 
   // Meal plan entry operations
   createMealPlanEntry(entry: InsertMealPlanEntry): Promise<MealPlanEntry>;
   getMealPlanEntries(mealPlanId: string): Promise<MealPlanEntry[]>;
   getMealPlanEntriesByDate(mealPlanId: string, date: Date): Promise<MealPlanEntry[]>;
-  updateMealPlanEntry(id: string, data: Partial<MealPlanEntry>): Promise<MealPlanEntry>;
-  deleteMealPlanEntry(id: string): Promise<void>;
+  getMealPlanEntryWithOwnership(id: string, userId: string): Promise<MealPlanEntry | undefined>;
+  updateMealPlanEntry(id: string, userId: string, data: Partial<MealPlanEntry>): Promise<MealPlanEntry | null>;
+  deleteMealPlanEntry(id: string, userId: string): Promise<boolean>;
 
   // Meal prep operations
   createMealPrepSchedule(schedule: InsertMealPrepSchedule): Promise<MealPrepSchedule>;
   getUserMealPrepSchedules(userId: string): Promise<MealPrepSchedule[]>;
-  updateMealPrepSchedule(id: string, data: Partial<MealPrepSchedule>): Promise<MealPrepSchedule>;
-  deleteMealPrepSchedule(id: string): Promise<void>;
+  updateMealPrepSchedule(id: string, userId: string, data: Partial<MealPrepSchedule>): Promise<MealPrepSchedule | null>;
+  deleteMealPrepSchedule(id: string, userId: string): Promise<boolean>;
 
   // Nutritional recommendation operations
   getUserRecommendations(userId: string): Promise<NutritionalRecommendation[]>;
@@ -231,17 +233,18 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(medications).where(eq(medications.userId, userId));
   }
 
-  async updateMedication(id: string, data: Partial<Medication>): Promise<Medication> {
+  async updateMedication(id: string, userId: string, data: Partial<Medication>): Promise<Medication | null> {
     const [result] = await db
       .update(medications)
       .set(data)
-      .where(eq(medications.id, id))
+      .where(and(eq(medications.id, id), eq(medications.userId, userId)))
       .returning();
-    return result;
+    return result || null;
   }
 
-  async deleteMedication(id: string): Promise<void> {
-    await db.delete(medications).where(eq(medications.id, id));
+  async deleteMedication(id: string, userId: string): Promise<boolean> {
+    const result = await db.delete(medications).where(and(eq(medications.id, id), eq(medications.userId, userId)));
+    return (result.rowCount ?? 0) > 0;
   }
 
   // Medication log operations
@@ -250,11 +253,18 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async getUserMedicationLogs(userId: string, limit = 50): Promise<MedicationLog[]> {
+  async getUserMedicationLogs(userId: string, limit = 50, cutoffDate?: Date): Promise<MedicationLog[]> {
+    const conditions = [eq(medicationLogs.userId, userId)];
+
+    // Apply history retention filter at database level if cutoff provided
+    if (cutoffDate) {
+      conditions.push(gte(medicationLogs.takenAt, cutoffDate));
+    }
+
     return await db
       .select()
       .from(medicationLogs)
-      .where(eq(medicationLogs.userId, userId))
+      .where(and(...conditions))
       .orderBy(desc(medicationLogs.takenAt))
       .limit(limit);
   }
@@ -279,30 +289,27 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async getUserFoodEntries(userId: string, date?: Date): Promise<FoodEntry[]> {
+  async getUserFoodEntries(userId: string, date?: Date, cutoffDate?: Date): Promise<FoodEntry[]> {
+    const conditions = [eq(foodEntries.userId, userId)];
+
     if (date) {
       const startOfDay = new Date(date);
       startOfDay.setHours(0, 0, 0, 0);
       const endOfDay = new Date(date);
       endOfDay.setHours(23, 59, 59, 999);
-      
-      return await db
-        .select()
-        .from(foodEntries)
-        .where(
-          and(
-            eq(foodEntries.userId, userId),
-            gte(foodEntries.consumedAt, startOfDay),
-            lte(foodEntries.consumedAt, endOfDay)
-          )
-        )
-        .orderBy(desc(foodEntries.consumedAt));
+      conditions.push(gte(foodEntries.consumedAt, startOfDay));
+      conditions.push(lte(foodEntries.consumedAt, endOfDay));
     }
-    
+
+    // Apply history retention filter at database level if cutoff provided
+    if (cutoffDate) {
+      conditions.push(gte(foodEntries.consumedAt, cutoffDate));
+    }
+
     return await db
       .select()
       .from(foodEntries)
-      .where(eq(foodEntries.userId, userId))
+      .where(and(...conditions))
       .orderBy(desc(foodEntries.consumedAt));
   }
 
@@ -320,17 +327,18 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(foodEntries.consumedAt));
   }
 
-  async updateFoodEntry(id: string, data: Partial<FoodEntry>): Promise<FoodEntry> {
+  async updateFoodEntry(id: string, userId: string, data: Partial<FoodEntry>): Promise<FoodEntry | null> {
     const [result] = await db
       .update(foodEntries)
       .set(data)
-      .where(eq(foodEntries.id, id))
+      .where(and(eq(foodEntries.id, id), eq(foodEntries.userId, userId)))
       .returning();
-    return result;
+    return result || null;
   }
 
-  async deleteFoodEntry(id: string): Promise<void> {
-    await db.delete(foodEntries).where(eq(foodEntries.id, id));
+  async deleteFoodEntry(id: string, userId: string): Promise<boolean> {
+    const result = await db.delete(foodEntries).where(and(eq(foodEntries.id, id), eq(foodEntries.userId, userId)));
+    return (result.rowCount ?? 0) > 0;
   }
 
   // Weight log operations
@@ -339,11 +347,18 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async getUserWeightLogs(userId: string, limit = 30): Promise<WeightLog[]> {
+  async getUserWeightLogs(userId: string, limit = 30, cutoffDate?: Date): Promise<WeightLog[]> {
+    const conditions = [eq(weightLogs.userId, userId)];
+
+    // Apply history retention filter at database level if cutoff provided
+    if (cutoffDate) {
+      conditions.push(gte(weightLogs.loggedAt, cutoffDate));
+    }
+
     return await db
       .select()
       .from(weightLogs)
-      .where(eq(weightLogs.userId, userId))
+      .where(and(...conditions))
       .orderBy(desc(weightLogs.loggedAt))
       .limit(limit);
   }
@@ -480,68 +495,64 @@ export class DatabaseStorage implements IStorage {
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date(today);
     endOfDay.setHours(23, 59, 59, 999);
-
-    // Today's calories
-    const todaysFood = await db
-      .select()
-      .from(foodEntries)
-      .where(
-        and(
-          eq(foodEntries.userId, userId),
-          gte(foodEntries.consumedAt, startOfDay),
-          lte(foodEntries.consumedAt, endOfDay)
-        )
-      );
-
-    const todaysCalories = todaysFood.reduce((sum, entry) => sum + entry.calories, 0);
-
-    // Weekly weight change
     const weekAgo = new Date(today);
     weekAgo.setDate(weekAgo.getDate() - 7);
-    
-    const recentWeights = await db
-      .select()
-      .from(weightLogs)
-      .where(
-        and(
-          eq(weightLogs.userId, userId),
-          gte(weightLogs.loggedAt, weekAgo)
+
+    // Run all queries in parallel to avoid N+1 problem
+    const [todaysFood, recentWeights, streakResult, medicationResult] = await Promise.all([
+      // Today's calories
+      db.select()
+        .from(foodEntries)
+        .where(
+          and(
+            eq(foodEntries.userId, userId),
+            gte(foodEntries.consumedAt, startOfDay),
+            lte(foodEntries.consumedAt, endOfDay)
+          )
+        ),
+      // Weekly weight change
+      db.select()
+        .from(weightLogs)
+        .where(
+          and(
+            eq(weightLogs.userId, userId),
+            gte(weightLogs.loggedAt, weekAgo)
+          )
         )
-      )
-      .orderBy(desc(weightLogs.loggedAt))
-      .limit(2);
+        .orderBy(desc(weightLogs.loggedAt))
+        .limit(2),
+      // Current streak
+      db.select()
+        .from(dailyStreaks)
+        .where(
+          and(
+            eq(dailyStreaks.userId, userId),
+            eq(dailyStreaks.streakType, 'food_tracking')
+          )
+        )
+        .limit(1),
+      // Upcoming medication
+      db.select()
+        .from(medications)
+        .where(eq(medications.userId, userId))
+        .orderBy(medications.nextDueDate)
+        .limit(1),
+    ]);
+
+    const todaysCalories = todaysFood.reduce((sum, entry) => sum + entry.calories, 0);
 
     let weeklyWeightChange = 0;
     if (recentWeights.length >= 2) {
       weeklyWeightChange = Number(recentWeights[0].weight) - Number(recentWeights[1].weight);
     }
 
-    // Current streak
-    const [streak] = await db
-      .select()
-      .from(dailyStreaks)
-      .where(
-        and(
-          eq(dailyStreaks.userId, userId),
-          eq(dailyStreaks.streakType, 'food_tracking')
-        )
-      );
-
-    const currentStreak = streak?.currentStreak || 0;
-
-    // Upcoming medication
-    const [upcomingMedication] = await db
-      .select()
-      .from(medications)
-      .where(eq(medications.userId, userId))
-      .orderBy(medications.nextDueDate)
-      .limit(1);
+    const currentStreak = streakResult[0]?.currentStreak || 0;
 
     return {
       todaysCalories,
       weeklyWeightChange,
       currentStreak,
-      upcomingMedication: upcomingMedication || null,
+      upcomingMedication: medicationResult[0] || null,
     };
   }
 
@@ -565,11 +576,18 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async getUserHungerLogs(userId: string, limit: number = 30): Promise<HungerLog[]> {
+  async getUserHungerLogs(userId: string, limit: number = 30, cutoffDate?: Date): Promise<HungerLog[]> {
+    const conditions = [eq(hungerLogs.userId, userId)];
+
+    // Apply history retention filter at database level if cutoff provided
+    if (cutoffDate) {
+      conditions.push(gte(hungerLogs.loggedAt, cutoffDate));
+    }
+
     return await db
       .select()
       .from(hungerLogs)
-      .where(eq(hungerLogs.userId, userId))
+      .where(and(...conditions))
       .orderBy(desc(hungerLogs.loggedAt))
       .limit(limit);
   }
@@ -805,17 +823,18 @@ export class DatabaseStorage implements IStorage {
       .limit(limit);
   }
 
-  async updateRecipe(id: string, data: Partial<Recipe>): Promise<Recipe> {
+  async updateRecipe(id: string, userId: string, data: Partial<Recipe>): Promise<Recipe | null> {
     const [result] = await db
       .update(recipes)
       .set({ ...data, updatedAt: new Date() })
-      .where(eq(recipes.id, id))
+      .where(and(eq(recipes.id, id), eq(recipes.userId, userId)))
       .returning();
-    return result;
+    return result || null;
   }
 
-  async deleteRecipe(id: string): Promise<void> {
-    await db.delete(recipes).where(eq(recipes.id, id));
+  async deleteRecipe(id: string, userId: string): Promise<boolean> {
+    const result = await db.delete(recipes).where(and(eq(recipes.id, id), eq(recipes.userId, userId)));
+    return (result.rowCount ?? 0) > 0;
   }
 
   async searchRecipes(query: string, filters?: any): Promise<Recipe[]> {
@@ -921,17 +940,27 @@ export class DatabaseStorage implements IStorage {
     return plan;
   }
 
-  async updateMealPlan(id: string, data: Partial<MealPlan>): Promise<MealPlan> {
+  async getMealPlanById(id: string, userId: string): Promise<MealPlan | undefined> {
+    const [plan] = await db
+      .select()
+      .from(mealPlans)
+      .where(and(eq(mealPlans.id, id), eq(mealPlans.userId, userId)))
+      .limit(1);
+    return plan;
+  }
+
+  async updateMealPlan(id: string, userId: string, data: Partial<MealPlan>): Promise<MealPlan | null> {
     const [result] = await db
       .update(mealPlans)
       .set({ ...data, updatedAt: new Date() })
-      .where(eq(mealPlans.id, id))
+      .where(and(eq(mealPlans.id, id), eq(mealPlans.userId, userId)))
       .returning();
-    return result;
+    return result || null;
   }
 
-  async deleteMealPlan(id: string): Promise<void> {
-    await db.delete(mealPlans).where(eq(mealPlans.id, id));
+  async deleteMealPlan(id: string, userId: string): Promise<boolean> {
+    const result = await db.delete(mealPlans).where(and(eq(mealPlans.id, id), eq(mealPlans.userId, userId)));
+    return (result.rowCount ?? 0) > 0;
   }
 
   // Meal plan entry operations
@@ -960,17 +989,39 @@ export class DatabaseStorage implements IStorage {
       );
   }
 
-  async updateMealPlanEntry(id: string, data: Partial<MealPlanEntry>): Promise<MealPlanEntry> {
+  async getMealPlanEntryWithOwnership(id: string, userId: string): Promise<MealPlanEntry | undefined> {
+    // Get the entry and verify the meal plan belongs to the user
+    const [result] = await db
+      .select({ entry: mealPlanEntries })
+      .from(mealPlanEntries)
+      .innerJoin(mealPlans, eq(mealPlanEntries.mealPlanId, mealPlans.id))
+      .where(and(eq(mealPlanEntries.id, id), eq(mealPlans.userId, userId)))
+      .limit(1);
+    return result?.entry;
+  }
+
+  async updateMealPlanEntry(id: string, userId: string, data: Partial<MealPlanEntry>): Promise<MealPlanEntry | null> {
+    // First verify ownership via meal plan
+    const existingEntry = await this.getMealPlanEntryWithOwnership(id, userId);
+    if (!existingEntry) {
+      return null;
+    }
     const [result] = await db
       .update(mealPlanEntries)
       .set(data)
       .where(eq(mealPlanEntries.id, id))
       .returning();
-    return result;
+    return result || null;
   }
 
-  async deleteMealPlanEntry(id: string): Promise<void> {
+  async deleteMealPlanEntry(id: string, userId: string): Promise<boolean> {
+    // First verify ownership via meal plan
+    const existingEntry = await this.getMealPlanEntryWithOwnership(id, userId);
+    if (!existingEntry) {
+      return false;
+    }
     await db.delete(mealPlanEntries).where(eq(mealPlanEntries.id, id));
+    return true;
   }
 
   // Meal prep operations
@@ -987,17 +1038,18 @@ export class DatabaseStorage implements IStorage {
       .orderBy(mealPrepSchedules.prepDate);
   }
 
-  async updateMealPrepSchedule(id: string, data: Partial<MealPrepSchedule>): Promise<MealPrepSchedule> {
+  async updateMealPrepSchedule(id: string, userId: string, data: Partial<MealPrepSchedule>): Promise<MealPrepSchedule | null> {
     const [result] = await db
       .update(mealPrepSchedules)
       .set(data)
-      .where(eq(mealPrepSchedules.id, id))
+      .where(and(eq(mealPrepSchedules.id, id), eq(mealPrepSchedules.userId, userId)))
       .returning();
-    return result;
+    return result || null;
   }
 
-  async deleteMealPrepSchedule(id: string): Promise<void> {
-    await db.delete(mealPrepSchedules).where(eq(mealPrepSchedules.id, id));
+  async deleteMealPrepSchedule(id: string, userId: string): Promise<boolean> {
+    const result = await db.delete(mealPrepSchedules).where(and(eq(mealPrepSchedules.id, id), eq(mealPrepSchedules.userId, userId)));
+    return (result.rowCount ?? 0) > 0;
   }
 
   // Nutritional recommendation operations

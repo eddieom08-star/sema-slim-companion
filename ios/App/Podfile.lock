@@ -2,10 +2,16 @@ PODS:
   - Capacitor (7.4.3):
     - CapacitorCordova
   - CapacitorCordova (7.4.3)
+  - RevenueCat (5.56.1)
 
 DEPENDENCIES:
   - "Capacitor (from `../../node_modules/@capacitor/ios`)"
   - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
+  - RevenueCat (~> 5.0)
+
+SPEC REPOS:
+  trunk:
+    - RevenueCat
 
 EXTERNAL SOURCES:
   Capacitor:
@@ -16,7 +22,8 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   Capacitor: 28d6c01026a9a3f7156529498ec1f389a2a28dbc
   CapacitorCordova: 435121e81a2df4d0034f0fb11fcefab5104cfdb5
+  RevenueCat: 633c9c51182f868cd4244e183b2ce3f8a66f9b55
 
-PODFILE CHECKSUM: 7dfe587981e23b675da9153f844e155d84b54fe4
+PODFILE CHECKSUM: 7e736b1c85af6332dc598d30a4fd4aa047fa4968
 
 COCOAPODS: 1.16.2

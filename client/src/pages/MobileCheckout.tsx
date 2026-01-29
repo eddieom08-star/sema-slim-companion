@@ -16,9 +16,14 @@
  * 4. Mobile app checks for updated entitlements via API
  */
 
-import { useEffect, useState, useMemo } from 'react';
-import { useAuth } from '@clerk/clerk-react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { useAuthNative } from '@/hooks/useAuthNative';
+import { clerkNative } from '@/lib/clerkNative';
 import { TOKEN_PRODUCTS, SUBSCRIPTION_PRODUCTS } from '@shared/features';
+
+// Check if running on native mobile platform
+const isMobile = Capacitor.isNativePlatform();
 
 interface CheckoutState {
   loading: boolean;
@@ -30,7 +35,19 @@ interface CheckoutState {
 export default function MobileCheckout() {
   // Use native URLSearchParams instead of react-router-dom (project uses wouter)
   const searchParams = useMemo(() => new URLSearchParams(window.location.search), []);
-  const { isSignedIn, getToken } = useAuth();
+
+  // Use native auth hook (works on both mobile and web via fallback)
+  const { isSignedIn } = useAuthNative();
+
+  // Token getter that works on both platforms
+  const getToken = useCallback(async (): Promise<string | null> => {
+    if (isMobile) {
+      const result = await clerkNative.getToken();
+      return result.token || null;
+    }
+    // On web, token is handled by queryClient auth getter
+    return null;
+  }, []);
   const [state, setState] = useState<CheckoutState>({
     loading: true,
     error: null,

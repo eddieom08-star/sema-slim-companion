@@ -10,7 +10,8 @@ import {
   decimal,
   boolean,
   date,
-  pgEnum
+  pgEnum,
+  uniqueIndex
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -59,7 +60,10 @@ export const medications = pgTable("medications", {
   reminderEnabled: boolean("reminder_enabled").default(true),
   adherenceScore: integer("adherence_score").default(100), // 0-100 percentage
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("idx_medications_user_id").on(table.userId),
+  index("idx_medications_next_due").on(table.nextDueDate),
+]);
 
 // Medication logs
 export const medicationLogs = pgTable("medication_logs", {
@@ -75,7 +79,10 @@ export const medicationLogs = pgTable("medication_logs", {
   constipation: integer("constipation"), // 0-5 scale
   heartburn: integer("heartburn"), // 0-5 scale
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("idx_medication_logs_user_id").on(table.userId),
+  index("idx_medication_logs_taken_at").on(table.takenAt),
+]);
 
 // Food entries
 export const foodEntries = pgTable("food_entries", {
@@ -96,7 +103,11 @@ export const foodEntries = pgTable("food_entries", {
   mealType: varchar("meal_type", { length: 20 }).notNull(), // breakfast, lunch, dinner, snack
   consumedAt: timestamp("consumed_at").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("idx_food_entries_user_id").on(table.userId),
+  index("idx_food_entries_consumed_at").on(table.consumedAt),
+  index("idx_food_entries_user_consumed").on(table.userId, table.consumedAt),
+]);
 
 // Weight logs
 export const weightLogs = pgTable("weight_logs", {
@@ -108,7 +119,11 @@ export const weightLogs = pgTable("weight_logs", {
   notes: text("notes"),
   loggedAt: timestamp("logged_at").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("idx_weight_logs_user_id").on(table.userId),
+  index("idx_weight_logs_logged_at").on(table.loggedAt),
+  index("idx_weight_logs_user_logged").on(table.userId, table.loggedAt),
+]);
 
 // Body measurements
 export const bodyMeasurements = pgTable("body_measurements", {
@@ -155,7 +170,9 @@ export const dailyStreaks = pgTable("daily_streaks", {
   lastActivity: date("last_activity"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("idx_daily_streaks_user_type").on(table.userId, table.streakType),
+]);
 
 // User goals
 export const userGoals = pgTable("user_goals", {
@@ -768,7 +785,8 @@ export const featureUsage = pgTable("feature_usage", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
-  index("idx_feature_usage_user_date").on(table.userId, table.usageDate),
+  // CRITICAL: Unique constraint required for onConflictDoUpdate in consumeFeature
+  uniqueIndex("idx_feature_usage_user_date_type").on(table.userId, table.usageDate, table.featureType),
   index("idx_feature_usage_type").on(table.featureType),
 ]);
 

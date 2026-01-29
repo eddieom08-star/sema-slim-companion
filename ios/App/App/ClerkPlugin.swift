@@ -5,12 +5,49 @@ import UIKit
 import SwiftUI
 
 /**
+ * Observable wrapper for Clerk session state
+ * Uses polling since Clerk.shared doesn't conform to ObservableObject
+ */
+class ClerkSessionObserver: ObservableObject {
+    @Published var isSignedIn: Bool = false
+    private var timer: Timer?
+    private var pollCount: Int = 0
+
+    init() {
+        Task { @MainActor in
+            self.isSignedIn = Clerk.shared.session != nil
+        }
+        // Poll every 150ms for fast auth detection, stop after 20 polls (3s) or on sign-in
+        timer = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
+            self.pollCount += 1
+            Task { @MainActor in
+                let signedIn = Clerk.shared.session != nil
+                if self.isSignedIn != signedIn {
+                    self.isSignedIn = signedIn
+                    if signedIn {
+                        self.timer?.invalidate()
+                    }
+                }
+                if self.pollCount >= 20 {
+                    self.timer?.invalidate()
+                }
+            }
+        }
+    }
+
+    deinit {
+        timer?.invalidate()
+    }
+}
+
+/**
  * SwiftUI wrapper for Clerk's AuthView
  * Observes Clerk session state to auto-dismiss on successful authentication
  */
 struct ClerkAuthView: View {
     @Environment(\.dismiss) private var dismiss
-    @ObservedObject private var clerk = Clerk.shared
+    @StateObject private var sessionObserver = ClerkSessionObserver()
     let onAuthComplete: (Bool) -> Void
 
     // Track if we've already notified about auth completion
@@ -24,19 +61,19 @@ struct ClerkAuthView: View {
                         Button("Close") {
                             dismiss()
                             if !hasNotifiedCompletion {
-                                onAuthComplete(clerk.session != nil)
+                                onAuthComplete(sessionObserver.isSignedIn)
                             }
                         }
                     }
                 }
         }
         // Observe session changes - auto-dismiss when user signs in (e.g., after Google OAuth)
-        .onChange(of: clerk.session != nil) { wasSignedIn, isSignedIn in
+        .onChange(of: sessionObserver.isSignedIn) { wasSignedIn, isSignedIn in
             if isSignedIn && !hasNotifiedCompletion {
                 print("[ClerkAuthView] Session detected after OAuth, auto-dismissing")
                 hasNotifiedCompletion = true
                 // Small delay to let the UI update, then auto-dismiss
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                     dismiss()
                     onAuthComplete(true)
                 }

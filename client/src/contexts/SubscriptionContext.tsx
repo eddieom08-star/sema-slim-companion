@@ -1,6 +1,75 @@
-import React, { createContext, useContext, useEffect, useState, useCallback, type PropsWithChildren } from 'react';
-import { useAuth } from '@clerk/clerk-react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef, type PropsWithChildren } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { useAuthNative } from '@/hooks/useAuthNative';
+import { clerkNative } from '@/lib/clerkNative';
 import type { UserEntitlements } from '../../../shared/features';
+
+// Check if running on native mobile platform
+const isMobile = Capacitor.isNativePlatform();
+
+// Cache configuration
+const CACHE_KEY_SUBSCRIPTION = 'semaslim_subscription_cache';
+const CACHE_KEY_ENTITLEMENTS = 'semaslim_entitlements_cache';
+const CACHE_KEY_TOKENS = 'semaslim_tokens_cache';
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+  userId: string;
+}
+
+/**
+ * Get cached data if valid (not expired and same user)
+ */
+function getFromCache<T>(key: string, userId: string): T | null {
+  try {
+    const cached = localStorage.getItem(key);
+    if (!cached) return null;
+
+    const entry: CacheEntry<T> = JSON.parse(cached);
+    const isExpired = Date.now() - entry.timestamp > CACHE_TTL_MS;
+    const isWrongUser = entry.userId !== userId;
+
+    if (isExpired || isWrongUser) {
+      localStorage.removeItem(key);
+      return null;
+    }
+
+    return entry.data;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Save data to cache
+ */
+function saveToCache<T>(key: string, data: T, userId: string): void {
+  try {
+    const entry: CacheEntry<T> = {
+      data,
+      timestamp: Date.now(),
+      userId,
+    };
+    localStorage.setItem(key, JSON.stringify(entry));
+  } catch {
+    // Cache storage failed - non-critical
+  }
+}
+
+/**
+ * Clear all subscription-related cache
+ */
+function clearCache(): void {
+  try {
+    localStorage.removeItem(CACHE_KEY_SUBSCRIPTION);
+    localStorage.removeItem(CACHE_KEY_ENTITLEMENTS);
+    localStorage.removeItem(CACHE_KEY_TOKENS);
+  } catch {
+    // Non-critical
+  }
+}
 
 interface Subscription {
   tier: 'free' | 'pro';
@@ -32,6 +101,7 @@ interface SubscriptionContextValue {
   entitlements: UserEntitlements | null;
   tokenBalance: TokenBalance | null;
   isLoading: boolean;
+  isOffline: boolean;
   error: string | null;
 
   // Helpers
@@ -41,8 +111,8 @@ interface SubscriptionContextValue {
   getRemainingUsage: (feature: string) => number;
 
   // Actions
-  refreshSubscription: () => Promise<void>;
-  refreshTokenBalance: () => Promise<void>;
+  refreshSubscription: (forceRefresh?: boolean) => Promise<void>;
+  refreshTokenBalance: (forceRefresh?: boolean) => Promise<void>;
   openCheckout: (plan: 'monthly' | 'annual') => Promise<void>;
   openBillingPortal: () => Promise<void>;
   purchaseTokens: (productId: string) => Promise<void>;
@@ -62,12 +132,55 @@ interface SubscriptionContextValue {
 const SubscriptionContext = createContext<SubscriptionContextValue | null>(null);
 
 export function SubscriptionProvider({ children }: PropsWithChildren) {
-  const { getToken, isSignedIn } = useAuth();
+  // Use native auth hook (works on both mobile and web)
+  const { isSignedIn, userId } = useAuthNative();
+
+  // Token getter that works on both platforms
+  const getToken = useCallback(async (): Promise<string | null> => {
+    if (isMobile) {
+      const result = await clerkNative.getToken();
+      return result.token || null;
+    }
+    // On web, token is handled by queryClient auth getter
+    return null;
+  }, []);
+
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [entitlements, setEntitlements] = useState<UserEntitlements | null>(null);
   const [tokenBalance, setTokenBalance] = useState<TokenBalance | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+  // Track last successful fetch for cache invalidation
+  const lastFetchRef = useRef<number>(0);
+
+  // Online/offline detection
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Load from cache on mount (offline-first)
+  useEffect(() => {
+    if (userId) {
+      const cachedSub = getFromCache<Subscription>(CACHE_KEY_SUBSCRIPTION, userId);
+      const cachedEnt = getFromCache<UserEntitlements>(CACHE_KEY_ENTITLEMENTS, userId);
+      const cachedTokens = getFromCache<TokenBalance>(CACHE_KEY_TOKENS, userId);
+
+      if (cachedSub) setSubscription(cachedSub);
+      if (cachedEnt) setEntitlements(cachedEnt);
+      if (cachedTokens) setTokenBalance(cachedTokens);
+    }
+  }, [userId]);
 
   const fetchWithAuth = useCallback(async (url: string, options: RequestInit = {}) => {
     const token = await getToken();
@@ -82,8 +195,35 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
     return response;
   }, [getToken]);
 
-  const refreshSubscription = useCallback(async () => {
-    if (!isSignedIn) return;
+  const refreshSubscription = useCallback(async (forceRefresh: boolean = false) => {
+    if (!isSignedIn || !userId) return;
+
+    // Check cache first (unless forced refresh)
+    if (!forceRefresh) {
+      const cached = getFromCache<{ subscription: Subscription; entitlements: UserEntitlements }>(
+        CACHE_KEY_SUBSCRIPTION,
+        userId
+      );
+      if (cached) {
+        setSubscription(cached.subscription);
+        setEntitlements(cached.entitlements);
+        // Still fetch in background to update cache
+      }
+    }
+
+    // If offline, use cached data
+    if (isOffline) {
+      const cached = getFromCache<{ subscription: Subscription; entitlements: UserEntitlements }>(
+        CACHE_KEY_SUBSCRIPTION,
+        userId
+      );
+      if (cached) {
+        setSubscription(cached.subscription);
+        setEntitlements(cached.entitlements);
+        setError(null);
+      }
+      return;
+    }
 
     try {
       const response = await fetchWithAuth('/api/subscription');
@@ -92,27 +232,63 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
         setSubscription(data.subscription);
         setEntitlements(data.entitlements);
         setError(null);
+        lastFetchRef.current = Date.now();
+
+        // Cache the response
+        saveToCache(CACHE_KEY_SUBSCRIPTION, {
+          subscription: data.subscription,
+          entitlements: data.entitlements,
+        }, userId);
+        saveToCache(CACHE_KEY_ENTITLEMENTS, data.entitlements, userId);
       } else {
         throw new Error('Failed to fetch subscription');
       }
     } catch (err) {
+      // On network error, fall back to cache
+      const cached = getFromCache<{ subscription: Subscription; entitlements: UserEntitlements }>(
+        CACHE_KEY_SUBSCRIPTION,
+        userId
+      );
+      if (cached) {
+        setSubscription(cached.subscription);
+        setEntitlements(cached.entitlements);
+      }
       setError(err instanceof Error ? err.message : 'Unknown error');
     }
-  }, [isSignedIn, fetchWithAuth]);
+  }, [isSignedIn, userId, isOffline, fetchWithAuth]);
 
-  const refreshTokenBalance = useCallback(async () => {
-    if (!isSignedIn) return;
+  const refreshTokenBalance = useCallback(async (forceRefresh: boolean = false) => {
+    if (!isSignedIn || !userId) return;
+
+    // Check cache first
+    if (!forceRefresh) {
+      const cached = getFromCache<TokenBalance>(CACHE_KEY_TOKENS, userId);
+      if (cached) {
+        setTokenBalance(cached);
+      }
+    }
+
+    // If offline, use cached data
+    if (isOffline) {
+      const cached = getFromCache<TokenBalance>(CACHE_KEY_TOKENS, userId);
+      if (cached) {
+        setTokenBalance(cached);
+      }
+      return;
+    }
 
     try {
       const response = await fetchWithAuth('/api/tokens/balance');
       if (response.ok) {
         const data = await response.json();
         setTokenBalance(data);
+        saveToCache(CACHE_KEY_TOKENS, data, userId);
       }
     } catch (err) {
+      // On error, keep cached data
       console.error('Failed to fetch token balance:', err);
     }
-  }, [isSignedIn, fetchWithAuth]);
+  }, [isSignedIn, userId, isOffline, fetchWithAuth]);
 
   const openCheckout = useCallback(async (plan: 'monthly' | 'annual') => {
     try {
@@ -182,6 +358,16 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
   }, [fetchWithAuth]);
 
   const checkFeature = useCallback(async (feature: string, quantity: number = 1) => {
+    // Offline-first: use local entitlements to check
+    if (isOffline && entitlements) {
+      const allowed = canUseFeatureLocal(entitlements, feature, quantity);
+      return {
+        allowed,
+        reason: allowed ? undefined : 'offline_check',
+        remaining: getRemainingLocal(entitlements, feature),
+      };
+    }
+
     try {
       const response = await fetchWithAuth('/api/features/check', {
         method: 'POST',
@@ -190,15 +376,25 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
 
       return await response.json();
     } catch (err) {
+      // Fallback to local check on error
+      if (entitlements) {
+        const allowed = canUseFeatureLocal(entitlements, feature, quantity);
+        return { allowed, reason: 'network_error' };
+      }
       return { allowed: false, reason: 'error' };
     }
-  }, [fetchWithAuth]);
+  }, [fetchWithAuth, isOffline, entitlements]);
 
   const consumeFeature = useCallback(async (
     feature: string,
     quantity: number = 1,
     useTokens: boolean = false
   ) => {
+    // Cannot consume offline - would create sync issues
+    if (isOffline) {
+      return { success: false, tokensUsed: false, reason: 'offline' };
+    }
+
     try {
       const response = await fetchWithAuth('/api/features/consume', {
         method: 'POST',
@@ -208,15 +404,47 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
       const result = await response.json();
 
       if (response.ok) {
-        // Refresh token balance after consumption
-        await refreshTokenBalance();
+        // Invalidate cache and refresh
+        if (userId) {
+          clearCache();
+        }
+        await refreshTokenBalance(true);
       }
 
       return result;
     } catch (err) {
       return { success: false, tokensUsed: false };
     }
-  }, [fetchWithAuth, refreshTokenBalance]);
+  }, [fetchWithAuth, refreshTokenBalance, isOffline, userId]);
+
+  // Helper for local feature checks (offline-first)
+  const canUseFeatureLocal = (ent: UserEntitlements, feature: string, quantity: number = 1): boolean => {
+    switch (feature) {
+      case 'barcode_scan':
+        return ent.barcodeScansPerDay === -1 || ent.barcodeScansToday + quantity <= ent.barcodeScansPerDay;
+      case 'ai_meal_plan':
+        return ent.aiMealPlansUsed + quantity <= ent.aiMealPlansPerMonth || ent.aiTokens >= quantity;
+      case 'ai_recipe':
+        return ent.aiRecipeSuggestionsUsed + quantity <= ent.aiRecipeSuggestionsPerMonth || ent.aiTokens >= quantity;
+      case 'pdf_export':
+        return (ent.tier === 'pro' && ent.pdfExportsUsed + quantity <= ent.pdfExportsIncluded) || ent.exportTokens >= quantity;
+      default:
+        return true;
+    }
+  };
+
+  const getRemainingLocal = (ent: UserEntitlements, feature: string): number => {
+    switch (feature) {
+      case 'barcode_scan':
+        return ent.barcodeScansPerDay === -1 ? -1 : Math.max(0, ent.barcodeScansPerDay - ent.barcodeScansToday);
+      case 'ai_meal_plan':
+        return Math.max(0, ent.aiMealPlansPerMonth - ent.aiMealPlansUsed) + ent.aiTokens;
+      case 'ai_recipe':
+        return Math.max(0, ent.aiRecipeSuggestionsPerMonth - ent.aiRecipeSuggestionsUsed) + ent.aiTokens;
+      default:
+        return -1;
+    }
+  };
 
   // Computed helpers
   const isPro = subscription?.tier === 'pro' &&
@@ -286,16 +514,51 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
     }
   }, [isSignedIn, refreshSubscription, refreshTokenBalance]);
 
-  // Handle URL params for checkout/purchase success
+  // Exponential backoff retry for post-checkout refresh
+  const refreshWithRetry = useCallback(async (maxRetries: number = 5, initialDelayMs: number = 1000) => {
+    let delay = initialDelayMs;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        await refreshSubscription(true);
+        await refreshTokenBalance(true);
+
+        // Check if subscription is now Pro (webhook processed)
+        if (subscription?.tier === 'pro') {
+          return true;
+        }
+      } catch (err) {
+        console.log(`Refresh attempt ${attempt + 1} failed, retrying...`);
+      }
+
+      // Wait with exponential backoff (1s, 2s, 4s, 8s, 16s)
+      if (attempt < maxRetries - 1) {
+        await new Promise(resolve => setTimeout(resolve, delay));
+        delay *= 2;
+      }
+    }
+
+    return false;
+  }, [refreshSubscription, refreshTokenBalance, subscription]);
+
+  // Handle URL params for checkout/purchase success with retry logic
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const subscriptionStatus = urlParams.get('subscription');
     const purchaseStatus = urlParams.get('purchase');
 
     if (subscriptionStatus === 'success' || purchaseStatus === 'success') {
-      // Refresh data after successful checkout
-      refreshSubscription();
-      refreshTokenBalance();
+      // Clear cache to ensure fresh data
+      if (userId) {
+        clearCache();
+      }
+
+      // Retry refresh with exponential backoff (webhook may not have arrived yet)
+      refreshWithRetry(5, 1000).then((success) => {
+        if (!success) {
+          console.warn('Subscription refresh failed after retries - webhook may be delayed');
+        }
+      });
 
       // Clean up URL
       const url = new URL(window.location.href);
@@ -304,13 +567,14 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
       url.searchParams.delete('session_id');
       window.history.replaceState({}, '', url.toString());
     }
-  }, [refreshSubscription, refreshTokenBalance]);
+  }, [userId, refreshWithRetry]);
 
   const value: SubscriptionContextValue = {
     subscription,
     entitlements,
     tokenBalance,
     isLoading,
+    isOffline,
     error,
     isPro,
     isTrialing,

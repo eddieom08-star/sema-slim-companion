@@ -609,12 +609,24 @@ Servings: [number]`;
     if (file) {
       setSelectedImage(file);
       try {
-        // Resize image to stay under Claude's 2000px limit
-        const processed = await resizeImageForClaude(file, {
-          maxDimension: 1920,  // Leave margin below 2000px limit
-          quality: 0.9,
+        // For receipt/recipe scanning, we use more aggressive compression
+        // 1024px max is sufficient for text extraction and reduces payload size
+        let processed = await resizeImageForClaude(file, {
+          maxDimension: 1024,  // Smaller size for faster uploads and API calls
+          quality: 0.7,        // Lower quality is fine for text/receipt scanning
           format: 'jpeg'
         });
+
+        // If the base64 is still very large (>2MB), compress more aggressively
+        const base64SizeBytes = processed.base64.length * 0.75; // Approximate decoded size
+        if (base64SizeBytes > 2 * 1024 * 1024) {
+          processed = await resizeImageForClaude(file, {
+            maxDimension: 800,
+            quality: 0.5,
+            format: 'jpeg'
+          });
+        }
+
         setProcessedImage(processed);
         setImagePreview(processed.base64WithPrefix);
 

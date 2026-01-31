@@ -12,7 +12,48 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { resizeImageForClaude, type ProcessedImage } from "@/lib/image-utils";
 import { ProUpsellModal } from "@/components/monetization/ProUpsellModal";
+import { LimitReachedBanner } from "@/components/LimitReachedBanner";
 import { useSubscription } from "@/contexts/SubscriptionContext";
+
+// Helper to parse error responses and extract user-friendly messages
+function parseErrorResponse(error: any): { isLimitError: boolean; message: string; type?: string } {
+  const errorMessage = error?.message || '';
+
+  // Try to extract JSON from the error message (format: "403: {json}")
+  const jsonMatch = errorMessage.match(/^\d+:\s*(\{.+\})$/s);
+  if (jsonMatch) {
+    try {
+      const parsed = JSON.parse(jsonMatch[1]);
+      if (parsed.error === 'limit_reached' || parsed.reason?.includes('limit')) {
+        return {
+          isLimitError: true,
+          message: parsed.message || 'You have reached your usage limit.',
+          type: parsed.reason || 'general'
+        };
+      }
+      return {
+        isLimitError: false,
+        message: parsed.message || 'Something went wrong. Please try again.'
+      };
+    } catch (e) {
+      // JSON parsing failed, fall through
+    }
+  }
+
+  // Check for limit-related keywords
+  if (errorMessage.includes('limit') || errorMessage.includes('403')) {
+    return {
+      isLimitError: true,
+      message: 'You have reached your usage limit.',
+      type: 'ai_recipe'
+    };
+  }
+
+  return {
+    isLimitError: false,
+    message: errorMessage || 'Something went wrong. Please try again.'
+  };
+}
 
 interface Message {
   role: "user" | "assistant";
@@ -378,6 +419,7 @@ export default function Recipes() {
   const [recipeToDelete, setRecipeToDelete] = useState<string | null>(null);
   const [currentAIRecipe, setCurrentAIRecipe] = useState<any>(null);
   const [showUpsellModal, setShowUpsellModal] = useState(false);
+  const [showLimitBanner, setShowLimitBanner] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { refreshSubscription } = useSubscription();
@@ -537,15 +579,18 @@ Servings: [number]`;
     } catch (error: any) {
       console.error('Recipe chat error:', error);
 
-      // Check if this is a limit reached error (403)
-      if (error.message?.includes('limit') || error.message?.includes('403')) {
-        setShowUpsellModal(true);
+      // Parse the error to get a user-friendly message
+      const parsedError = parseErrorResponse(error);
+
+      if (parsedError.isLimitError) {
+        // Show the inline limit banner instead of raw error
+        setShowLimitBanner(true);
         // Refresh subscription to get updated usage counts
         refreshSubscription();
       } else {
         toast({
-          title: "Error",
-          description: error.message || "Failed to get response. Please try again.",
+          title: "Unable to generate recipe",
+          description: parsedError.message,
           variant: "destructive"
         });
       }
@@ -703,8 +748,8 @@ Servings: [number]`;
       <Navigation />
       <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 md:py-8">
         {/* Header */}
-        <div className="mb-6 md:mb-8">
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Recipes</h1>
+        <div className="mb-4 md:mb-6">
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-1">Recipes</h1>
           <p className="text-sm md:text-base text-muted-foreground">Create recipes with AI or scan existing ones</p>
         </div>
 
@@ -726,10 +771,10 @@ Servings: [number]`;
           </TabsList>
 
           {/* AI Recipe Creator Tab */}
-          <TabsContent value="ai-creator" className="mt-6 overflow-hidden">
-            <Card className="flex flex-col overflow-hidden h-[calc(100vh-280px)] min-h-[400px] max-h-[600px] w-full max-w-full">
-              <CardHeader className="flex-shrink-0 p-4 md:p-6">
-                <CardTitle className="flex items-center gap-2">
+          <TabsContent value="ai-creator" className="mt-4 overflow-hidden">
+            <Card className="flex flex-col overflow-hidden h-[calc(100vh-260px)] min-h-[400px] max-h-[600px] w-full max-w-full">
+              <CardHeader className="flex-shrink-0 px-4 pt-4 pb-2 md:px-5 md:pt-5 md:pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
                   <Bot className="h-5 w-5" />
                   AI Recipe Assistant
                 </CardTitle>
@@ -737,7 +782,7 @@ Servings: [number]`;
               <CardContent className="flex-1 flex flex-col p-0 overflow-hidden min-h-0">
                 {/* Messages Area */}
                 <div className="flex-1 overflow-y-auto overflow-x-hidden px-4">
-                  <div className="space-y-4 py-4" style={{ maxWidth: 'calc(100vw - 56px)' }}>
+                  <div className="space-y-3 py-3" style={{ maxWidth: 'calc(100vw - 56px)' }}>
                     {messages.map((message, index) => (
                       <div key={index} className="space-y-2">
                         {/* Hide text bubble for assistant messages that have recipe cards */}
@@ -784,10 +829,21 @@ Servings: [number]`;
                 </div>
 
                 {/* Input Area */}
-                <div className="flex-shrink-0 border-t p-4 space-y-3">
+                <div className="flex-shrink-0 border-t p-3 space-y-2">
+                  {/* Limit Reached Banner */}
+                  {showLimitBanner && (
+                    <LimitReachedBanner
+                      type="ai_recipe"
+                      onDismiss={() => setShowLimitBanner(false)}
+                      onUpgrade={() => {
+                        setShowLimitBanner(false);
+                        setShowUpsellModal(true);
+                      }}
+                    />
+                  )}
                   <Button
                     onClick={handleInstantRecipe}
-                    disabled={isLoading}
+                    disabled={isLoading || showLimitBanner}
                     className="w-full bg-primary text-white hover:bg-primary/90"
                   >
                     <Zap className="h-4 w-4 mr-2" />
@@ -804,7 +860,7 @@ Servings: [number]`;
                           handleSendMessage();
                         }
                       }}
-                      disabled={isLoading}
+                      disabled={isLoading || showLimitBanner}
                       className="flex-1"
                       inputMode="text"
                       autoComplete="off"
@@ -813,7 +869,7 @@ Servings: [number]`;
                     />
                     <Button
                       onClick={() => handleSendMessage()}
-                      disabled={!inputMessage.trim() || isLoading}
+                      disabled={!inputMessage.trim() || isLoading || showLimitBanner}
                       size="icon"
                       variant="default"
                     >
@@ -826,15 +882,15 @@ Servings: [number]`;
           </TabsContent>
 
           {/* My Recipes Tab */}
-          <TabsContent value="my-recipes" className="mt-6">
+          <TabsContent value="my-recipes" className="mt-4">
             <Card>
-              <CardHeader className="p-4 md:p-6">
-                <CardTitle className="flex items-center gap-2">
+              <CardHeader className="px-4 pt-4 pb-2 md:px-5 md:pt-5 md:pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
                   <ChefHat className="h-5 w-5" />
                   My Saved Recipes
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-4 md:p-6">
+              <CardContent className="p-4 pt-2 md:p-5 md:pt-2">
                 {recipesLoading ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
                     {[...Array(3)].map((_, i) => (
@@ -920,10 +976,10 @@ Servings: [number]`;
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-12">
-                    <ChefHat className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-                    <h3 className="text-lg font-semibold text-foreground mb-2">No recipes yet</h3>
-                    <p className="text-muted-foreground mb-4">
+                  <div className="text-center py-8">
+                    <ChefHat className="h-14 w-14 mx-auto mb-3 text-muted-foreground opacity-50" />
+                    <h3 className="text-lg font-semibold text-foreground mb-1.5">No recipes yet</h3>
+                    <p className="text-muted-foreground mb-3 text-sm">
                       Create recipes with the AI Creator or scan receipts to build your collection
                     </p>
                     <Button onClick={() => setActiveTab("ai-creator")}>
@@ -937,17 +993,17 @@ Servings: [number]`;
           </TabsContent>
 
           {/* Scan Receipt Tab */}
-          <TabsContent value="scan-receipt" className="mt-6">
+          <TabsContent value="scan-receipt" className="mt-4">
             <Card>
-              <CardHeader className="p-4 md:p-6">
-                <CardTitle className="flex items-center gap-2">
+              <CardHeader className="px-4 pt-4 pb-2 md:px-5 md:pt-5 md:pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
                   <ScanLine className="h-5 w-5" />
                   Scan Recipe from Receipt or Image
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-4 md:p-6 space-y-6">
+              <CardContent className="p-4 pt-2 md:p-5 md:pt-2 space-y-4">
                 <div className="text-center">
-                  <p className="text-muted-foreground mb-4">
+                  <p className="text-muted-foreground mb-3">
                     Upload a photo of a recipe, receipt, or cookbook page to extract the recipe information
                   </p>
 

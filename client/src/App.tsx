@@ -40,10 +40,41 @@ const PageLoader = () => (
 );
 
 function Router() {
-  const { isSignedIn, isLoading, user } = useAuth();
+  const { isSignedIn, isLoading, user, error, signOut } = useAuth();
 
   if (isLoading) {
     return <PageLoader />;
+  }
+
+  // Signed in but profile fetch failed — show recovery instead of broken Dashboard
+  if (isSignedIn && !user && error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="text-center space-y-4 max-w-md">
+          <div className="w-12 h-12 bg-destructive/10 rounded-lg flex items-center justify-center mx-auto">
+            <i className="fas fa-exclamation-triangle text-destructive text-xl"></i>
+          </div>
+          <h2 className="text-xl font-bold text-foreground">Connection Issue</h2>
+          <p className="text-sm text-muted-foreground">
+            Unable to load your profile. Check your internet connection and try again.
+          </p>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors"
+            >
+              Retry
+            </button>
+            <button
+              onClick={() => signOut()}
+              className="px-6 py-3 bg-secondary text-secondary-foreground rounded-lg font-medium hover:bg-secondary/90 transition-colors"
+            >
+              Sign Out
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!isSignedIn) {

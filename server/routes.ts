@@ -1940,8 +1940,8 @@ If this is a recipe image, cookbook page, or food receipt, extract the following
   "recipe": {
     "name": "Recipe name",
     "description": "Brief description",
-    "recipeType": "breakfast|lunch|dinner|snack",
-    "difficulty": "beginner|medium|advanced",
+    "recipeType": "breakfast|lunch|dinner|snack|dessert",
+    "difficulty": "easy|medium|hard",
     "prepTime": 15,
     "cookTime": 30,
     "servings": 4,
@@ -2047,7 +2047,58 @@ Always respond with valid JSON only, no additional text.`;
         const parsed = JSON.parse(textContent.text);
 
         if (parsed.found && parsed.recipe) {
-          res.json({ recipe: parsed.recipe });
+          const recipe = parsed.recipe;
+
+          // Normalize difficulty to valid DB enum values
+          const difficultyMap: Record<string, string> = {
+            'beginner': 'easy', 'simple': 'easy', 'easy': 'easy',
+            'intermediate': 'medium', 'moderate': 'medium', 'medium': 'medium',
+            'advanced': 'hard', 'difficult': 'hard', 'hard': 'hard', 'expert': 'hard',
+          };
+          const validDifficulties = ['easy', 'medium', 'hard'];
+          recipe.difficulty = difficultyMap[recipe.difficulty?.toLowerCase()]
+            || (validDifficulties.includes(recipe.difficulty?.toLowerCase()) ? recipe.difficulty.toLowerCase() : 'medium');
+
+          // Normalize recipeType to valid DB enum values
+          const validRecipeTypes = ['breakfast', 'lunch', 'dinner', 'snack', 'dessert'];
+          const recipeTypeMap: Record<string, string> = {
+            'brunch': 'breakfast', 'supper': 'dinner', 'appetizer': 'snack',
+            'side': 'snack', 'treat': 'dessert', 'sweet': 'dessert',
+          };
+          recipe.recipeType = recipeTypeMap[recipe.recipeType?.toLowerCase()]
+            || (validRecipeTypes.includes(recipe.recipeType?.toLowerCase()) ? recipe.recipeType.toLowerCase() : 'dinner');
+
+          // Coerce numeric fields
+          recipe.calories = parseInt(recipe.calories) || 0;
+          recipe.prepTime = parseInt(recipe.prepTime) || 0;
+          recipe.cookTime = parseInt(recipe.cookTime) || 0;
+          recipe.servings = parseInt(recipe.servings) || 1;
+
+          // Ensure string fields for decimal columns
+          recipe.protein = String(recipe.protein || '0');
+          recipe.carbs = String(recipe.carbs || '0');
+          recipe.fat = String(recipe.fat || '0');
+
+          // Ensure instructions is a string
+          if (Array.isArray(recipe.instructions)) {
+            recipe.instructions = recipe.instructions.join('\n');
+          }
+
+          // Normalize ingredients to [{name, quantity, unit}]
+          if (Array.isArray(recipe.ingredients)) {
+            recipe.ingredients = recipe.ingredients.map((ing: any) => {
+              if (typeof ing === 'string') return { name: ing, quantity: '', unit: '' };
+              return { name: ing.name || String(ing), quantity: String(ing.quantity || ''), unit: String(ing.unit || '') };
+            });
+          }
+
+          // Ensure boolean fields
+          recipe.isGlp1Friendly = !!recipe.isGlp1Friendly;
+          recipe.isHighProtein = !!recipe.isHighProtein;
+          recipe.isLowCarb = !!recipe.isLowCarb;
+          recipe.isPublic = false;
+
+          res.json({ recipe });
         } else {
           res.json({ message: parsed.message || "No recipe found in the image" });
         }

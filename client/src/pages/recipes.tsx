@@ -648,40 +648,59 @@ Servings: [number]`;
     }
   };
 
+  // Shared formatting: normalizes any recipe object for the save endpoint
+  const formatRecipeForSave = (recipe: any) => {
+    // Normalize ingredients
+    let ingredients = recipe.ingredients;
+    if (Array.isArray(ingredients)) {
+      ingredients = ingredients.map((ing: any) => {
+        if (typeof ing === 'string') return { name: ing, quantity: '', unit: '' };
+        return { name: ing.name || String(ing), quantity: String(ing.quantity || ''), unit: String(ing.unit || '') };
+      });
+    }
+
+    // Normalize difficulty to valid enum
+    const difficultyMap: Record<string, string> = {
+      'beginner': 'easy', 'simple': 'easy', 'easy': 'easy',
+      'intermediate': 'medium', 'moderate': 'medium', 'medium': 'medium',
+      'advanced': 'hard', 'difficult': 'hard', 'hard': 'hard',
+    };
+    const difficulty = difficultyMap[recipe.difficulty?.toLowerCase()] || 'medium';
+
+    // Normalize recipeType to valid enum
+    const validRecipeTypes = ['breakfast', 'lunch', 'dinner', 'snack', 'dessert'];
+    const recipeType = validRecipeTypes.includes(recipe.recipeType?.toLowerCase())
+      ? recipe.recipeType.toLowerCase() : 'dinner';
+
+    // Instructions must be a string per schema
+    const instructions = Array.isArray(recipe.instructions)
+      ? recipe.instructions.join('\n')
+      : recipe.instructions || '';
+
+    return {
+      name: recipe.name,
+      description: recipe.description || '',
+      recipeType,
+      difficulty,
+      prepTime: parseInt(recipe.prepTime) || 0,
+      cookTime: parseInt(recipe.cookTime) || 0,
+      servings: parseInt(recipe.servings) || 1,
+      ingredients,
+      instructions,
+      calories: parseInt(recipe.calories) || 0,
+      protein: String(recipe.protein || '0'),
+      carbs: String(recipe.carbs || '0'),
+      fat: String(recipe.fat || '0'),
+      isGlp1Friendly: !!recipe.isGlp1Friendly,
+      isHighProtein: !!recipe.isHighProtein,
+      isLowCarb: !!recipe.isLowCarb,
+      isPublic: false,
+    };
+  };
+
   const handleSaveRecipe = async (recipe: ParsedRecipe) => {
     try {
-      // Convert arrays to proper format for database
-      const ingredientsFormatted = recipe.ingredients.map(ing => ({
-        name: ing,
-        quantity: '',
-        unit: ''
-      }));
-
-      // Instructions must be a string (not array) per schema
-      const instructionsText = Array.isArray(recipe.instructions)
-        ? recipe.instructions.join('\n')
-        : recipe.instructions;
-
-      const recipeData = {
-        name: recipe.name,
-        description: recipe.description,
-        recipeType: 'dinner', // Default to dinner
-        difficulty: recipe.difficulty,
-        prepTime: recipe.prepTime,
-        cookTime: recipe.cookTime,
-        servings: recipe.servings,
-        ingredients: ingredientsFormatted,
-        instructions: instructionsText,
-        calories: recipe.calories,
-        protein: recipe.protein.toString(),
-        carbs: recipe.carbs?.toString() || '0',
-        fat: recipe.fat?.toString() || '0',
-        isGlp1Friendly: recipe.isGlp1Friendly || false,
-        isHighProtein: recipe.isHighProtein || false,
-        isLowCarb: recipe.isLowCarb || false,
-        isPublic: false
-      };
-
+      const recipeData = formatRecipeForSave(recipe);
       await saveRecipe.mutateAsync(recipeData);
 
       toast({
@@ -725,8 +744,9 @@ Servings: [number]`;
       const data = await response.json();
 
       if (data.recipe) {
-        // Save the extracted recipe
-        await saveRecipe.mutateAsync(data.recipe);
+        // Format and save the extracted recipe
+        const formattedRecipe = formatRecipeForSave(data.recipe);
+        await saveRecipe.mutateAsync(formattedRecipe);
 
         toast({
           title: "Recipe extracted!",

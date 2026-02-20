@@ -14,7 +14,12 @@ export default function SignInPage() {
 
     (async () => {
       try {
-        const result = await clerkNative.presentSignIn();
+        const result = await Promise.race([
+          clerkNative.presentSignIn(),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('Sign-in timed out')), 30000)
+          ),
+        ]);
         if (result.success || result.isSignedIn) {
           setSignedIn(true);
           setLocation('/dashboard');

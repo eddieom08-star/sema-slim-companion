@@ -2,7 +2,7 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 import { Capacitor } from "@capacitor/core";
 
 // API base URL - use production URL when running on native platform (iOS/Android)
-const getApiBaseUrl = () => {
+export const getApiBaseUrl = () => {
   if (Capacitor.isNativePlatform()) {
     return "https://sema-slim-companion.vercel.app";
   }
@@ -14,7 +14,6 @@ let getSessionToken: (() => Promise<string | null>) | null = null;
 let tokenGetterReady = false;
 
 export function setAuthTokenGetter(getter: () => Promise<string | null>) {
-  console.log('[QueryClient] setAuthTokenGetter called');
   getSessionToken = getter;
   tokenGetterReady = true;
 }
@@ -27,13 +26,7 @@ export function isTokenGetterReady(): boolean {
   return tokenGetterReady;
 }
 
-// For mobile: Initialize token getter synchronously at module load time
-// This MUST happen before any React components render
-if (Capacitor.isNativePlatform()) {
-  console.log('[QueryClient] Mobile detected - will configure token getter during initialization');
-  // Token getter will be configured by initializeMobile() before React renders
-  // See main.tsx where we await initializeMobile() before rendering
-}
+// Token getter will be configured by initializeMobile() before React renders
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -51,27 +44,17 @@ async function throwIfResNotOk(res: Response) {
 async function getAuthHeaders(): Promise<Record<string, string>> {
   const headers: Record<string, string> = {};
 
-  console.log('[QueryClient] Getting auth headers, getter exists:', !!getSessionToken);
-
   if (getSessionToken) {
     try {
       const token = await getSessionToken();
-      console.log('[QueryClient] Token retrieved:', token ? `${token.substring(0, 20)}...` : 'null');
-      console.log('[QueryClient] Token length:', token?.length);
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
-        console.log('[QueryClient] Authorization header set:', headers['Authorization'].substring(0, 27) + '...');
-      } else {
-        console.warn('[QueryClient] Token is null, skipping Authorization header');
       }
     } catch (error) {
       console.error('[QueryClient] Failed to get session token:', error);
     }
-  } else {
-    console.warn('[QueryClient] No auth token getter configured!');
   }
 
-  console.log('[QueryClient] Final headers:', Object.keys(headers));
   return headers;
 }
 

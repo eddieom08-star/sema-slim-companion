@@ -92,11 +92,8 @@ export const clerkNative = {
       throw new Error('VITE_CLERK_PUBLISHABLE_KEY not found in environment');
     }
 
-    console.log('[ClerkNative] Initializing with key:', publishableKey.substring(0, 20) + '...');
-
     try {
-      const result = await ClerkNative.initialize({ publishableKey });
-      console.log('[ClerkNative] Initialization result:', result);
+      await ClerkNative.initialize({ publishableKey });
     } catch (error) {
       console.error('[ClerkNative] Initialization failed:', error);
       throw error;
@@ -112,11 +109,8 @@ export const clerkNative = {
       return { success: false };
     }
 
-    console.log('[ClerkNative] Presenting sign-in UI');
-
     try {
       const result = await ClerkNative.presentSignIn();
-      console.log('[ClerkNative] Sign-in result:', result);
       return result;
     } catch (error) {
       console.error('[ClerkNative] Sign-in failed:', error);
@@ -133,11 +127,8 @@ export const clerkNative = {
       return { success: false };
     }
 
-    console.log('[ClerkNative] Presenting sign-up UI');
-
     try {
       const result = await ClerkNative.presentSignUp();
-      console.log('[ClerkNative] Sign-up result:', result);
       return result;
     } catch (error) {
       console.error('[ClerkNative] Sign-up failed:', error);
@@ -153,11 +144,8 @@ export const clerkNative = {
       return;
     }
 
-    console.log('[ClerkNative] Signing out');
-
     try {
-      const result = await ClerkNative.signOut();
-      console.log('[ClerkNative] Sign-out result:', result);
+      await ClerkNative.signOut();
     } catch (error) {
       console.error('[ClerkNative] Sign-out failed:', error);
       throw error;
@@ -197,40 +185,29 @@ export const clerkNative = {
     }
 
     try {
-      // Check if the native plugin is available
       if (!ClerkNative || typeof ClerkNative.isSignedIn !== 'function') {
         console.error('[ClerkNative] isSignedIn: Plugin not available');
         return { isSignedIn: false, message: 'Plugin not available' };
       }
 
-      console.log('[ClerkNative] Calling native isSignedIn...');
       const result = await ClerkNative.isSignedIn();
-      console.log('[ClerkNative] isSignedIn returned:', result);
 
-      // CRITICAL: If SDK says signed in, verify by checking if we can actually get a token
+      // Verify session by checking if we can actually get a token
       // This catches stale sessions where isSignedIn=true but getToken fails
       if (result.isSignedIn) {
-        console.log('[ClerkNative] Verifying session by attempting to get token...');
         try {
           const tokenResult = await ClerkNative.getToken();
           if (!tokenResult.token) {
-            console.warn('[ClerkNative] Session invalid: isSignedIn=true but no token available');
             return { isSignedIn: false, message: 'Session expired - please sign in again' };
           }
-          console.log('[ClerkNative] Session verified - token available');
         } catch (tokenError: any) {
-          console.warn('[ClerkNative] Session invalid: isSignedIn=true but getToken failed:', tokenError?.message);
           return { isSignedIn: false, message: 'Session expired - please sign in again' };
         }
       }
 
       return result;
     } catch (error: any) {
-      console.error('[ClerkNative] isSignedIn check failed:', {
-        name: error?.name,
-        message: error?.message,
-        code: error?.code
-      });
+      console.error('[ClerkNative] isSignedIn check failed:', error?.message);
       return { isSignedIn: false, message: error?.message || 'Unknown error' };
     }
   },
@@ -244,25 +221,10 @@ export const clerkNative = {
     }
 
     try {
-      console.log('[ClerkNative] Requesting session token...');
       const result = await ClerkNative.getToken();
-      console.log('[ClerkNative] getToken result:', {
-        hasToken: !!result.token,
-        tokenLength: result.token?.length,
-        message: result.message
-      });
-      if (result.token) {
-        console.log('[ClerkNative] Token preview:', result.token.substring(0, 30) + '...');
-      }
       return result.token || null;
     } catch (error: any) {
-      console.error('[ClerkNative] getToken failed:', {
-        name: error?.name,
-        message: error?.message,
-        code: error?.code,
-        stack: error?.stack,
-        error: JSON.stringify(error)
-      });
+      console.error('[ClerkNative] getToken failed:', error?.message);
       return null;
     }
   },

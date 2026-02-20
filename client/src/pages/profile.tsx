@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAuthNative as useAuth } from "@/hooks/useAuthNative";
+import { useAuth } from "@/contexts/AuthContext";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -14,9 +14,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Edit, Save, X, LogOut } from "lucide-react";
-// import { useClerk } from "@clerk/clerk-react"; // DISABLED - Using native SDK
-import { Capacitor } from "@capacitor/core";
-import { clerkNative } from "@/lib/clerkNative";
 
 const profileFormSchema = updateUserProfileSchema.extend({
   currentWeight: z.preprocess(
@@ -36,13 +33,11 @@ const profileFormSchema = updateUserProfileSchema.extend({
 type ProfileFormData = z.infer<typeof updateUserProfileSchema>;
 
 export default function Profile() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  // const { signOut } = useClerk(); // DISABLED - Using native SDK
   const [isEditing, setIsEditing] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const isMobile = Capacitor.isNativePlatform();
 
   const form = useForm({
     resolver: zodResolver(profileFormSchema),
@@ -95,9 +90,7 @@ export default function Profile() {
   const handleLogout = async () => {
     try {
       setIsLoggingOut(true);
-      await clerkNative.signOut();
-      // Reload to clear app state and return to landing
-      window.location.href = "/";
+      await signOut();
     } catch (error) {
       console.error("Logout error:", error);
       setIsLoggingOut(false);

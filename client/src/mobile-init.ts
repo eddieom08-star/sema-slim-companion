@@ -51,22 +51,27 @@ function setupKeyboardFocusFix() {
     }
   });
 
-  // Add keyboard event listeners for debugging
-  Keyboard.addListener('keyboardWillShow', (info) => {
-    console.log('[Mobile Init] Keyboard will show, height:', info.keyboardHeight);
-  });
+  // Add keyboard event listeners for debugging (wrapped in try/catch for unsupported platforms)
+  try {
+    Keyboard.addListener('keyboardWillShow', (info) => {
+      console.log('[Mobile Init] Keyboard will show, height:', info.keyboardHeight);
+    });
 
-  Keyboard.addListener('keyboardDidShow', (info) => {
-    console.log('[Mobile Init] Keyboard did show, height:', info.keyboardHeight);
-  });
+    Keyboard.addListener('keyboardDidShow', (info) => {
+      console.log('[Mobile Init] Keyboard did show, height:', info.keyboardHeight);
+    });
 
-  Keyboard.addListener('keyboardWillHide', () => {
-    console.log('[Mobile Init] Keyboard will hide');
-  });
+    Keyboard.addListener('keyboardWillHide', () => {
+      console.log('[Mobile Init] Keyboard will hide');
+    });
 
-  Keyboard.addListener('keyboardDidHide', () => {
-    console.log('[Mobile Init] Keyboard did hide');
-  });
+    Keyboard.addListener('keyboardDidHide', () => {
+      console.log('[Mobile Init] Keyboard did hide');
+    });
+  } catch (e) {
+    // Keyboard listeners not available on this platform - non-critical
+    console.log('[Mobile Init] Keyboard listeners not available:', e);
+  }
 
   console.log('[Mobile Init] Keyboard focus fix installed');
 }

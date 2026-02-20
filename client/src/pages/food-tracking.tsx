@@ -11,78 +11,6 @@ import { HungerChart } from "@/components/hunger-chart";
 import { apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
 import { Brain, Zap, Pizza, IceCream, Cookie } from "lucide-react";
-import { Capacitor } from "@capacitor/core";
-
-// TODO: Remove this once mobile auth is fully stable
-// Currently used to show demo mode on mobile during testing
-const isBypassingAuth = false; // Set to Capacitor.isNativePlatform() to bypass auth on mobile
-
-// Mock data for testing without authentication
-const MOCK_FOOD_ENTRIES = [
-  {
-    id: "1",
-    foodName: "Grilled Chicken Breast",
-    brand: "Home cooked",
-    quantity: "6",
-    unit: "oz",
-    calories: 280,
-    protein: "53",
-    carbs: "0",
-    fat: "6",
-    mealType: "lunch",
-    loggedAt: new Date().toISOString()
-  },
-  {
-    id: "2",
-    foodName: "Mixed Green Salad",
-    brand: "",
-    quantity: "2",
-    unit: "cups",
-    calories: 35,
-    protein: "2",
-    carbs: "7",
-    fat: "0.5",
-    mealType: "lunch",
-    loggedAt: new Date().toISOString()
-  },
-  {
-    id: "3",
-    foodName: "Protein Shake",
-    brand: "Optimum Nutrition",
-    quantity: "1",
-    unit: "scoop",
-    calories: 120,
-    protein: "24",
-    carbs: "3",
-    fat: "1",
-    mealType: "breakfast",
-    loggedAt: new Date().toISOString()
-  },
-  {
-    id: "4",
-    foodName: "Greek Yogurt",
-    brand: "Fage Total 0%",
-    quantity: "1",
-    unit: "cup",
-    calories: 100,
-    protein: "18",
-    carbs: "7",
-    fat: "0",
-    mealType: "snack",
-    loggedAt: new Date().toISOString()
-  }
-];
-
-const MOCK_HUNGER_LOGS = [
-  {
-    id: "1",
-    hungerBefore: 5,
-    hungerAfter: 3,
-    cravingIntensity: 2,
-    cravingType: "sweet",
-    loggedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString() // 2 hours ago
-  }
-];
 
 export default function FoodTracking() {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -110,7 +38,6 @@ export default function FoodTracking() {
     },
   });
 
-  // Use real data (mock data fallback removed - we want real API data)
   const effectiveFoodEntries = foodEntries || [];
   const effectiveHungerLogs = hungerLogs || [];
 
@@ -136,15 +63,6 @@ export default function FoodTracking() {
 
   const logHunger = useMutation({
     mutationFn: async () => {
-      // If bypassing auth, show demo message instead of API call
-      if (isBypassingAuth) {
-        toast({
-          title: "Demo Mode",
-          description: "You're in test mode. Data won't be saved, but you can explore all features!",
-        });
-        return;
-      }
-
       await apiRequest("POST", "/api/hunger-logs", {
         hungerBefore: Math.max(hungerLevel, 1),
         hungerAfter: fullnessLevel > 0 ? Math.max(11 - fullnessLevel, 1) : null,
@@ -154,15 +72,6 @@ export default function FoodTracking() {
       });
     },
     onSuccess: () => {
-      if (isBypassingAuth) {
-        // Just reset form in demo mode
-        setHungerLevel(5);
-        setFullnessLevel(0);
-        setCravingIntensity(0);
-        setCravingType("");
-        return;
-      }
-
       queryClient.invalidateQueries({ queryKey: ["/api/hunger-logs"] });
       toast({
         title: "Hunger log recorded",

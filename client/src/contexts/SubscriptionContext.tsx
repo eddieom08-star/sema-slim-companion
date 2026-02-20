@@ -1,11 +1,9 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef, type PropsWithChildren } from 'react';
-import { Capacitor } from '@capacitor/core';
-import { useAuthNative } from '@/hooks/useAuthNative';
-import { clerkNative } from '@/lib/clerkNative';
+import { useAuth } from '@/contexts/AuthContext';
+import { getApiBaseUrl } from '@/lib/queryClient';
 import type { UserEntitlements } from '../../../shared/features';
 
-// Check if running on native mobile platform
-const isMobile = Capacitor.isNativePlatform();
+const API_BASE = getApiBaseUrl();
 
 // Cache configuration
 const CACHE_KEY_SUBSCRIPTION = 'semaslim_subscription_cache';
@@ -132,18 +130,7 @@ interface SubscriptionContextValue {
 const SubscriptionContext = createContext<SubscriptionContextValue | null>(null);
 
 export function SubscriptionProvider({ children }: PropsWithChildren) {
-  // Use native auth hook (works on both mobile and web)
-  const { isSignedIn, userId } = useAuthNative();
-
-  // Token getter that works on both platforms
-  const getToken = useCallback(async (): Promise<string | null> => {
-    if (isMobile) {
-      const result = await clerkNative.getToken();
-      return result.token || null;
-    }
-    // On web, token is handled by queryClient auth getter
-    return null;
-  }, []);
+  const { isSignedIn, userId, getToken } = useAuth();
 
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [entitlements, setEntitlements] = useState<UserEntitlements | null>(null);
@@ -184,13 +171,20 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
 
   const fetchWithAuth = useCallback(async (url: string, options: RequestInit = {}) => {
     const token = await getToken();
-    const response = await fetch(url, {
+    const fullUrl = API_BASE + url;
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    const response = await fetch(fullUrl, {
       ...options,
       headers: {
         ...options.headers,
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
+        ...headers,
       },
+      credentials: 'include',
     });
     return response;
   }, [getToken]);

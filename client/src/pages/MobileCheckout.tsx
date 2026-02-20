@@ -16,14 +16,12 @@
  * 4. Mobile app checks for updated entitlements via API
  */
 
-import { useEffect, useState, useMemo, useCallback } from 'react';
-import { Capacitor } from '@capacitor/core';
-import { useAuthNative } from '@/hooks/useAuthNative';
-import { clerkNative } from '@/lib/clerkNative';
+import { useEffect, useState, useMemo } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { getApiBaseUrl } from '@/lib/queryClient';
 import { TOKEN_PRODUCTS, SUBSCRIPTION_PRODUCTS } from '@shared/features';
 
-// Check if running on native mobile platform
-const isMobile = Capacitor.isNativePlatform();
+const API_BASE = getApiBaseUrl();
 
 interface CheckoutState {
   loading: boolean;
@@ -36,18 +34,7 @@ export default function MobileCheckout() {
   // Use native URLSearchParams instead of react-router-dom (project uses wouter)
   const searchParams = useMemo(() => new URLSearchParams(window.location.search), []);
 
-  // Use native auth hook (works on both mobile and web via fallback)
-  const { isSignedIn } = useAuthNative();
-
-  // Token getter that works on both platforms
-  const getToken = useCallback(async (): Promise<string | null> => {
-    if (isMobile) {
-      const result = await clerkNative.getToken();
-      return result.token || null;
-    }
-    // On web, token is handled by queryClient auth getter
-    return null;
-  }, []);
+  const { isSignedIn, getToken } = useAuth();
   const [state, setState] = useState<CheckoutState>({
     loading: true,
     error: null,
@@ -114,13 +101,18 @@ export default function MobileCheckout() {
             cancelUrl: `${window.location.origin}/checkout?product=${productId}&cancelled=true`,
           };
 
-      const response = await fetch(endpoint, {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(API_BASE + endpoint, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(body),
+        credentials: 'include',
       });
 
       if (!response.ok) {

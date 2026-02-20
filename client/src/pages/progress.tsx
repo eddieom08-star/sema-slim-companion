@@ -12,90 +12,6 @@ import { ProgressChart } from "@/components/progress-chart";
 import { AchievementBadge } from "@/components/achievement-badge";
 import { apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
-import { Capacitor } from "@capacitor/core";
-
-// Mock data for testing without authentication
-const MOCK_WEIGHT_LOGS = [
-  {
-    id: "1",
-    weight: "178.5",
-    loggedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
-    notes: "Feeling great! Sticking to the diet plan."
-  },
-  {
-    id: "2",
-    weight: "180.2",
-    loggedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(), // 4 days ago
-    notes: "Had a cheat meal yesterday, but back on track."
-  },
-  {
-    id: "3",
-    weight: "181.0",
-    loggedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), // 1 week ago
-    notes: "Weekly weigh-in. Slowly making progress!"
-  },
-  {
-    id: "4",
-    weight: "182.5",
-    loggedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(), // 2 weeks ago
-    notes: "Starting to see results from medication."
-  },
-  {
-    id: "5",
-    weight: "185.0",
-    loggedAt: new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString(), // 3 weeks ago
-    notes: "First week on Ozempic. Feeling optimistic!"
-  },
-  {
-    id: "6",
-    weight: "187.0",
-    loggedAt: new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString(), // 4 weeks ago
-    notes: "Starting weight before GLP-1 therapy."
-  }
-];
-
-const MOCK_USER_ACHIEVEMENTS = [
-  {
-    id: "1",
-    achievementType: "first_weight_log",
-    achievementName: "First Step",
-    achievementDescription: "Logged your first weight",
-    achievementIcon: "fa-weight",
-    earnedAt: new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString()
-  },
-  {
-    id: "2",
-    achievementType: "weight_loss_5lbs",
-    achievementName: "5 Pounds Down!",
-    achievementDescription: "Lost 5 pounds",
-    achievementIcon: "fa-trophy",
-    earnedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-  },
-  {
-    id: "3",
-    achievementType: "logging_streak_7",
-    achievementName: "Week Warrior",
-    achievementDescription: "Logged weight for 7 days in a row",
-    achievementIcon: "fa-fire",
-    earnedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
-  }
-];
-
-const MOCK_STREAKS = [
-  { streakType: 'food_tracking', currentStreak: 7 },
-  { streakType: 'weight_logging', currentStreak: 5 }
-];
-
-const MOCK_USER_PROFILE = {
-  onboardingCompleted: true,
-  medicationType: "ozempic",
-  currentWeight: 178.5,
-  targetWeight: 150,
-  activityLevel: "moderate",
-  startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-  firstName: "Test",
-  email: "test@example.com"
-};
 
 export default function Progress() {
   const [weightInput, setWeightInput] = useState("");
@@ -105,36 +21,23 @@ export default function Progress() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Auth bypass flag - set to false for production/TestFlight
-  // Only enable for local development debugging
-  const isBypassingAuth = false;
-
   const { data: weightLogs, isLoading: weightLogsLoading } = useQuery({
     queryKey: ["/api/weight-logs"],
-    enabled: !isBypassingAuth, // Disable query when bypassing auth
   });
 
   const { data: userAchievements, isLoading: achievementsLoading } = useQuery({
     queryKey: ["/api/user-achievements"],
-    enabled: !isBypassingAuth, // Disable query when bypassing auth
   });
 
   const { data: streaks, isLoading: streaksLoading } = useQuery({
     queryKey: ["/api/streaks"],
-    enabled: !isBypassingAuth, // Disable query when bypassing auth
   });
 
   const { data: userProfile, isLoading: isProfileLoading } = useQuery({
     queryKey: ["/api/auth/user"],
-    enabled: !isBypassingAuth, // Disable query when bypassing auth
   });
 
-  // Use effective data - mock when bypassing auth, real data otherwise
-  const effectiveWeightLogs = isBypassingAuth ? MOCK_WEIGHT_LOGS : weightLogs;
-  const effectiveUserAchievements = isBypassingAuth ? MOCK_USER_ACHIEVEMENTS : userAchievements;
-  const effectiveStreaks = isBypassingAuth ? MOCK_STREAKS : streaks;
-  const effectiveUserProfile = isBypassingAuth ? MOCK_USER_PROFILE : userProfile;
-  const effectiveIsLoading = isBypassingAuth ? false : (weightLogsLoading || achievementsLoading || streaksLoading || isProfileLoading);
+  const isLoading = weightLogsLoading || achievementsLoading || streaksLoading || isProfileLoading;
 
   const logWeight = useMutation({
     mutationFn: async (data: any) => {
@@ -171,19 +74,19 @@ export default function Progress() {
     });
   };
 
-  const latestWeight = (effectiveWeightLogs as any)?.[0];
-  const previousWeight = (effectiveWeightLogs as any)?.[1];
+  const latestWeight = (weightLogs as any)?.[0];
+  const previousWeight = (weightLogs as any)?.[1];
   const weightChange = latestWeight && previousWeight
     ? Number(latestWeight.weight) - Number(previousWeight.weight)
     : 0;
 
-  const totalWeightLoss = (effectiveWeightLogs as any) && (effectiveWeightLogs as any).length > 0
-    ? Number((effectiveWeightLogs as any)[(effectiveWeightLogs as any).length - 1].weight) - Number(latestWeight?.weight || 0)
+  const totalWeightLoss = (weightLogs as any) && (weightLogs as any).length > 0
+    ? Number((weightLogs as any)[(weightLogs as any).length - 1].weight) - Number(latestWeight?.weight || 0)
     : 0;
 
-  const weightLoggingStreak = (effectiveStreaks as any)?.find((s: any) => s.streakType === 'weight_logging')?.currentStreak || 0;
+  const weightLoggingStreak = (streaks as any)?.find((s: any) => s.streakType === 'weight_logging')?.currentStreak || 0;
 
-  if (effectiveIsLoading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-background pb-20 md:pb-8 overflow-x-hidden">
         <Navigation />
@@ -219,7 +122,7 @@ export default function Progress() {
           <Card data-testid="card-current-weight">
             <CardContent className="p-4 md:p-6 text-center">
               <div className="text-3xl font-bold text-foreground mb-2">
-                {latestWeight ? `${Number(latestWeight.weight).toFixed(1)} lbs` : effectiveUserProfile && (effectiveUserProfile as any).currentWeight ? `${Number((effectiveUserProfile as any).currentWeight).toFixed(1)} lbs` : 'No data'}
+                {latestWeight ? `${Number(latestWeight.weight).toFixed(1)} lbs` : userProfile && (userProfile as any).currentWeight ? `${Number((userProfile as any).currentWeight).toFixed(1)} lbs` : 'No data'}
               </div>
               <div className="text-sm text-muted-foreground mb-2">Current Weight</div>
               {weightChange !== 0 && (
@@ -242,7 +145,7 @@ export default function Progress() {
               </div>
               <div className="text-sm text-muted-foreground mb-2">Total Weight Loss</div>
               <div className="text-sm text-muted-foreground">
-                {(effectiveWeightLogs as any)?.length || 0} entries recorded
+                {(weightLogs as any)?.length || 0} entries recorded
               </div>
             </CardContent>
           </Card>
@@ -285,9 +188,9 @@ export default function Progress() {
               </CardHeader>
               <CardContent className="p-4 md:p-6">
                 <div className="space-y-4" data-testid="recent-weight-logs">
-                  {(effectiveWeightLogs as any) && (effectiveWeightLogs as any).length > 0 ? (
-                    (effectiveWeightLogs as any).slice(0, 10).map((log: any, index: number) => {
-                      const prevLog = (effectiveWeightLogs as any)[index + 1];
+                  {(weightLogs as any) && (weightLogs as any).length > 0 ? (
+                    (weightLogs as any).slice(0, 10).map((log: any, index: number) => {
+                      const prevLog = (weightLogs as any)[index + 1];
                       const change = prevLog ? Number(log.weight) - Number(prevLog.weight) : 0;
                       
                       return (
@@ -406,8 +309,8 @@ export default function Progress() {
               </CardHeader>
               <CardContent className="p-4 md:p-6">
                 <div className="space-y-4" data-testid="achievements-list">
-                  {(effectiveUserAchievements as any) && (effectiveUserAchievements as any).length > 0 ? (
-                    (effectiveUserAchievements as any).slice(0, 5).map((achievement: any) => (
+                  {(userAchievements as any) && (userAchievements as any).length > 0 ? (
+                    (userAchievements as any).slice(0, 5).map((achievement: any) => (
                       <AchievementBadge key={achievement.id} achievement={achievement} />
                     ))
                   ) : (
@@ -451,9 +354,9 @@ export default function Progress() {
 
               {/* Weight Change */}
               {(() => {
-                const logIndex = (effectiveWeightLogs as any)?.findIndex((log: any) => log.id === selectedWeightLog.id);
-                const prevLog = logIndex !== -1 && logIndex < (effectiveWeightLogs as any).length - 1
-                  ? (effectiveWeightLogs as any)[logIndex + 1]
+                const logIndex = (weightLogs as any)?.findIndex((log: any) => log.id === selectedWeightLog.id);
+                const prevLog = logIndex !== -1 && logIndex < (weightLogs as any).length - 1
+                  ? (weightLogs as any)[logIndex + 1]
                   : null;
                 const change = prevLog ? Number(selectedWeightLog.weight) - Number(prevLog.weight) : null;
 

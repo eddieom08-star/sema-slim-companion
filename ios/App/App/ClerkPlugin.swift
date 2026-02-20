@@ -11,16 +11,14 @@ import SwiftUI
 class ClerkSessionObserver: ObservableObject {
     @Published var isSignedIn: Bool = false
     private var timer: Timer?
-    private var pollCount: Int = 0
 
     init() {
         Task { @MainActor in
             self.isSignedIn = Clerk.shared.session != nil
         }
-        // Poll every 150ms for fast auth detection, stop after 20 polls (3s) or on sign-in
-        timer = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: true) { [weak self] _ in
+        // Poll every 250ms until sign-in detected; timer stops on sign-in or view dealloc
+        timer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
             guard let self = self else { return }
-            self.pollCount += 1
             Task { @MainActor in
                 let signedIn = Clerk.shared.session != nil
                 if self.isSignedIn != signedIn {
@@ -28,9 +26,6 @@ class ClerkSessionObserver: ObservableObject {
                     if signedIn {
                         self.timer?.invalidate()
                     }
-                }
-                if self.pollCount >= 20 {
-                    self.timer?.invalidate()
                 }
             }
         }
@@ -49,19 +44,27 @@ struct ClerkAuthView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var sessionObserver = ClerkSessionObserver()
     let onAuthComplete: (Bool) -> Void
+    let mode: AuthView.Mode
 
     // Track if we've already notified about auth completion
     @State private var hasNotifiedCompletion = false
 
+    init(mode: AuthView.Mode = .signInOrUp, onAuthComplete: @escaping (Bool) -> Void) {
+        self.mode = mode
+        self.onAuthComplete = onAuthComplete
+    }
+
     var body: some View {
         NavigationView {
-            AuthView()
+            AuthView(mode: mode)
                 .toolbar {
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button("Close") {
                             dismiss()
                             if !hasNotifiedCompletion {
-                                onAuthComplete(sessionObserver.isSignedIn)
+                                // Check actual Clerk state, not stale observer
+                                let actuallySignedIn = Clerk.shared.session != nil
+                                onAuthComplete(actuallySignedIn)
                             }
                         }
                     }
@@ -134,7 +137,22 @@ public class ClerkPlugin: CAPPlugin, CAPBridgedPlugin {
      */
     @objc func presentSignIn(_ call: CAPPluginCall) {
         print("[ClerkPlugin] Presenting sign-in UI")
+        presentAuthView(call: call, mode: .signInOrUp)
+    }
 
+    /**
+     * Present native sign-up UI using Clerk's AuthView in sign-up mode
+     * Auto-dismisses and resolves when OAuth completes (e.g., Google sign-in)
+     */
+    @objc func presentSignUp(_ call: CAPPluginCall) {
+        print("[ClerkPlugin] Presenting sign-up UI")
+        presentAuthView(call: call, mode: .signUp)
+    }
+
+    /**
+     * Internal helper to present Clerk's AuthView with a specific mode
+     */
+    private func presentAuthView(call: CAPPluginCall, mode: AuthView.Mode) {
         DispatchQueue.main.async {
             guard let viewController = self.bridge?.viewController else {
                 call.reject("Unable to get view controller")
@@ -145,16 +163,17 @@ public class ClerkPlugin: CAPPlugin, CAPBridgedPlugin {
             var hasResolved = false
 
             // Create SwiftUI AuthView and wrap in hosting controller
-            let authView = ClerkAuthView(onAuthComplete: { [weak self] wasSuccessful in
+            let authView = ClerkAuthView(mode: mode, onAuthComplete: { [weak self] wasSuccessful in
                 // Prevent double-resolution if both dismiss and onChange fire
                 guard !hasResolved else { return }
                 hasResolved = true
 
+                let actionType = mode == .signUp ? "Sign-up" : "Sign-in"
                 print("[ClerkPlugin] Auth completed - signed in: \(wasSuccessful)")
 
                 call.resolve([
                     "success": wasSuccessful,
-                    "message": wasSuccessful ? "Sign-in successful" : "Sign-in cancelled",
+                    "message": wasSuccessful ? "\(actionType) successful" : "\(actionType) cancelled",
                     "isSignedIn": wasSuccessful
                 ])
 
@@ -167,16 +186,6 @@ public class ClerkPlugin: CAPPlugin, CAPBridgedPlugin {
             let hostingController = UIHostingController(rootView: authView)
             viewController.present(hostingController, animated: true, completion: nil)
         }
-    }
-
-    /**
-     * Present native sign-up UI (same as sign-in in Clerk)
-     */
-    @objc func presentSignUp(_ call: CAPPluginCall) {
-        print("[ClerkPlugin] Presenting sign-up UI")
-
-        // Clerk's AuthView handles both sign-in and sign-up
-        self.presentSignIn(call)
     }
 
     /**

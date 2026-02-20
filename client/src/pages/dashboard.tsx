@@ -6,120 +6,68 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { isUnauthorizedError } from "@/lib/authUtils";
-import { refreshNativeAuth } from "@/hooks/useAuthNative";
+import { useAuth } from "@/contexts/AuthContext";
 import Navigation from "@/components/ui/navigation";
 import { ProgressChart } from "@/components/progress-chart";
 import { AppetiteChart } from "@/components/appetite-chart";
 import { CaloriesChart } from "@/components/calories-chart";
 import { AchievementBadge } from "@/components/achievement-badge";
 import { Trophy, Zap, TrendingUp } from "lucide-react";
-import { Capacitor } from "@capacitor/core";
-
-// Mock data for testing without auth
-const MOCK_DASHBOARD_DATA = {
-  todaysCalories: 1200,
-  weeklyWeightChange: -2.5,
-  upcomingMedication: {
-    medicationType: "Ozempic",
-    dosage: "0.5mg"
-  }
-};
-
-const MOCK_STREAKS = [
-  { streakType: 'food_tracking', currentStreak: 7 },
-  { streakType: 'weight_logging', currentStreak: 5 }
-];
-
-const MOCK_GAMIFICATION = {
-  totalPoints: 250,
-  lifetimePoints: 450,
-  currentLevel: 3
-};
-
-const MOCK_USER_PROFILE = {
-  onboardingCompleted: true,
-  medicationType: "ozempic",
-  currentWeight: 180,
-  targetWeight: 150,
-  activityLevel: "moderate",
-  startDate: new Date().toISOString(),
-  firstName: "Test",
-  email: "test@example.com"
-};
-
-const MOCK_ACHIEVEMENTS = [];
-
-// Auth bypass flag - set to false for production/TestFlight
-// Only enable for local development debugging
-const isBypassingAuth = false;
 
 export default function Dashboard() {
   const { toast } = useToast();
+  const { signOut } = useAuth();
   const [, setLocation] = useLocation();
   const hasShownUnauthorizedRef = useRef(false);
 
-  const { data: dashboardData, isLoading: isDashboardLoading } = useQuery({
+  const { data: dashboardData, isLoading: isDashboardLoading, error: dashboardError } = useQuery({
     queryKey: ["/api/dashboard"],
-    retry: false,
-    enabled: !isBypassingAuth, // Disable query when bypassing auth
+    retry: 2,
+    retryDelay: 1000,
   });
 
   const { data: streaks, isLoading: isStreaksLoading } = useQuery({
     queryKey: ["/api/streaks"],
-    retry: false,
-    enabled: !isBypassingAuth,
+    retry: 2,
+    retryDelay: 1000,
   });
 
   const { data: userAchievements, isLoading: isAchievementsLoading } = useQuery({
     queryKey: ["/api/user-achievements"],
-    retry: false,
-    enabled: !isBypassingAuth,
+    retry: 2,
+    retryDelay: 1000,
   });
 
   const { data: gamificationData, isLoading: isGamificationLoading } = useQuery({
     queryKey: ["/api/gamification"],
-    retry: false,
-    enabled: !isBypassingAuth,
+    retry: 2,
+    retryDelay: 1000,
   });
 
   const { data: userProfile, isLoading: isProfileLoading } = useQuery({
     queryKey: ["/api/auth/user"],
-    retry: false,
-    enabled: !isBypassingAuth,
+    retry: 2,
+    retryDelay: 1000,
   });
 
-  // Use mock data when bypassing auth
-  const effectiveDashboardData = isBypassingAuth ? MOCK_DASHBOARD_DATA : dashboardData;
-  const effectiveStreaks = isBypassingAuth ? MOCK_STREAKS : streaks;
-  const effectiveGamificationData = isBypassingAuth ? MOCK_GAMIFICATION : gamificationData;
-  const effectiveUserProfile = isBypassingAuth ? MOCK_USER_PROFILE : userProfile;
-  const effectiveUserAchievements = isBypassingAuth ? MOCK_ACHIEVEMENTS : userAchievements;
-  const effectiveIsLoading = isBypassingAuth ? false : (isDashboardLoading || isStreaksLoading || isAchievementsLoading || isGamificationLoading || isProfileLoading);
+  const isLoading = isDashboardLoading || isStreaksLoading || isAchievementsLoading || isGamificationLoading || isProfileLoading;
 
   useEffect(() => {
-    // Only handle unauthorized if not bypassing auth and data fetch completed without data
-    // Use a ref to prevent multiple toasts/refreshes
-    if (!isBypassingAuth && !isDashboardLoading && !dashboardData && !hasShownUnauthorizedRef.current) {
-      hasShownUnauthorizedRef.current = true;
-
-      // Add a small delay before refreshing auth - this gives React Query's retry logic time to work
-      // and prevents race conditions right after sign-in when token might still be syncing
-      const timeoutId = setTimeout(() => {
+    if (!isDashboardLoading && dashboardError && !hasShownUnauthorizedRef.current) {
+      const errorMessage = dashboardError instanceof Error ? dashboardError.message : String(dashboardError);
+      if (errorMessage.includes('401')) {
+        hasShownUnauthorizedRef.current = true;
         toast({
-          title: "Unauthorized",
-          description: "Please sign in to continue.",
+          title: "Session Expired",
+          description: "Please sign in again to continue.",
           variant: "destructive",
         });
-        // Clear the native auth state so Router shows sign-in page
-        refreshNativeAuth();
-      }, 2000); // 2 second delay to allow retries
-
-      return () => clearTimeout(timeoutId);
+        signOut();
+      }
     }
-  }, [isDashboardLoading, dashboardData, toast]);
+  }, [isDashboardLoading, dashboardError, toast, signOut]);
 
-  if (effectiveIsLoading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-background pb-20 md:pb-8 overflow-x-hidden">
         <Navigation />
@@ -140,12 +88,12 @@ export default function Dashboard() {
     );
   }
 
-  const foodTrackingStreak = (effectiveStreaks as any)?.find((s: any) => s.streakType === 'food_tracking')?.currentStreak || 0;
-  const weightLoggingStreak = (effectiveStreaks as any)?.find((s: any) => s.streakType === 'weight_logging')?.currentStreak || 0;
+  const foodTrackingStreak = (streaks as any)?.find((s: any) => s.streakType === 'food_tracking')?.currentStreak || 0;
+  const weightLoggingStreak = (streaks as any)?.find((s: any) => s.streakType === 'weight_logging')?.currentStreak || 0;
 
   // Calculate level progression
-  const totalPoints = (effectiveGamificationData as any)?.totalPoints || 0;
-  const currentLevel = (effectiveGamificationData as any)?.currentLevel || Math.floor(totalPoints / 100) + 1;
+  const totalPoints = (gamificationData as any)?.totalPoints || 0;
+  const currentLevel = (gamificationData as any)?.currentLevel || Math.floor(totalPoints / 100) + 1;
   const pointsForCurrentLevel = (currentLevel - 1) * 100;
   const pointsForNextLevel = currentLevel * 100;
   const pointsInCurrentLevel = Math.max(0, totalPoints - pointsForCurrentLevel);
@@ -225,7 +173,7 @@ export default function Dashboard() {
                     </div>
                     <div className="text-center">
                       <p className="text-sm text-muted-foreground">Lifetime Points</p>
-                      <p className="text-lg font-bold text-secondary">{(effectiveGamificationData as any)?.lifetimePoints || 0}</p>
+                      <p className="text-lg font-bold text-secondary">{(gamificationData as any)?.lifetimePoints || 0}</p>
                     </div>
                   </div>
 
@@ -255,7 +203,7 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4" data-testid="achievements-list">
-                  {(effectiveUserAchievements as any)?.slice(0, 3).map((achievement: any, index: number) => (
+                  {(userAchievements as any)?.slice(0, 3).map((achievement: any, index: number) => (
                     <AchievementBadge key={achievement.id} achievement={achievement} />
                   )) || (
                     <p className="text-muted-foreground text-sm">
@@ -277,10 +225,10 @@ export default function Dashboard() {
                 <span className="text-xs md:text-sm font-medium text-muted-foreground truncate">Calories</span>
               </div>
               <div className="text-xl md:text-2xl font-bold text-foreground" data-testid="text-todays-calories">
-                {(effectiveDashboardData as any)?.todaysCalories || 0}
+                {(dashboardData as any)?.todaysCalories || 0}
               </div>
               <p className="text-xs text-muted-foreground truncate">
-                {(effectiveDashboardData as any)?.todaysCalories < 1400 ? "On track" : "Above target"}
+                {(dashboardData as any)?.todaysCalories < 1400 ? "On track" : "Above target"}
               </p>
             </CardContent>
           </Card>
@@ -292,11 +240,11 @@ export default function Dashboard() {
                 <span className="text-xs md:text-sm font-medium text-muted-foreground truncate">Week</span>
               </div>
               <div className="text-xl md:text-2xl font-bold text-foreground" data-testid="text-weekly-change">
-                {(effectiveDashboardData as any)?.weeklyWeightChange > 0 ? '+' : ''}
-                {(effectiveDashboardData as any)?.weeklyWeightChange?.toFixed(1) || '0.0'} lbs
+                {(dashboardData as any)?.weeklyWeightChange > 0 ? '+' : ''}
+                {(dashboardData as any)?.weeklyWeightChange?.toFixed(1) || '0.0'} lbs
               </div>
               <p className="text-xs text-muted-foreground truncate">
-                {(effectiveDashboardData as any)?.weeklyWeightChange < 0 ? "Progress!" : "Keep going!"}
+                {(dashboardData as any)?.weeklyWeightChange < 0 ? "Progress!" : "Keep going!"}
               </p>
             </CardContent>
           </Card>
@@ -323,11 +271,11 @@ export default function Dashboard() {
                 <span className="text-xs md:text-sm font-medium text-muted-foreground truncate">Next Med</span>
               </div>
               <div className="text-base md:text-lg font-bold text-foreground truncate" data-testid="text-next-medication">
-                {(effectiveDashboardData as any)?.upcomingMedication ? (
+                {(dashboardData as any)?.upcomingMedication ? (
                   <>
-                    <span className="truncate block">{(effectiveDashboardData as any).upcomingMedication.medicationType}</span>
+                    <span className="truncate block">{(dashboardData as any).upcomingMedication.medicationType}</span>
                     <p className="text-xs text-muted-foreground font-normal truncate">
-                      {(effectiveDashboardData as any).upcomingMedication.dosage}
+                      {(dashboardData as any).upcomingMedication.dosage}
                     </p>
                   </>
                 ) : (
@@ -384,7 +332,7 @@ export default function Dashboard() {
         </div>
 
         {/* Health & Medication Overview */}
-        {effectiveUserProfile && (effectiveUserProfile as any).onboardingCompleted && (
+        {userProfile && (userProfile as any).onboardingCompleted && (
           <div className="mt-6 md:mt-8">
             <Card>
               <CardHeader>
@@ -396,48 +344,48 @@ export default function Dashboard() {
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {/* Medication Info */}
-                  {(effectiveUserProfile as any).medicationType && (
+                  {(userProfile as any).medicationType && (
                     <div className="space-y-2">
                       <div className="flex items-center space-x-2 text-muted-foreground">
                         <i className="fas fa-syringe text-sm"></i>
                         <span className="text-xs font-medium uppercase">Medication</span>
                       </div>
                       <p className="text-lg font-semibold text-foreground capitalize">
-                        {(effectiveUserProfile as any).medicationType}
+                        {(userProfile as any).medicationType}
                       </p>
-                      {(effectiveUserProfile as any).startDate && (
+                      {(userProfile as any).startDate && (
                         <p className="text-xs text-muted-foreground">
-                          Started: {new Date((effectiveUserProfile as any).startDate).toLocaleDateString()}
+                          Started: {new Date((userProfile as any).startDate).toLocaleDateString()}
                         </p>
                       )}
                     </div>
                   )}
 
                   {/* Weight Goals */}
-                  {(effectiveUserProfile as any).currentWeight && (effectiveUserProfile as any).targetWeight && (
+                  {(userProfile as any).currentWeight && (userProfile as any).targetWeight && (
                     <div className="space-y-2">
                       <div className="flex items-center space-x-2 text-muted-foreground">
                         <i className="fas fa-bullseye text-sm"></i>
                         <span className="text-xs font-medium uppercase">Weight Goal</span>
                       </div>
                       <p className="text-lg font-semibold text-foreground">
-                        {Number((effectiveUserProfile as any).currentWeight).toFixed(1)} → {Number((effectiveUserProfile as any).targetWeight).toFixed(1)} lbs
+                        {Number((userProfile as any).currentWeight).toFixed(1)} → {Number((userProfile as any).targetWeight).toFixed(1)} lbs
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {(Number((effectiveUserProfile as any).currentWeight) - Number((effectiveUserProfile as any).targetWeight)).toFixed(1)} lbs to go
+                        {(Number((userProfile as any).currentWeight) - Number((userProfile as any).targetWeight)).toFixed(1)} lbs to go
                       </p>
                     </div>
                   )}
 
                   {/* Activity Level */}
-                  {(effectiveUserProfile as any).activityLevel && (
+                  {(userProfile as any).activityLevel && (
                     <div className="space-y-2">
                       <div className="flex items-center space-x-2 text-muted-foreground">
                         <i className="fas fa-running text-sm"></i>
                         <span className="text-xs font-medium uppercase">Activity</span>
                       </div>
                       <p className="text-lg font-semibold text-foreground capitalize">
-                        {(effectiveUserProfile as any).activityLevel.replace('_', ' ')}
+                        {(userProfile as any).activityLevel.replace('_', ' ')}
                       </p>
                     </div>
                   )}

@@ -1,15 +1,12 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-// import { useClerk } from "@clerk/clerk-react"; // DISABLED - Using native SDK
 import { Button } from "@/components/ui/button";
-import { useAuthNative as useAuth } from "@/hooks/useAuthNative";
+import { useAuth } from "@/contexts/AuthContext";
 import { NotificationCenter, useUnreadNotificationsCount } from "@/components/notification-center";
-import { clerkNative } from "@/lib/clerkNative";
 
 export default function Navigation() {
   const [location] = useLocation();
-  const { user } = useAuth();
-  // const { signOut } = useClerk(); // DISABLED - Using native SDK
+  const { user, signOut } = useAuth();
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const unreadCount = useUnreadNotificationsCount();
@@ -17,9 +14,7 @@ export default function Navigation() {
   const handleLogout = async () => {
     try {
       setIsLoggingOut(true);
-      await clerkNative.signOut();
-      // Reload to clear app state and return to landing
-      window.location.href = "/";
+      await signOut();
     } catch (error) {
       console.error("Logout error:", error);
       setIsLoggingOut(false);

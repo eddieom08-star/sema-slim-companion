@@ -3,8 +3,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-// import { useAuth as useClerkAuth } from "@clerk/clerk-react"; // DISABLED - Using native SDK
-import { useAuthNative as useAuth } from "@/hooks/useAuthNative";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState, lazy, Suspense } from "react";
 import { Capacitor } from "@capacitor/core";
 import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
@@ -40,95 +39,88 @@ const PageLoader = () => (
   </div>
 );
 
-// TEMPORARY: Bypass authentication on mobile for testing
-const BYPASS_AUTH_ON_MOBILE = false;
-
-/**
- * Simplified Router component
- *
- * LOGIC:
- * 1. Show loading while checking auth
- * 2. If not authenticated -> Landing/Sign-in pages
- * 3. If authenticated without onboarding -> Onboarding page
- * 4. If authenticated with onboarding -> App pages
- */
 function Router() {
-  const { isAuthenticated, isLoading, user, isSignedIn } = useAuth();
-  const isMobile = Capacitor.isNativePlatform();
+  const { isSignedIn, isLoading, user } = useAuth();
 
-  // Mobile: Allow access with just isSignedIn (don't require user data)
-  const canAccessApp = isMobile ? isSignedIn : isAuthenticated;
-
-  // Show loading spinner while initial auth check happens
   if (isLoading) {
+    return <PageLoader />;
+  }
+
+  if (!isSignedIn) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center space-y-4">
-          <div className="w-10 h-10 bg-primary rounded-lg animate-pulse mx-auto"></div>
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </div>
+      <Suspense fallback={<PageLoader />}>
+        <Switch>
+          <Route path="/checkout/success" component={CheckoutSuccess} />
+          <Route path="/checkout" component={MobileCheckout} />
+          <Route path="/" component={Landing} />
+          <Route path="/sign-in" component={SignInPage} />
+          <Route path="/sign-up" component={SignUpPage} />
+          <Route component={Landing} />
+        </Switch>
+      </Suspense>
     );
   }
 
-  // Determine route key to force Switch re-render when auth state changes
-  const routeKey = canAccessApp ? 'authenticated' : 'unauthenticated';
-
-  // For authenticated users, check onboarding
-  const needsOnboarding = canAccessApp && user && !(user as any).onboardingCompleted;
+  if (user && !(user as any).onboardingCompleted) {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <Switch>
+          <Route path="/checkout/success" component={CheckoutSuccess} />
+          <Route path="/checkout" component={MobileCheckout} />
+          <Route path="/" component={Onboarding} />
+          <Route component={Onboarding} />
+        </Switch>
+      </Suspense>
+    );
+  }
 
   return (
     <Suspense fallback={<PageLoader />}>
-      <Switch key={routeKey}>
-        {/* Checkout routes - accessible regardless of auth (for mobile deep linking) */}
+      <Switch>
         <Route path="/checkout/success" component={CheckoutSuccess} />
         <Route path="/checkout" component={MobileCheckout} />
-
-        {!canAccessApp ? (
-          <>
-            {/* Not authenticated: show auth pages */}
-            <Route path="/" component={Landing} />
-            <Route path="/sign-in" component={SignInPage} />
-            <Route path="/sign-up" component={SignUpPage} />
-            <Route path="/:any*" component={Landing} />
-          </>
-        ) : needsOnboarding ? (
-          <>
-            {/* Onboarding not complete */}
-            <Route path="/" component={Onboarding} />
-            <Route path="/:any*" component={Onboarding} />
-          </>
-        ) : (
-          <>
-            {/* Authenticated with onboarding complete (or no user data yet on mobile) */}
-            <Route path="/" component={Dashboard} />
-            <Route path="/dashboard" component={Dashboard} />
-            <Route path="/food-tracking" component={FoodTracking} />
-            <Route path="/medication" component={Medication} />
-            <Route path="/recipes" component={Recipes} />
-            <Route path="/progress" component={Progress} />
-            <Route path="/profile" component={Profile} />
-            <Route component={NotFound} />
-          </>
-        )}
+        <Route path="/" component={Dashboard} />
+        <Route path="/dashboard" component={Dashboard} />
+        <Route path="/food-tracking" component={FoodTracking} />
+        <Route path="/medication" component={Medication} />
+        <Route path="/recipes" component={Recipes} />
+        <Route path="/progress" component={Progress} />
+        <Route path="/profile" component={Profile} />
+        <Route component={NotFound} />
       </Switch>
     </Suspense>
   );
 }
 
 function App() {
-  // const { getToken } = useClerkAuth(); // DISABLED - Using native SDK
   const [appError, setAppError] = useState<Error | null>(null);
 
-  // Global error handler for mobile
   useEffect(() => {
     if (Capacitor.isNativePlatform()) {
+      const nonCriticalPatterns = [
+        /plugin.*not implemented/i,
+        /StatusBar/i,
+        /SplashScreen/i,
+        /Keyboard/i,
+      ];
+
+      const isNonCriticalError = (error: Error | string): boolean => {
+        const message = typeof error === 'string' ? error : error?.message || '';
+        return nonCriticalPatterns.some(pattern => pattern.test(message));
+      };
+
       const handleError = (event: ErrorEvent) => {
-        setAppError(event.error);
+        if (!isNonCriticalError(event.error)) {
+          setAppError(event.error);
+        }
       };
 
       const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-        setAppError(new Error(event.reason));
+        const reason = event.reason;
+        const errorMessage = reason?.message || String(reason);
+        if (!isNonCriticalError(errorMessage)) {
+          setAppError(new Error(errorMessage));
+        }
       };
 
       window.addEventListener('error', handleError);
@@ -141,7 +133,6 @@ function App() {
     }
   }, []);
 
-  // If there's a critical error on mobile, show error page
   if (Capacitor.isNativePlatform() && appError) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -170,17 +161,19 @@ function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <SubscriptionProvider>
-            <Toaster />
-            <Router />
-            <Suspense fallback={null}>
-              <PWAInstallPrompt />
-              <OfflineIndicator />
-              <NetworkAwareIndicator />
-            </Suspense>
-          </SubscriptionProvider>
-        </TooltipProvider>
+        <AuthProvider>
+          <TooltipProvider>
+            <SubscriptionProvider>
+              <Toaster />
+              <Router />
+              <Suspense fallback={null}>
+                <PWAInstallPrompt />
+                <OfflineIndicator />
+                <NetworkAwareIndicator />
+              </Suspense>
+            </SubscriptionProvider>
+          </TooltipProvider>
+        </AuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );

@@ -1767,10 +1767,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Try multiple model names in order of preference
       // The API key might not have access to newer models
       const modelPriority = [
-        'claude-3-5-sonnet-20241022',  // Newest Claude 3.5 Sonnet v2
-        'claude-3-5-sonnet-20240620',  // Original Claude 3.5 Sonnet
-        'claude-3-sonnet-20240229',    // Claude 3 Sonnet
-        'claude-3-haiku-20240307'      // Claude 3 Haiku (fallback)
+        'claude-sonnet-4-5-20250929',  // Claude Sonnet 4.5
+        'claude-3-5-sonnet-20241022',  // Claude 3.5 Sonnet v2 (fallback)
+        'claude-haiku-4-5-20251001',   // Claude Haiku 4.5 (fallback)
+        'claude-3-haiku-20240307'      // Claude 3 Haiku (last resort)
       ];
 
       let model = modelPriority[0]; // Start with the newest
@@ -1968,10 +1968,10 @@ Always respond with valid JSON only, no additional text.`;
 
       // Call Claude API with image
       const modelPriority = [
-        'claude-3-5-sonnet-20241022',
-        'claude-3-5-sonnet-20240620',
-        'claude-3-sonnet-20240229',
-        'claude-3-haiku-20240307'
+        'claude-sonnet-4-5-20250929',  // Claude Sonnet 4.5
+        'claude-3-5-sonnet-20241022',  // Claude 3.5 Sonnet v2 (fallback)
+        'claude-haiku-4-5-20251001',   // Claude Haiku 4.5 (fallback)
+        'claude-3-haiku-20240307'      // Claude 3 Haiku (last resort)
       ];
 
       let response;
@@ -2039,14 +2039,14 @@ Always respond with valid JSON only, no additional text.`;
         return res.status(500).json({ message: "Unexpected response format from AI" });
       }
 
-      // Record AI usage after successful generation
-      await entitlementsService.consumeFeature(userId, FEATURE_TYPES.AI_RECIPE, 1);
-
       // Parse the JSON response
       try {
         const parsed = JSON.parse(textContent.text);
 
         if (parsed.found && parsed.recipe) {
+          // Record AI usage only after successful recipe extraction
+          await entitlementsService.consumeFeature(userId, FEATURE_TYPES.AI_RECIPE, 1);
+
           const recipe = parsed.recipe;
 
           // Normalize difficulty to valid DB enum values

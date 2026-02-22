@@ -62,13 +62,14 @@ export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
+  options?: { timeout?: number },
 ): Promise<Response> {
   const authHeaders = await getAuthHeaders();
   const baseUrl = getApiBaseUrl();
   const fullUrl = baseUrl + url;
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15000);
+  const timeoutId = setTimeout(() => controller.abort(), options?.timeout ?? 15000);
 
   try {
     const res = await fetch(fullUrl, {

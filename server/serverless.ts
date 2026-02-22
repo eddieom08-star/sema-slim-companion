@@ -75,7 +75,7 @@ export async function createServer() {
   serverApp.use(mongoSanitize({ replaceWith: '_' }));
   serverApp.use(xss());
   serverApp.use(hpp());
-  serverApp.use(express.json());
+  serverApp.use(express.json({ limit: '10mb' })); // Allow larger payloads for image uploads (base64 encoded)
   serverApp.use(express.urlencoded({ extended: false }));
 
   // Handle favicon

@@ -558,7 +558,7 @@ Servings: [number]`;
       const response = await apiRequest('POST', '/api/ai/recipe-chat', {
         messages: useInstantMode ? [userMessage] : [...messages, userMessage],
         systemPrompt: enhancedPrompt
-      });
+      }, { timeout: 45000 });
 
       const data = await response.json();
 
@@ -739,7 +739,7 @@ Servings: [number]`;
           base64: processedImage.base64,
           mediaType: processedImage.mediaType,
         }
-      });
+      }, { timeout: 45000 });
 
       const data = await response.json();
 

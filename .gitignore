@@ -7,5 +7,6 @@ vite.config.ts.*
 .env
 api/server.js
 .claude
+.mcp.json
 build/
 .vercel

@@ -765,11 +765,18 @@ Servings: [number]`;
       setProcessedImage(null);
     } catch (error: any) {
       console.error('Recipe scan error:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to scan receipt. Please try again.",
-        variant: "destructive"
-      });
+      const parsedError = parseErrorResponse(error);
+
+      if (parsedError.isLimitError) {
+        setShowLimitBanner(true);
+        refreshSubscription();
+      } else {
+        toast({
+          title: "Unable to scan recipe",
+          description: parsedError.message,
+          variant: "destructive"
+        });
+      }
     } finally {
       setIsLoading(false);
     }

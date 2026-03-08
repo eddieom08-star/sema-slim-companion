@@ -6,7 +6,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState, lazy, Suspense } from "react";
 import { Capacitor } from "@capacitor/core";
-import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
+import { App as CapApp } from "@capacitor/app";
+import { SubscriptionProvider, useSubscription } from "@/contexts/SubscriptionContext";
 import { ErrorBoundary } from "@/components/error-boundary";
 
 // Lazy load pages for code splitting
@@ -123,6 +124,34 @@ function Router() {
   );
 }
 
+/**
+ * Listens for deep links (semaslim://) on native and refreshes state after checkout.
+ */
+function DeepLinkHandler() {
+  const { refreshSubscription, refreshTokenBalance } = useSubscription();
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    const listener = CapApp.addListener('appUrlOpen', async (event) => {
+      const url = event.url;
+      console.log('[DeepLink] Received:', url);
+
+      if (url.includes('checkout-complete') || url.includes('subscription=success') || url.includes('purchase=success')) {
+        // Refresh entitlements after purchase
+        await refreshSubscription(true);
+        await refreshTokenBalance(true);
+      }
+    });
+
+    return () => {
+      listener.then(l => l.remove());
+    };
+  }, [refreshSubscription, refreshTokenBalance]);
+
+  return null;
+}
+
 function App() {
   const [appError, setAppError] = useState<Error | null>(null);
 
@@ -195,6 +224,7 @@ function App() {
         <AuthProvider>
           <TooltipProvider>
             <SubscriptionProvider>
+              <DeepLinkHandler />
               <Toaster />
               <Router />
               <Suspense fallback={null}>

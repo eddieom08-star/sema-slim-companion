@@ -4,6 +4,7 @@ import Capacitor
 class ViewController: CAPBridgeViewController {
     override open func capacitorDidLoad() {
         bridge?.registerPluginInstance(ClerkPlugin())
-        print("[ViewController] ClerkPlugin registered with Capacitor bridge")
+        bridge?.registerPluginInstance(PurchasesPlugin())
+        print("[ViewController] ClerkPlugin and PurchasesPlugin registered with Capacitor bridge")
     }
 }

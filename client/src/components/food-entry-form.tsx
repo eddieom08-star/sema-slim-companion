@@ -157,12 +157,37 @@ export function FoodEntryForm() {
       
       // Switch to manual tab so user can adjust and submit
       setActiveTab("manual");
-    } catch (error) {
-      toast({
-        title: "Food not found",
-        description: "This barcode is not in our database. Try manual entry or a different product.",
-        variant: "destructive",
-      });
+    } catch (error: any) {
+      // apiRequest throws Error("403: {json body}") — parse to detect limit errors
+      const errorMsg = error?.message || '';
+      let isLimitError = false;
+      let limitMessage = '';
+
+      if (errorMsg.startsWith('403:')) {
+        try {
+          const body = JSON.parse(errorMsg.substring(4).trim());
+          if (body?.error === 'limit_reached') {
+            isLimitError = true;
+            limitMessage = body.message || 'You have reached your daily barcode scan limit. Upgrade to Pro for unlimited scanning.';
+          }
+        } catch {
+          // Not JSON, treat as generic error
+        }
+      }
+
+      if (isLimitError) {
+        toast({
+          title: "Scan limit reached",
+          description: limitMessage,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Food not found",
+          description: "This barcode is not in our database. Try manual entry or a different product.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsSearchingBarcode(false);
     }

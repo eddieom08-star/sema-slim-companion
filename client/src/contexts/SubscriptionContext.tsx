@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef, type PropsWithChildren } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getApiBaseUrl } from '@/lib/queryClient';
+import { Capacitor } from '@capacitor/core';
+import { Purchases } from '@/lib/purchases-plugin';
 import type { UserEntitlements } from '../../../shared/features';
 
 const API_BASE = getApiBaseUrl();
@@ -284,14 +286,54 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
     }
   }, [isSignedIn, userId, isOffline, fetchWithAuth]);
 
+  // Map app plan IDs to RevenueCat/App Store product IDs
+  const RC_PRODUCT_MAP: Record<string, string> = {
+    monthly: 'com.semaslim.pro.monthly',
+    annual: 'com.semaslim.pro.annual',
+    ai_tokens_5: 'com.semaslim.ai_tokens_5',
+    ai_tokens_15: 'com.semaslim.ai_tokens_15',
+    ai_tokens_50: 'com.semaslim.ai_tokens_50',
+    streak_shields_3: 'com.semaslim.streak_shields_3',
+    streak_shields_10: 'com.semaslim.streak_shields_10',
+    export_single: 'com.semaslim.export_single',
+    export_5: 'com.semaslim.export_5',
+  };
+
   const openCheckout = useCallback(async (plan: 'monthly' | 'annual') => {
+    // Native iOS: Use RevenueCat In-App Purchase
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const productId = RC_PRODUCT_MAP[plan];
+        if (!productId) throw new Error(`Unknown plan: ${plan}`);
+
+        const result = await Purchases.purchase({ productId });
+        if (result.cancelled) return;
+
+        if (result.success) {
+          // Sync entitlements with server
+          await fetchWithAuth('/api/mobile/sync-purchases', {
+            method: 'POST',
+            body: JSON.stringify({ source: 'revenuecat' }),
+          });
+          clearCache();
+          await refreshSubscription(true);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Purchase failed');
+        throw err;
+      }
+      return;
+    }
+
+    // Web: Stripe checkout with correct base URL
+    const baseUrl = API_BASE || window.location.origin;
     try {
       const response = await fetchWithAuth('/api/subscription/checkout', {
         method: 'POST',
         body: JSON.stringify({
           plan,
-          successUrl: `${window.location.origin}/dashboard?subscription=success`,
-          cancelUrl: `${window.location.origin}/pricing?subscription=cancelled`,
+          successUrl: `${baseUrl}/checkout/success?return_url=${encodeURIComponent('semaslim://checkout-complete')}`,
+          cancelUrl: `${baseUrl}/pricing?subscription=cancelled`,
         }),
       });
 
@@ -305,14 +347,15 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
       setError(err instanceof Error ? err.message : 'Unknown error');
       throw err;
     }
-  }, [fetchWithAuth]);
+  }, [fetchWithAuth, refreshSubscription]);
 
   const openBillingPortal = useCallback(async () => {
+    const baseUrl = API_BASE || window.location.origin;
     try {
       const response = await fetchWithAuth('/api/subscription/portal', {
         method: 'POST',
         body: JSON.stringify({
-          returnUrl: `${window.location.origin}/profile`,
+          returnUrl: `${baseUrl}/profile`,
         }),
       });
 
@@ -329,13 +372,37 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
   }, [fetchWithAuth]);
 
   const purchaseTokens = useCallback(async (productId: string) => {
+    // Native iOS: Use RevenueCat In-App Purchase
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const rcProductId = RC_PRODUCT_MAP[productId] || `com.semaslim.${productId}`;
+        const result = await Purchases.purchase({ productId: rcProductId });
+        if (result.cancelled) return;
+
+        if (result.success) {
+          await fetchWithAuth('/api/mobile/sync-purchases', {
+            method: 'POST',
+            body: JSON.stringify({ source: 'revenuecat' }),
+          });
+          clearCache();
+          await refreshTokenBalance(true);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Purchase failed');
+        throw err;
+      }
+      return;
+    }
+
+    // Web: Stripe checkout with correct base URL
+    const baseUrl = API_BASE || window.location.origin;
     try {
       const response = await fetchWithAuth('/api/tokens/purchase', {
         method: 'POST',
         body: JSON.stringify({
           productId,
-          successUrl: `${window.location.origin}/dashboard?purchase=success`,
-          cancelUrl: `${window.location.origin}/dashboard?purchase=cancelled`,
+          successUrl: `${baseUrl}/checkout/success?return_url=${encodeURIComponent('semaslim://checkout-complete')}`,
+          cancelUrl: `${baseUrl}/dashboard?purchase=cancelled`,
         }),
       });
 
@@ -349,7 +416,7 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
       setError(err instanceof Error ? err.message : 'Unknown error');
       throw err;
     }
-  }, [fetchWithAuth]);
+  }, [fetchWithAuth, refreshTokenBalance]);
 
   const checkFeature = useCallback(async (feature: string, quantity: number = 1) => {
     // Offline-first: use local entitlements to check

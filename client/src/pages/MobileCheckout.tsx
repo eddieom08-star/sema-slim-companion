@@ -89,16 +89,17 @@ export default function MobileCheckout() {
         ? '/api/subscription/checkout'
         : '/api/tokens/purchase';
 
+      const baseUrl = API_BASE || window.location.origin;
       const body = state.productType === 'subscription'
         ? {
             plan,
-            successUrl: `${window.location.origin}/checkout/success?return_url=${encodeURIComponent(returnUrl)}`,
-            cancelUrl: `${window.location.origin}/checkout?product=${productId || ''}&plan=${plan || ''}&cancelled=true`,
+            successUrl: `${baseUrl}/checkout/success?return_url=${encodeURIComponent(returnUrl)}`,
+            cancelUrl: `${baseUrl}/checkout?product=${productId || ''}&plan=${plan || ''}&cancelled=true`,
           }
         : {
             productId,
-            successUrl: `${window.location.origin}/checkout/success?return_url=${encodeURIComponent(returnUrl)}`,
-            cancelUrl: `${window.location.origin}/checkout?product=${productId}&cancelled=true`,
+            successUrl: `${baseUrl}/checkout/success?return_url=${encodeURIComponent(returnUrl)}`,
+            cancelUrl: `${baseUrl}/checkout?product=${productId}&cancelled=true`,
           };
 
       const headers: Record<string, string> = {

@@ -5,6 +5,7 @@ import { SplashScreen } from '@capacitor/splash-screen';
 import { Keyboard } from '@capacitor/keyboard';
 import { clerkNative } from '@/lib/clerkNative';
 import { setAuthTokenGetter } from '@/lib/queryClient';
+import { Purchases } from '@/lib/purchases-plugin';
 
 /**
  * Fix for iOS WebView keyboard not appearing on input focus
@@ -139,6 +140,19 @@ export async function initializeMobile() {
     console.log('[Mobile Init] Clerk Native initialized');
   } catch (error) {
     console.warn('[Mobile Init] Clerk init error:', error);
+  }
+
+  // Initialize RevenueCat for In-App Purchases
+  try {
+    const rcApiKey = import.meta.env.VITE_REVENUECAT_PUBLIC_KEY;
+    if (rcApiKey) {
+      await Purchases.configure({ apiKey: rcApiKey });
+      console.log('[Mobile Init] RevenueCat configured');
+    } else {
+      console.warn('[Mobile Init] VITE_REVENUECAT_PUBLIC_KEY not set, skipping RevenueCat');
+    }
+  } catch (error) {
+    console.warn('[Mobile Init] RevenueCat config error:', error);
   }
 
   console.log('[Mobile Init] Mobile features initialized');

@@ -1,7 +1,9 @@
-import { createContext, useContext, useCallback, useEffect, useState, type PropsWithChildren } from 'react';
+import { createContext, useContext, useCallback, useEffect, useState, useRef, type PropsWithChildren } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { clerkNative } from '@/lib/clerkNative';
 import { useLocation } from 'wouter';
+import { Capacitor } from '@capacitor/core';
+import { Purchases } from '@/lib/purchases-plugin';
 
 interface AuthState {
   isLoading: boolean;
@@ -46,6 +48,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
     return () => { cancelled = true; };
   }, []);
 
+  const rcLoginDone = useRef(false);
+
   const setSignedIn = useCallback((value: boolean) => {
     setMobileSignedIn(value);
     setMobileLoaded(true);
@@ -60,6 +64,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
     } catch (error) {
       console.error('[Auth] Sign-out error:', error);
     }
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await Purchases.logout();
+      } catch (error) {
+        console.warn('[Auth] RevenueCat logout error:', error);
+      }
+    }
+    rcLoginDone.current = false;
     setMobileSignedIn(false);
     queryClient.clear();
     setLocation('/');
@@ -80,6 +92,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
     refetchOnReconnect: true,
     refetchOnWindowFocus: false,
   });
+
+  // Login to RevenueCat when user is authenticated
+  useEffect(() => {
+    const userId = (user as any)?.id;
+    if (!userId || !Capacitor.isNativePlatform() || rcLoginDone.current) return;
+    rcLoginDone.current = true;
+    Purchases.login({ userId }).then(
+      () => console.log('[Auth] RevenueCat login success'),
+      (err: unknown) => console.warn('[Auth] RevenueCat login error:', err),
+    );
+  }, [user]);
 
   // Wait for both mobile auth check AND user data before routing
   const isLoading = !mobileLoaded || (mobileSignedIn && mobileLoaded && isUserQueryLoading);

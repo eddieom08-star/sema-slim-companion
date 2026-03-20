@@ -24,6 +24,7 @@ const Profile = lazy(() => import("@/pages/profile"));
 const Recipes = lazy(() => import("@/pages/recipes"));
 const MobileCheckout = lazy(() => import("@/pages/MobileCheckout"));
 const CheckoutSuccess = lazy(() => import("@/pages/CheckoutSuccess"));
+const Privacy = lazy(() => import("@/pages/privacy"));
 
 // Lazy load non-critical components
 const PWAInstallPrompt = lazy(() => import("@/components/pwa-install-prompt").then(m => ({ default: m.PWAInstallPrompt })));
@@ -82,6 +83,7 @@ function Router() {
     return (
       <Suspense fallback={<PageLoader />}>
         <Switch>
+          <Route path="/privacy" component={Privacy} />
           <Route path="/checkout/success" component={CheckoutSuccess} />
           <Route path="/checkout" component={MobileCheckout} />
           <Route path="/" component={Landing} />
@@ -97,6 +99,7 @@ function Router() {
     return (
       <Suspense fallback={<PageLoader />}>
         <Switch>
+          <Route path="/privacy" component={Privacy} />
           <Route path="/checkout/success" component={CheckoutSuccess} />
           <Route path="/checkout" component={MobileCheckout} />
           <Route path="/" component={Onboarding} />
@@ -109,6 +112,7 @@ function Router() {
   return (
     <Suspense fallback={<PageLoader />}>
       <Switch>
+        <Route path="/privacy" component={Privacy} />
         <Route path="/checkout/success" component={CheckoutSuccess} />
         <Route path="/checkout" component={MobileCheckout} />
         <Route path="/" component={Dashboard} />

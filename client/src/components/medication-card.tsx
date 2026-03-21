@@ -143,7 +143,11 @@ export function MedicationCard({ medication, onQuickLog, onDetailedLog, isLoggin
         {medication.reminderEnabled && (
           <div className="mt-4 flex items-center space-x-2 text-xs text-muted-foreground">
             <i className="fas fa-bell"></i>
-            <span>Reminders enabled</span>
+            <span>
+              {medication.reminderTime
+                ? `Reminder at ${new Date(`2000-01-01T${medication.reminderTime}`).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
+                : 'Reminders enabled'}
+            </span>
           </div>
         )}
       </CardContent>

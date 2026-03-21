@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { DetailedLogDialog } from "@/components/detailed-log-dialog";
 import { apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
 import { Capacitor } from "@capacitor/core";
+import { rescheduleAllReminders } from "@/lib/local-notifications";
 
 // Mock data for testing without authentication
 const MOCK_MEDICATIONS = [
@@ -90,6 +91,15 @@ export default function Medication() {
   const { data: medicationLogs, isLoading: logsLoading } = useQuery({
     queryKey: ["/api/medication-logs"],
   });
+
+  // Reschedule local notifications when medications load
+  const hasScheduled = useRef(false);
+  useEffect(() => {
+    if (medications && Array.isArray(medications) && medications.length > 0 && !hasScheduled.current) {
+      hasScheduled.current = true;
+      rescheduleAllReminders(medications);
+    }
+  }, [medications]);
 
   // Use real data (mock data fallback removed - we want real API data)
   const effectiveMedications = medications || [];

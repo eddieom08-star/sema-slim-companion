@@ -58,6 +58,7 @@ export const medications = pgTable("medications", {
   startDate: date("start_date").notNull(),
   nextDueDate: timestamp("next_due_date").notNull(),
   reminderEnabled: boolean("reminder_enabled").default(true),
+  reminderTime: varchar("reminder_time", { length: 5 }).default("09:00"), // HH:MM format
   adherenceScore: integer("adherence_score").default(100), // 0-100 percentage
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [

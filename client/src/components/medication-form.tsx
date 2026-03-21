@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { scheduleMedicationReminder } from "@/lib/local-notifications";
 
 interface MedicationFormProps {
   open: boolean;
@@ -21,6 +22,7 @@ export function MedicationForm({ open, onOpenChange }: MedicationFormProps) {
     dosage: "",
     frequency: "",
     startDate: new Date().toISOString().split('T')[0],
+    reminderTime: "09:00",
   });
 
   const createMedication = useMutation({
@@ -32,10 +34,21 @@ export function MedicationForm({ open, onOpenChange }: MedicationFormProps) {
         nextDueDate.setDate(nextDueDate.getDate() + 1);
       }
       
-      await apiRequest("POST", "/api/medications", {
+      const response = await apiRequest("POST", "/api/medications", {
         ...data,
         nextDueDate: nextDueDate.toISOString(),
         reminderEnabled: true,
+        reminderTime: data.reminderTime || "09:00",
+      });
+      const medication = await response.json();
+
+      // Schedule local notification for the reminder
+      scheduleMedicationReminder({
+        id: medication.id,
+        medicationType: data.medicationType,
+        dosage: data.dosage,
+        frequency: data.frequency,
+        reminderTime: data.reminderTime || "09:00",
       });
     },
     onSuccess: () => {
@@ -50,6 +63,7 @@ export function MedicationForm({ open, onOpenChange }: MedicationFormProps) {
         dosage: "",
         frequency: "",
         startDate: new Date().toISOString().split('T')[0],
+        reminderTime: "09:00",
       });
     },
     onError: (error: any) => {
@@ -149,6 +163,17 @@ export function MedicationForm({ open, onOpenChange }: MedicationFormProps) {
               value={formData.startDate}
               onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
               data-testid="input-start-date"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="reminderTime">Reminder Time</Label>
+            <Input
+              id="reminderTime"
+              type="time"
+              value={formData.reminderTime}
+              onChange={(e) => setFormData({ ...formData, reminderTime: e.target.value })}
+              data-testid="input-reminder-time"
             />
           </div>
 

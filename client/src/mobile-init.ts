@@ -135,11 +135,14 @@ export async function initializeMobile() {
   }
 
   try {
-    // Initialize Clerk Native SDK
+    // Initialize Clerk Native SDK - this MUST succeed for auth to work
+    // The native plugin now calls Clerk.shared.configure() and waits for completion
     await clerkNative.initialize();
-    console.log('[Mobile Init] Clerk Native initialized');
+    console.log('[Mobile Init] Clerk Native initialized successfully');
   } catch (error) {
-    console.warn('[Mobile Init] Clerk init error:', error);
+    console.error('[Mobile Init] CRITICAL: Clerk SDK initialization failed. Sign-in will not work.', error);
+    // Don't re-throw - let the app render so users see the landing page
+    // Auth attempts will fail with a clear "not initialized" error from the native plugin
   }
 
   // Initialize RevenueCat for In-App Purchases

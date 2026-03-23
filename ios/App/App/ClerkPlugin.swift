@@ -103,17 +103,16 @@ public class ClerkPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "getToken", returnType: CAPPluginReturnPromise)
     ]
 
+    /// Tracks whether Clerk.shared.configure() completed successfully
+    private var isClerkConfigured = false
+
     public override func load() {
         print("[ClerkPlugin] Plugin loaded successfully")
-
-        Task { @MainActor in
-            let signedIn = Clerk.shared.session != nil
-            print("[ClerkPlugin] Clerk.shared state: \(signedIn ? "signed in" : "not signed in")")
-        }
     }
 
     /**
      * Initialize Clerk with publishable key
+     * This actually calls Clerk.shared.configure() and waits for it to complete
      */
     @objc func initialize(_ call: CAPPluginCall) {
         guard let publishableKey = call.getString("publishableKey") else {
@@ -121,14 +120,24 @@ public class ClerkPlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
 
-        print("[ClerkPlugin] Initializing with key: \(String(publishableKey.prefix(20)))...")
+        print("[ClerkPlugin] Initializing Clerk SDK with key: \(String(publishableKey.prefix(20)))...")
 
-        // Note: Actual Clerk SDK initialization will be done in AppDelegate
-        // This method just validates the key is provided
-        call.resolve([
-            "success": true,
-            "message": "Clerk initialized"
-        ])
+        Task {
+            do {
+                try await Clerk.shared.configure(publishableKey: publishableKey)
+                self.isClerkConfigured = true
+                let signedIn = await MainActor.run { Clerk.shared.session != nil }
+                print("[ClerkPlugin] Clerk SDK configured successfully, signed in: \(signedIn)")
+                call.resolve([
+                    "success": true,
+                    "message": "Clerk initialized successfully"
+                ])
+            } catch {
+                self.isClerkConfigured = false
+                print("[ClerkPlugin] Clerk SDK initialization FAILED: \(error)")
+                call.reject("Clerk initialization failed: \(error.localizedDescription)")
+            }
+        }
     }
 
     /**
@@ -153,6 +162,12 @@ public class ClerkPlugin: CAPPlugin, CAPBridgedPlugin {
      * Internal helper to present Clerk's AuthView with a specific mode
      */
     private func presentAuthView(call: CAPPluginCall, mode: AuthView.Mode) {
+        guard isClerkConfigured else {
+            print("[ClerkPlugin] ERROR: Attempted to present auth UI before Clerk was initialized")
+            call.reject("Clerk not initialized. Call initialize() first.")
+            return
+        }
+
         DispatchQueue.main.async {
             guard let viewController = self.bridge?.viewController else {
                 call.reject("Unable to get view controller")

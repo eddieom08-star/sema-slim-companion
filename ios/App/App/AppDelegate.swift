@@ -1,6 +1,5 @@
 import UIKit
 import Capacitor
-import Clerk
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -8,19 +7,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
-
-        // Initialize Clerk with publishable key
-        Task {
-            do {
-                try await Clerk.shared.configure(publishableKey: "pk_test_Y29tcGxldGUtYnVsbGZyb2ctNzEuY2xlcmsuYWNjb3VudHMuZGV2JA")
-                print("[AppDelegate] Clerk initialized successfully")
-            } catch {
-                print("[AppDelegate] Clerk initialization error: \(error)")
-            }
-        }
-
-        print("[AppDelegate] App launched")
+        // Clerk SDK initialization is handled by ClerkPlugin.initialize() called from JS
+        // This ensures the publishable key comes from the environment (VITE_CLERK_PUBLISHABLE_KEY)
+        // and initialization is properly awaited before auth UI is presented
+        print("[AppDelegate] App launched - Clerk init deferred to ClerkPlugin")
         return true
     }
 

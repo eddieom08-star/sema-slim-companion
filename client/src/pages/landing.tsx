@@ -63,7 +63,7 @@ export default function Landing() {
         imageUrl="https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=1200&q=80"
         title={
           <>
-            Welcome to <span className="text-primary">SemaSlim</span>
+            Welcome to <span className="text-primary">GLP Friend</span>
           </>
         }
         description="The only weight management app designed specifically for GLP-1 users. Track nutrition, manage medications, and achieve sustainable results."

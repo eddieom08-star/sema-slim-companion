@@ -40,7 +40,7 @@ export default function Navigation() {
                 <i className="fas fa-heartbeat text-primary-foreground text-xl"></i>
               </div>
               <div>
-                <h1 className="text-xl font-bold text-foreground">SemaSlim</h1>
+                <h1 className="text-xl font-bold text-foreground">GLP Friend</h1>
                 <p className="text-xs text-muted-foreground">GLP-1 Weight Management</p>
               </div>
             </div>

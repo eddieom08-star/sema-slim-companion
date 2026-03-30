@@ -504,7 +504,7 @@ export class StripeService {
     } catch {
       await stripe.products.create({
         id: productId,
-        name: productId === 'pro_monthly' ? 'SemaSlim Pro Monthly' : 'SemaSlim Pro Annual',
+        name: productId === 'pro_monthly' ? 'GLP Friend Pro Monthly' : 'GLP Friend Pro Annual',
       });
     }
 

@@ -2,7 +2,7 @@ import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.semaslim.app',
-  appName: 'SemaSlim',
+  appName: 'GLP Friend',
   webDir: 'dist/public',
   server: {
     androidScheme: 'https',

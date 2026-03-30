@@ -671,7 +671,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const response = await fetchWithTimeout(offUrl, {
         headers: {
-          'User-Agent': 'SemaSlim/1.0 (Weight Management App)'
+          'User-Agent': 'GLPFriend/1.0 (Weight Management App)'
         }
       }, 8000); // 8 second timeout for barcode lookup
 

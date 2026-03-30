@@ -36,7 +36,7 @@ export const users = pgTable("users", {
   profileImageUrl: varchar("profile_image_url"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-  // SemaSlim specific fields
+  // GLP Friend specific fields
   currentWeight: decimal("current_weight", { precision: 5, scale: 2 }),
   targetWeight: decimal("target_weight", { precision: 5, scale: 2 }),
   height: integer("height"), // in cm

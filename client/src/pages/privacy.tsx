@@ -8,14 +8,14 @@ export default function Privacy() {
         <section>
           <h2 className="text-lg font-semibold mb-2">1. Information We Collect</h2>
           <p>
-            SemaSlim collects information you provide directly when creating an account (email address, name) and health-related data you enter voluntarily (weight, food logs, medication schedules, fitness goals). We also collect device identifiers and usage analytics to improve the app experience.
+            GLP Friend collects information you provide directly when creating an account (email address, name) and health-related data you enter voluntarily (weight, food logs, medication schedules, fitness goals). We also collect device identifiers and usage analytics to improve the app experience.
           </p>
         </section>
 
         <section>
           <h2 className="text-lg font-semibold mb-2">2. How We Use Your Information</h2>
           <ul className="list-disc pl-5 space-y-1">
-            <li>Provide and personalize the SemaSlim experience, including AI-powered meal plans and recipe suggestions</li>
+            <li>Provide and personalize the GLP Friend experience, including AI-powered meal plans and recipe suggestions</li>
             <li>Track your progress toward health and weight management goals</li>
             <li>Process in-app purchases and manage your subscription</li>
             <li>Send transactional notifications (e.g., streak reminders, medication alerts)</li>
@@ -45,7 +45,7 @@ export default function Privacy() {
         <section>
           <h2 className="text-lg font-semibold mb-2">5. Health Data</h2>
           <p>
-            SemaSlim processes health-related information (weight, food intake, medication schedules) that you voluntarily provide. This data is used solely to deliver the app's core functionality. We do not share health data with advertisers or data brokers. You can delete all your health data at any time from your profile settings.
+            GLP Friend processes health-related information (weight, food intake, medication schedules) that you voluntarily provide. This data is used solely to deliver the app's core functionality. We do not share health data with advertisers or data brokers. You can delete all your health data at any time from your profile settings.
           </p>
         </section>
 
@@ -70,7 +70,7 @@ export default function Privacy() {
         <section>
           <h2 className="text-lg font-semibold mb-2">8. Children's Privacy</h2>
           <p>
-            SemaSlim is not intended for use by children under 13. We do not knowingly collect personal information from children under 13. If we become aware that a child under 13 has provided us with personal information, we will delete it promptly.
+            GLP Friend is not intended for use by children under 13. We do not knowingly collect personal information from children under 13. If we become aware that a child under 13 has provided us with personal information, we will delete it promptly.
           </p>
         </section>
 
@@ -86,7 +86,7 @@ export default function Privacy() {
           <p>
             If you have questions about this privacy policy or your data, contact us at:
           </p>
-          <p className="mt-2 font-medium">support@semaslim.com</p>
+          <p className="mt-2 font-medium">support@glpfriend.com</p>
         </section>
       </div>
     </div>

@@ -1,6 +1,6 @@
-const CACHE_NAME = 'semaslim-v1';
-const RUNTIME_CACHE = 'semaslim-runtime-v1';
-const DATA_CACHE = 'semaslim-data-v1';
+const CACHE_NAME = 'glpfriend-v1';
+const RUNTIME_CACHE = 'glpfriend-runtime-v1';
+const DATA_CACHE = 'glpfriend-data-v1';
 
 const STATIC_ASSETS = [
   '/',
@@ -170,7 +170,7 @@ async function syncOfflineData() {
 
 function openIndexedDB() {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('semaslim-offline', 1);
+    const request = indexedDB.open('glpfriend-offline', 1);
     
     request.onerror = () => reject(request.error);
     request.onsuccess = () => resolve(request.result);

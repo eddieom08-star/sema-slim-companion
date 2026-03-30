@@ -1,4 +1,4 @@
-// Feature limits configuration for SemaSlim monetization tiers
+// Feature limits configuration for GLP Friend monetization tiers
 
 export interface FeatureLimits {
   // AI Features
@@ -92,14 +92,14 @@ export interface ProductConfig {
 export const SUBSCRIPTION_PRODUCTS = {
   pro_monthly: {
     id: 'pro_monthly',
-    name: 'SemaSlim Pro Monthly',
+    name: 'GLP Friend Pro Monthly',
     description: 'Full access to all Pro features, billed monthly',
     amount: 999, // $9.99
     interval: 'month' as const,
   },
   pro_annual: {
     id: 'pro_annual',
-    name: 'SemaSlim Pro Annual',
+    name: 'GLP Friend Pro Annual',
     description: 'Full access to all Pro features, save 33%',
     amount: 7999, // $79.99
     interval: 'year' as const,

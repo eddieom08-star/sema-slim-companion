@@ -112,7 +112,7 @@ export function Paywall({ reason, upsellType, onClose, onPurchaseComplete }: Pay
                 </span>
                 <span className="text-emerald-600 font-semibold">Save 40%</span>
               </div>
-              <h3 className="text-lg font-bold text-gray-900">SemaSlim Pro</h3>
+              <h3 className="text-lg font-bold text-gray-900">GLP Friend Pro</h3>
               <ul className="mt-2 space-y-2 text-sm text-gray-600">
                 <li className="flex items-center">
                   <svg className="w-4 h-4 text-emerald-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">

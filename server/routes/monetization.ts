@@ -456,7 +456,7 @@ router.post('/exports/healthcare-pdf', requireAuth(), async (req: Request, res: 
     });
 
     // Set response headers for PDF download
-    const filename = `semaslim-health-report-${new Date().toISOString().split('T')[0]}.pdf`;
+    const filename = `glpfriend-health-report-${new Date().toISOString().split('T')[0]}.pdf`;
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.setHeader('Content-Length', pdfBuffer.length);

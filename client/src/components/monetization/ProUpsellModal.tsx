@@ -45,7 +45,7 @@ const triggerMessages: Record<string, { title: string; description: string }> = 
     description: "Generate professional PDF reports for your healthcare provider with detailed insights.",
   },
   general: {
-    title: "Upgrade to SemaSlim Pro",
+    title: "Upgrade to GLP Friend Pro",
     description: "Get the most out of your GLP-1 journey with premium features.",
   },
 };

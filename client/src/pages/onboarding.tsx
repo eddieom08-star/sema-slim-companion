@@ -33,7 +33,7 @@ export default function Onboarding() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       toast({
-        title: "Welcome to SemaSlim!",
+        title: "Welcome to GLP Friend!",
         description: "Your profile has been set up successfully.",
       });
 
@@ -108,7 +108,7 @@ export default function Onboarding() {
           <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center mx-auto mb-4">
             <i className="fas fa-heartbeat text-primary-foreground text-xl"></i>
           </div>
-          <CardTitle className="text-2xl">Welcome to SemaSlim</CardTitle>
+          <CardTitle className="text-2xl">Welcome to GLP Friend</CardTitle>
           <p className="text-muted-foreground">
             Let's personalize your GLP-1 weight management journey
           </p>

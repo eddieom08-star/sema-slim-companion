@@ -6,7 +6,7 @@ import { Capacitor } from "@capacitor/core";
 
 const isMobile = Capacitor.isNativePlatform();
 
-console.log('[SemaSlim Init] Starting app initialization', {
+console.log('[GLP Friend Init] Starting app initialization', {
   isMobile,
   platform: Capacitor.getPlatform(),
   env: import.meta.env.MODE,
@@ -17,14 +17,14 @@ console.log('[SemaSlim Init] Starting app initialization', {
 (async () => {
   try {
     await initializeMobile();
-    console.log('[SemaSlim Init] Mobile initialization complete');
+    console.log('[GLP Friend Init] Mobile initialization complete');
   } catch (error) {
-    console.error('[SemaSlim Init] Mobile init error:', error);
+    console.error('[GLP Friend Init] Mobile init error:', error);
   }
 
   createRoot(document.getElementById("root")!).render(
     <App />
   );
 
-  console.log('[SemaSlim Init] App rendered');
+  console.log('[GLP Friend Init] App rendered');
 })();

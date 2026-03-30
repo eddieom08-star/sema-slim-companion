@@ -8,9 +8,9 @@ import type { UserEntitlements } from '../../../shared/features';
 const API_BASE = getApiBaseUrl();
 
 // Cache configuration
-const CACHE_KEY_SUBSCRIPTION = 'semaslim_subscription_cache';
-const CACHE_KEY_ENTITLEMENTS = 'semaslim_entitlements_cache';
-const CACHE_KEY_TOKENS = 'semaslim_tokens_cache';
+const CACHE_KEY_SUBSCRIPTION = 'glpfriend_subscription_cache';
+const CACHE_KEY_ENTITLEMENTS = 'glpfriend_entitlements_cache';
+const CACHE_KEY_TOKENS = 'glpfriend_tokens_cache';
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 interface CacheEntry<T> {

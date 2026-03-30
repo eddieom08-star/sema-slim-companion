@@ -32,7 +32,7 @@ export function registerServiceWorker() {
 }
 
 function showUpdateNotification() {
-  if (confirm('A new version of SemaSlim is available. Would you like to update now?')) {
+  if (confirm('A new version of GLP Friend is available. Would you like to update now?')) {
     navigator.serviceWorker.getRegistration().then((registration) => {
       if (registration?.waiting) {
         registration.waiting.postMessage({ type: 'SKIP_WAITING' });
@@ -232,7 +232,7 @@ export async function saveOfflineAction(
 
 function openIndexedDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('semaslim-offline', 1);
+    const request = indexedDB.open('glpfriend-offline', 1);
     
     request.onerror = () => reject(request.error);
     request.onsuccess = () => resolve(request.result);

@@ -178,7 +178,7 @@ export default function MobileCheckout() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">SemaSlim</h1>
+          <h1 className="text-2xl font-bold text-gray-900">GLP Friend</h1>
           <p className="text-gray-500 mt-1">Complete Your Purchase</p>
         </div>
 

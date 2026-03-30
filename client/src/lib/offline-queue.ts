@@ -8,7 +8,7 @@ interface QueuedRequest {
   retries: number;
 }
 
-const DB_NAME = 'semaslim-offline';
+const DB_NAME = 'glpfriend-offline';
 const STORE_NAME = 'offline-actions';
 const MAX_RETRIES = 3;
 

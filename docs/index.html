@@ -234,6 +234,67 @@
     .footer-links { display: flex; align-items: center; gap: 1.5rem; }
     .footer-links a { text-decoration: none; color: var(--gray-500); font-size: 0.875rem; transition: color 0.15s; }
     .footer-links a:hover { color: var(--gray-900); }
+
+    /* --- WAITLIST --- */
+    .waitlist {
+      padding: 5rem 1.5rem; background: var(--blue-50);
+    }
+    .waitlist-inner {
+      max-width: 36rem; margin: 0 auto; text-align: center;
+    }
+    .waitlist-inner h2 {
+      font-size: clamp(1.75rem, 4vw, 2.25rem); font-weight: 700;
+      letter-spacing: -0.02em; margin-bottom: 0.75rem;
+    }
+    .waitlist-inner > p {
+      font-size: 1rem; color: var(--gray-500); margin-bottom: 2rem; line-height: 1.6;
+    }
+    .waitlist-form {
+      display: flex; gap: 0.5rem; max-width: 28rem; margin: 0 auto;
+    }
+    .waitlist-form input[type="email"] {
+      flex: 1; min-width: 0;
+      padding: 0.75rem 1rem; border: 1px solid var(--gray-200);
+      border-radius: 0.75rem; font-size: 1rem; font-family: inherit;
+      background: var(--white); color: var(--gray-900);
+      outline: none; transition: border-color 0.15s;
+    }
+    .waitlist-form input[type="email"]:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+    .waitlist-form input[type="email"]::placeholder { color: var(--gray-400); }
+    .waitlist-form button {
+      background: var(--blue); color: var(--white);
+      border: none; border-radius: 0.75rem; padding: 0.75rem 1.5rem;
+      font-size: 1rem; font-weight: 600; cursor: pointer;
+      white-space: nowrap; transition: all 0.2s; font-family: inherit;
+    }
+    .waitlist-form button:hover { background: var(--blue-dark); }
+    .waitlist-form button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .waitlist-note {
+      font-size: 0.75rem; color: var(--gray-400); margin-top: 0.75rem;
+    }
+    .waitlist-success {
+      display: none; padding: 1rem 1.5rem; background: #ECFDF5; border: 1px solid #A7F3D0;
+      border-radius: 0.75rem; color: #065F46; font-size: 0.938rem; font-weight: 500;
+      margin-top: 1rem;
+    }
+    .waitlist-success.show { display: block; }
+    .waitlist-error {
+      display: none; padding: 1rem 1.5rem; background: #FEF2F2; border: 1px solid #FECACA;
+      border-radius: 0.75rem; color: #991B1B; font-size: 0.938rem; font-weight: 500;
+      margin-top: 1rem;
+    }
+    .waitlist-error.show { display: block; }
+    @media (max-width: 480px) {
+      .waitlist-form { flex-direction: column; }
+      .waitlist-form button { width: 100%; }
+    }
+
+    /* --- HERO WAITLIST INLINE --- */
+    .hero-waitlist {
+      margin-top: 1.5rem; font-size: 0.875rem; color: var(--gray-400);
+    }
+    .hero-waitlist a { color: var(--blue); text-decoration: none; font-weight: 500; }
+    .hero-waitlist a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
@@ -273,6 +334,7 @@
       </a>
       <a href="#features" class="btn-outline">Learn More</a>
     </div>
+    <p class="hero-waitlist">Not on iOS? <a href="#waitlist">Join the waitlist</a> for Android & updates.</p>
   </section>
 
   <!-- FEATURES -->
@@ -373,6 +435,26 @@
     </div>
   </section>
 
+  <!-- WAITLIST -->
+  <section class="waitlist" id="waitlist">
+    <div class="waitlist-inner">
+      <p class="section-label">Early Access</p>
+      <h2>Join the waitlist</h2>
+      <p>Be the first to know when new features drop, Android launches, and get early access to GLP Friend Pro.</p>
+      <form class="waitlist-form" id="waitlistForm" action="https://formsubmit.co/support@glpfriend.com" method="POST">
+        <input type="hidden" name="_subject" value="New GLP Friend Waitlist Signup">
+        <input type="hidden" name="_captcha" value="false">
+        <input type="hidden" name="_template" value="table">
+        <input type="hidden" name="_next" value="https://glpfriend.com#waitlist-thanks">
+        <input type="email" name="email" placeholder="Enter your email" required autocomplete="email">
+        <button type="submit" id="waitlistBtn">Join Waitlist</button>
+      </form>
+      <p class="waitlist-note">No spam. Unsubscribe anytime. We only send product updates.</p>
+      <div class="waitlist-success" id="waitlistSuccess">You're on the list! We'll be in touch soon.</div>
+      <div class="waitlist-error" id="waitlistError">Something went wrong. Please try again.</div>
+    </div>
+  </section>
+
   <!-- CTA -->
   <section class="cta">
     <h2>Start your journey today</h2>
@@ -400,5 +482,55 @@
     </div>
   </footer>
 
+  <script>
+    // Waitlist form - AJAX submit to stay on page
+    const form = document.getElementById('waitlistForm');
+    const btn = document.getElementById('waitlistBtn');
+    const successMsg = document.getElementById('waitlistSuccess');
+    const errorMsg = document.getElementById('waitlistError');
+
+    // Check if returning from FormSubmit redirect
+    if (window.location.hash === '#waitlist-thanks') {
+      successMsg.classList.add('show');
+      form.style.display = 'none';
+      history.replaceState(null, '', window.location.pathname);
+    }
+
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const email = form.querySelector('input[type="email"]').value;
+      if (!email) return;
+
+      btn.disabled = true;
+      btn.textContent = 'Joining...';
+      successMsg.classList.remove('show');
+      errorMsg.classList.remove('show');
+
+      fetch('https://formsubmit.co/ajax/support@glpfriend.com', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ email: email, _subject: 'New GLP Friend Waitlist Signup' })
+      })
+      .then(function(res) {
+        if (res.ok) {
+          successMsg.classList.add('show');
+          form.reset();
+          // Track in GA
+          if (typeof gtag === 'function') {
+            gtag('event', 'waitlist_signup', { event_category: 'engagement', event_label: 'waitlist' });
+          }
+        } else {
+          throw new Error('Form submission failed');
+        }
+      })
+      .catch(function() {
+        errorMsg.classList.add('show');
+      })
+      .finally(function() {
+        btn.disabled = false;
+        btn.textContent = 'Join Waitlist';
+      });
+    });
+  </script>
 </body>
 </html>

@@ -492,6 +492,34 @@
   </footer>
 
   <script>
+    // API endpoint for waitlist — falls back to FormSubmit if server unavailable
+    var API_URL = 'https://sema-slim-companion.vercel.app/api/waitlist';
+    var FALLBACK_URL = 'https://formsubmit.co/ajax/support@glpfriend.com';
+
+    function submitWaitlist(email, formId) {
+      // Try API first, fallback to FormSubmit
+      return fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, source: formId })
+      })
+      .then(function(res) {
+        if (res.ok) return res.json();
+        throw new Error('api-fail');
+      })
+      .catch(function() {
+        // Fallback to FormSubmit
+        return fetch(FALLBACK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({ email: email, _subject: 'New GLP Friend Waitlist Signup' })
+        }).then(function(res) {
+          if (res.ok) return { success: true };
+          throw new Error('fallback-fail');
+        });
+      });
+    }
+
     function setupWaitlistForm(formId, successId, errorId) {
       var form = document.getElementById(formId);
       var successMsg = document.getElementById(successId);
@@ -510,19 +538,13 @@
         successMsg.classList.remove('show');
         errorMsg.classList.remove('show');
 
-        fetch('https://formsubmit.co/ajax/support@glpfriend.com', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-          body: JSON.stringify({ email: email, _subject: 'New GLP Friend Waitlist Signup' })
-        })
-        .then(function(res) {
-          if (res.ok) {
-            successMsg.classList.add('show');
-            form.reset();
-            if (typeof gtag === 'function') {
-              gtag('event', 'waitlist_signup', { event_category: 'engagement', event_label: formId });
-            }
-          } else { throw new Error('fail'); }
+        submitWaitlist(email, formId)
+        .then(function() {
+          successMsg.classList.add('show');
+          form.reset();
+          if (typeof gtag === 'function') {
+            gtag('event', 'waitlist_signup', { event_category: 'engagement', event_label: formId });
+          }
         })
         .catch(function() { errorMsg.classList.add('show'); })
         .finally(function() { btn.disabled = false; btn.textContent = 'Join Waitlist'; });

@@ -22,6 +22,7 @@ import {
   mealPlanEntries,
   mealPrepSchedules,
   nutritionalRecommendations,
+  waitlist,
   type User,
   type UpsertUser,
   type Medication,
@@ -1077,6 +1078,10 @@ export class DatabaseStorage implements IStorage {
       .set({ ...data, updatedAt: new Date() })
       .where(eq(nutritionalRecommendations.id, id))
       .returning();
+    return result;
+  }
+  async addToWaitlist(email: string, source: string = 'landing') {
+    const [result] = await db.insert(waitlist).values({ email, source }).returning();
     return result;
   }
 }

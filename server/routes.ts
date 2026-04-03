@@ -94,6 +94,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }
 
+  // Waitlist signup (no auth required, public endpoint)
+  app.post('/api/waitlist', async (req, res) => {
+    try {
+      const { email, source } = req.body;
+      if (!email || typeof email !== 'string' || !email.includes('@')) {
+        return res.status(400).json({ error: 'Valid email required' });
+      }
+      const result = await storage.addToWaitlist(email.toLowerCase().trim(), source || 'landing');
+      res.status(201).json({ success: true, message: 'Added to waitlist' });
+    } catch (error: any) {
+      if (error.code === '23505') {
+        return res.status(200).json({ success: true, message: 'Already on waitlist' });
+      }
+      logger.error('Waitlist signup error', { error: error.message });
+      res.status(500).json({ error: 'Failed to join waitlist' });
+    }
+  });
+
   app.get('/api/health', async (_req, res) => {
     try {
       // Check database connection with retry

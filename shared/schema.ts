@@ -865,3 +865,21 @@ export const insertFeatureUsageSchema = createInsertSchema(featureUsage).omit({
   createdAt: true,
   updatedAt: true,
 });
+
+// Waitlist signups from landing page
+export const waitlist = pgTable("waitlist", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  email: varchar("email", { length: 255 }).notNull().unique(),
+  source: varchar("source", { length: 50 }).default("landing"),
+  createdAt: timestamp("created_at").defaultNow(),
+  invitedAt: timestamp("invited_at"),
+  convertedAt: timestamp("converted_at"),
+}, (table) => [
+  index("idx_waitlist_email").on(table.email),
+  index("idx_waitlist_created").on(table.createdAt),
+]);
+
+export const insertWaitlistSchema = createInsertSchema(waitlist).pick({
+  email: true,
+  source: true,
+});

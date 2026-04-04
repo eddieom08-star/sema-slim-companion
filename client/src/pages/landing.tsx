@@ -12,7 +12,7 @@ export default function Landing() {
   // Auto-redirect to dashboard if already signed in
   useEffect(() => {
     if (!isLoading && isSignedIn) {
-      setLocation('/dashboard');
+      setLocation('/');
     }
   }, [isLoading, isSignedIn, setLocation]);
 
@@ -33,7 +33,7 @@ export default function Landing() {
       const result = await clerkNative.presentSignIn();
       if (result.success || result.isSignedIn) {
         setSignedIn(true);
-        setLocation('/dashboard');
+        setLocation('/');
       }
     } catch (error) {
       console.error('[Landing] Sign-in error:', error);
@@ -48,7 +48,7 @@ export default function Landing() {
       const result = await clerkNative.presentSignUp();
       if (result.success || result.isSignedIn) {
         setSignedIn(true);
-        setLocation('/dashboard');
+        setLocation('/');
       }
     } catch (error) {
       console.error('[Landing] Sign-up error:', error);

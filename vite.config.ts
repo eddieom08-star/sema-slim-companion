@@ -54,6 +54,7 @@ export default defineConfig(async ({ mode }) => {
   define: {
     'import.meta.env.VITE_CLERK_PUBLISHABLE_KEY': JSON.stringify(env.VITE_CLERK_PUBLISHABLE_KEY),
     'import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY': JSON.stringify(env.VITE_STRIPE_PUBLISHABLE_KEY),
+    'import.meta.env.VITE_ENABLE_V2': JSON.stringify(env.VITE_ENABLE_V2),
   },
 };
 });

@@ -39,7 +39,7 @@ export default function Onboarding() {
 
       // FIX: Explicitly navigate to dashboard after successful onboarding
       // This prevents white screen by not relying on router conditional re-render
-      setLocation("/dashboard");
+      setLocation("/");
     },
     onError: (error) => {
       toast({

@@ -22,7 +22,7 @@ export default function SignInPage() {
         ]);
         if (result.success || result.isSignedIn) {
           setSignedIn(true);
-          setLocation('/dashboard');
+          setLocation('/');
         } else {
           setLocation('/');
         }

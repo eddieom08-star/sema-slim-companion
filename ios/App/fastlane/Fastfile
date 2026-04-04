@@ -20,10 +20,10 @@ platform :ios do
       notify_external_testers: true,
       groups: ["External Testers"],
       app_version: "1.0",
-      build_number: "10",
+      build_number: "11",
       localized_build_info: {
         "default" => {
-          whats_new: "What to test:\n- Sign up and complete onboarding\n- Log food entries (manual, barcode scan, or AI receipt scan)\n- Track medication schedules and set reminder times\n- View progress charts and streaks\n- Browse and save AI-generated recipes\n- Test subscription upgrade flow (Pro tier)\n- Check achievement system and gamification\n- Medication reminder notifications"
+          whats_new: "What to test:\n- NEW: Agent-first chat experience is now the home screen after login\n- Chat with your AI health companion to log food, medication, weight\n- AI recipe generation (ask for GLP-1 friendly meals)\n- Health panel with daily stats\n- Sign up and complete onboarding\n- Test subscription upgrade flow (Pro tier)"
         }
       }
     )

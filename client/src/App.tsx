@@ -112,6 +112,35 @@ function Router() {
     );
   }
 
+  const v2Enabled = import.meta.env.VITE_ENABLE_V2 === 'true';
+
+  // When v2 is enabled, the agent shell IS the home screen
+  if (v2Enabled) {
+    return (
+      <AgentProvider>
+        <HealthPanelProvider>
+          <Suspense fallback={<PageLoader />}>
+            <Switch>
+              <Route path="/privacy" component={Privacy} />
+              <Route path="/checkout/success" component={CheckoutSuccess} />
+              <Route path="/checkout" component={MobileCheckout} />
+              <Route path="/food-tracking" component={FoodTracking} />
+              <Route path="/medication" component={Medication} />
+              <Route path="/recipes" component={Recipes} />
+              <Route path="/progress" component={Progress} />
+              <Route path="/profile" component={Profile} />
+              <Route path="/dashboard" component={Dashboard} />
+              <Route path="/">
+                {() => <AgentShell />}
+              </Route>
+              <Route component={NotFound} />
+            </Switch>
+          </Suspense>
+        </HealthPanelProvider>
+      </AgentProvider>
+    );
+  }
+
   return (
     <Suspense fallback={<PageLoader />}>
       <Switch>
@@ -125,15 +154,6 @@ function Router() {
         <Route path="/recipes" component={Recipes} />
         <Route path="/progress" component={Progress} />
         <Route path="/profile" component={Profile} />
-        <Route path="/v2">
-          {() => (
-            <AgentProvider>
-              <HealthPanelProvider>
-                <AgentShell />
-              </HealthPanelProvider>
-            </AgentProvider>
-          )}
-        </Route>
         <Route component={NotFound} />
       </Switch>
     </Suspense>

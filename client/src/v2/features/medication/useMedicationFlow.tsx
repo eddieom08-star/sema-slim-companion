@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { useAgent } from '@/v2/agent/AgentContext'
 import { useSubscription } from '@/contexts/SubscriptionContext'
+import { apiRequest } from '@/lib/queryClient'
 import ProMomentCard from '@/v2/monetisation/ProMomentCard'
 
 const FIELD_MAP: Record<string, string> = {
@@ -54,16 +55,11 @@ export function useMedicationFlow() {
     const timeStr = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
 
     try {
-      const res = await fetch('/api/medication-logs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          medicationId: medication.id,
-          takenAt: now.toISOString(),
-          dosage: medication.dosage,
-          notes: '',
-        }),
+      const res = await apiRequest('POST', '/api/medication-logs', {
+        medicationId: medication.id,
+        takenAt: now.toISOString(),
+        dosage: medication.dosage,
+        notes: '',
       })
       const data = await res.json()
       setLastLogId(data.id)
@@ -107,12 +103,7 @@ export function useMedicationFlow() {
 
     if (lastLogId && field && field !== 'notes') {
       try {
-        await fetch(`/api/medication-logs/${lastLogId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ [field]: severity }),
-        })
+        await apiRequest('PATCH', `/api/medication-logs/${lastLogId}`, { [field]: severity })
       } catch { /* non-critical */ }
     }
 

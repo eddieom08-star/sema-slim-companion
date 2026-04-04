@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { apiRequest, getApiBaseUrl } from '@/lib/queryClient'
 import { useAgent } from '@/v2/agent/AgentContext'
 import { useHealthPanel } from '@/v2/agent/HealthPanelContext'
 import { classifyIntent, getContextualChips } from '@/v2/agent/agentRouter'
@@ -41,13 +42,13 @@ function AgentShellInner() {
 
   const { data: dashboard } = useQuery({
     queryKey: ['dashboard'],
-    queryFn: () => fetch('/api/dashboard', { credentials: 'include' }).then(r => r.json()),
+    queryFn: () => apiRequest('GET', '/api/dashboard').then(r => r.json()),
     staleTime: 60 * 1000,
   })
 
   const { data: medications } = useQuery({
     queryKey: ['medications'],
-    queryFn: () => fetch('/api/medications', { credentials: 'include' }).then(r => r.json()),
+    queryFn: () => apiRequest('GET', '/api/medications').then(r => r.json()),
     staleTime: 5 * 60 * 1000,
   })
 
@@ -108,12 +109,7 @@ function AgentShellInner() {
     if (intent === 'general') {
       // Escalate to Haiku classify
       try {
-        const res = await fetch('/api/v2/classify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ text }),
-        })
+        const res = await apiRequest('POST', '/api/v2/classify', { text })
         const data = await res.json()
         dispatchIntent(data.intent ?? 'general', text, data.entities)
       } catch {
@@ -176,7 +172,7 @@ function AgentShellInner() {
   }
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-white dark:bg-gray-900 relative touch-pan-y">
+    <div className="flex flex-col w-full max-w-full overflow-x-hidden bg-white dark:bg-gray-900 relative touch-pan-y" style={{ height: '100dvh' }}>
       <HealthPanel userInitials={initials} />
       <HeaderStats
         userContext={userContext}

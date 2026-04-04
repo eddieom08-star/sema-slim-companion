@@ -21,7 +21,7 @@ export default function InputBar({ onSend, onCamera }: InputBarProps) {
   }
 
   return (
-    <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 pb-safe flex-shrink-0">
+    <div className="sticky bottom-0 z-50 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 flex-shrink-0 w-full max-w-full overflow-x-hidden" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}>
       <div className="flex items-end gap-2">
         <button onClick={onCamera} className="p-2 text-gray-400">
           <Camera className="w-5 h-5" />

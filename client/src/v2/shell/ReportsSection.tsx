@@ -1,3 +1,5 @@
+import { apiRequest } from '@/lib/queryClient'
+
 export default function ReportsSection() {
   return (
     <div className="px-4 pt-4 pb-20">
@@ -14,7 +16,7 @@ export default function ReportsSection() {
         <div className="px-4 pb-4 flex gap-2">
           <button
             className="flex-1 bg-gray-900 text-white text-xs font-medium py-2 rounded-xl"
-            onClick={() => fetch('/api/exports/healthcare-pdf', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reportPeriod: '30days', format: 'standard' }) })}
+            onClick={() => apiRequest('POST', '/api/exports/healthcare-pdf', { reportPeriod: '30days', format: 'standard' })}
           >
             Generate PDF
           </button>
@@ -31,7 +33,7 @@ export default function ReportsSection() {
         <div className="px-4 pb-4 flex gap-2">
           <button
             className="flex-1 bg-purple-600 text-white text-xs font-medium py-2 rounded-xl"
-            onClick={() => fetch('/api/exports/healthcare-pdf', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reportPeriod: '90days', format: 'clinical' }) })}
+            onClick={() => apiRequest('POST', '/api/exports/healthcare-pdf', { reportPeriod: '90days', format: 'clinical' })}
           >
             Generate PDF
           </button>

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useHealthPanel, type TrendTab, type Period } from '@/v2/agent/HealthPanelContext'
 import { useHealthPanelData } from './useHealthPanelData'
 import { useSubscription } from '@/contexts/SubscriptionContext'
+import { apiRequest } from '@/lib/queryClient'
 import {
   LineChart, Line, BarChart, Bar, XAxis, ReferenceLine,
   ResponsiveContainer, Tooltip
@@ -57,11 +58,8 @@ export default function TrendFullView() {
     if (!trendOpen || !isPro) return
     setAiInsight(null)
     const stats = { tab: trendTab, period }
-    fetch('/api/v2/appetite-insight', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ stats, tab: trendTab }),
-    }).then(r => r.json()).then(d => setAiInsight(d.insight)).catch(() => {})
+    apiRequest('POST', '/api/v2/appetite-insight', { stats, tab: trendTab })
+      .then(r => r.json()).then(d => setAiInsight(d.insight)).catch(() => {})
   }, [trendOpen, trendTab, isPro])
 
   const tabs: TrendTab[] = ['weight', 'calories', 'appetite', 'adherence']

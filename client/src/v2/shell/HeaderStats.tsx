@@ -26,7 +26,7 @@ export default function HeaderStats({
     : 'satisfied'
 
   return (
-    <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-4 pt-12 pb-4 flex-shrink-0">
+    <div className="sticky top-0 z-50 bg-gradient-to-r from-blue-500 to-purple-600 px-4 pb-4 flex-shrink-0 w-full max-w-full overflow-x-hidden" style={{ paddingTop: 'max(env(safe-area-inset-top), 12px)' }}>
       {/* Top row */}
       <div className="flex items-center justify-between mb-4">
         <button

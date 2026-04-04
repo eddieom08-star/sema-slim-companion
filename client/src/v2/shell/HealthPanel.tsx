@@ -17,7 +17,7 @@ function InlineSpark({ data, color }: InlineSparkProps) {
     return `${Math.round(x)},${Math.round(y)}`
   }).join(' ')
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} style={{ width: '100%', height: '28px' }}>
+    <svg viewBox={`0 0 ${w} ${h}`} style={{ width: '100%', maxWidth: '100%', height: '28px', display: 'block' }}>
       <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
       <circle cx={w} cy={h - 4 - ((data[data.length-1] - min) / range) * (h - 8)} r="2.5" fill={color} />
     </svg>
@@ -45,10 +45,10 @@ export default function HealthPanel({ userInitials }: { userInitials: string }) 
       />
 
       {/* Panel */}
-      <div className={`absolute top-0 bottom-0 left-0 w-[90%] bg-white z-20 flex flex-col overflow-hidden transition-transform duration-[280ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <div className={`absolute top-0 bottom-0 left-0 w-[90%] max-w-full bg-white z-20 flex flex-col overflow-x-hidden overflow-y-hidden transition-transform duration-[280ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
 
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-500 to-purple-600 pt-12 px-4 pb-3 flex-shrink-0">
+        <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-4 pb-3 flex-shrink-0 w-full max-w-full overflow-x-hidden" style={{ paddingTop: 'max(env(safe-area-inset-top), 12px)' }}>
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <div className="w-10 h-10 rounded-full bg-white/25 flex items-center justify-center text-white text-sm font-semibold">

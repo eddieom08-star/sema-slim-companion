@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { useAgent } from '@/v2/agent/AgentContext'
 import { useSubscription } from '@/contexts/SubscriptionContext'
+import { apiRequest } from '@/lib/queryClient'
 import { parseWeightFromText } from './weightParser'
 import WeightSparkline from './WeightSparkline'
 import ProMomentCard from '@/v2/monetisation/ProMomentCard'
@@ -20,15 +21,11 @@ export function useWeightFlow() {
     }
 
     // Fetch recent logs for delta
-    const logsRes = await fetch('/api/weight-logs?limit=8', { credentials: 'include' })
+    const logsRes = await apiRequest('GET', '/api/weight-logs?limit=8')
     const logs = await logsRes.json()
 
     // Log the new weight
-    await fetch('/api/weight-logs', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ weight: weight.kg, loggedAt: new Date().toISOString() }),
-    })
+    await apiRequest('POST', '/api/weight-logs', { weight: weight.kg, loggedAt: new Date().toISOString() })
 
     const startWeight = logs?.length ? parseFloat(logs[logs.length - 1].weight) : weight.kg
     const delta = Math.round((weight.kg - startWeight) * 10) / 10
@@ -62,7 +59,7 @@ export function useWeightFlow() {
 
     // Streak milestone upsell
     try {
-      const streakRes = await fetch('/api/streaks', { credentials: 'include' })
+      const streakRes = await apiRequest('GET', '/api/streaks')
       const streaks = await streakRes.json()
       if (Array.isArray(streaks)) {
         const best = streaks.find((s: any) => [7, 14, 30].includes(s.currentStreak))

@@ -17,15 +17,7 @@ import InputBar from './InputBar'
 import HealthPanel from './HealthPanel'
 import type { UserContext } from '@/v2/agent/types'
 
-// Feature flag — import env var
-const V2_ENABLED = import.meta.env.VITE_ENABLE_V2 === 'true'
-
 export default function AgentShell() {
-  if (!V2_ENABLED) {
-    // Safety net — should not render unless flag is on
-    return null
-  }
-
   return <AgentShellInner />
 }
 

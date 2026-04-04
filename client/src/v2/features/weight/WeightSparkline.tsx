@@ -25,7 +25,7 @@ export default function WeightSparkline({ logs, delta }: WeightSparklineProps) {
         <p className="text-xs text-gray-500">Weight trend</p>
         <p className="text-sm font-bold" style={{ color }}>{label}</p>
       </div>
-      <svg viewBox={`0 0 ${w} ${h}`} style={{ width: '100%', height: '60px' }}>
+      <svg viewBox={`0 0 ${w} ${h}`} style={{ width: '100%', height: '60px', display: 'block' }}>
         <polyline points={pts} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         {values.length > 0 && (
           <circle

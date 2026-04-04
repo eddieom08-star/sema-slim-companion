@@ -42,7 +42,7 @@ export default function ChatArea({ messages, onSuggestionTap }: ChatAreaProps) {
           <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-6 max-w-[260px]">
             Your GLP-1 companion is ready. What would you like to do?
           </p>
-          <div className="w-full max-w-sm space-y-2">
+          <div className="w-full space-y-2">
             {DEFAULT_QUICK_ACTIONS.map(({ label, icon: Icon }) => (
               <button
                 key={label}
@@ -54,7 +54,7 @@ export default function ChatArea({ messages, onSuggestionTap }: ChatAreaProps) {
               </button>
             ))}
           </div>
-          <div className="mt-6 overflow-x-auto w-full scrollbar-hide">
+          <div className="mt-6 w-full">
             <div className="flex gap-2 justify-center flex-wrap">
               {['How am I doing?', 'My progress today', 'My saved recipes'].map(chip => (
                 <button
@@ -73,7 +73,7 @@ export default function ChatArea({ messages, onSuggestionTap }: ChatAreaProps) {
         <div key={msg.id}>
           {msg.role === 'user' ? (
             <div className="flex justify-end">
-              <div className="bg-blue-500 text-white rounded-2xl rounded-tr-sm px-4 py-3 max-w-[80%] text-sm">
+              <div className="bg-blue-500 text-white rounded-2xl rounded-tr-sm px-4 py-3 max-w-[80%] text-sm overflow-hidden break-words">
                 {msg.content}
               </div>
             </div>
@@ -84,7 +84,7 @@ export default function ChatArea({ messages, onSuggestionTap }: ChatAreaProps) {
               </div>
               <div className="space-y-2 max-w-[82%]">
                 {msg.content && (
-                  <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-gray-800 dark:text-gray-100">
+                  <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-gray-800 dark:text-gray-100 overflow-hidden break-words">
                     {msg.content}
                   </div>
                 )}

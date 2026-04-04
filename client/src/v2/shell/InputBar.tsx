@@ -21,7 +21,7 @@ export default function InputBar({ onSend, onCamera }: InputBarProps) {
   }
 
   return (
-    <div className="sticky bottom-0 z-50 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 flex-shrink-0 w-full max-w-full overflow-x-hidden" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}>
+    <div className="z-50 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 flex-shrink-0 w-full max-w-full overflow-x-hidden" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 16px)' }}>
       <div className="flex items-end gap-2">
         <button onClick={onCamera} className="p-2 text-gray-400">
           <Camera className="w-5 h-5" />
@@ -32,7 +32,7 @@ export default function InputBar({ onSend, onCamera }: InputBarProps) {
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }}
           placeholder="Ask me anything..."
           rows={1}
-          className="flex-1 resize-none bg-gray-100 dark:bg-gray-800 rounded-2xl px-4 py-2.5 text-sm outline-none max-h-24 overflow-y-auto"
+          className="flex-1 min-w-0 resize-none bg-gray-100 dark:bg-gray-800 rounded-2xl px-4 py-2.5 text-sm outline-none max-h-24 overflow-y-auto"
           style={{ minHeight: '40px' }}
         />
         {text.trim() ? (

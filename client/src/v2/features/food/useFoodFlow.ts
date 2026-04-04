@@ -3,12 +3,10 @@ import { createElement } from 'react'
 import { useAgent } from '@/v2/agent/AgentContext'
 import { useSubscription } from '@/contexts/SubscriptionContext'
 import { needsDisambiguation, inferMealType, type FoodResult } from './foodVariance'
-import { getApiBaseUrl } from '@/lib/queryClient'
+import { apiRequest } from '@/lib/queryClient'
 import NutritionCard from './NutritionCard'
 import DisambiguationCard from './DisambiguationCard'
 import ProMomentCard from '@/v2/monetisation/ProMomentCard'
-
-const API = getApiBaseUrl()
 
 export function useFoodFlow() {
   const { addAgentMessage } = useAgent()
@@ -21,11 +19,7 @@ export function useFoodFlow() {
         food,
         quantity: qty,
         onLog: async () => {
-          await fetch(`${API}/api/food-entries`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({
+          await apiRequest('POST', '/api/food-entries', {
               foodName: food.name,
               calories: Math.round(Number(food.calories) * qty),
               protein: String(Math.round(Number(food.protein) * qty)),
@@ -35,8 +29,7 @@ export function useFoodFlow() {
               unit: food.servingUnit,
               mealType,
               consumedAt: new Date().toISOString(),
-            }),
-          })
+            })
           addAgentMessage(
             `Logged! ${Math.round(Number(food.calories) * qty)} calories for ${mealType}. How full are you feeling?`,
             { isTemplated: true, suggestions: ['Still hungry', 'Satisfied', 'Very full', 'Skip'] }
@@ -44,7 +37,7 @@ export function useFoodFlow() {
 
           if (!isPro) {
             try {
-              const countRes = await fetch(`${API}/api/hunger-logs?limit=1`, { credentials: 'include' })
+              const countRes = await apiRequest('GET', '/api/hunger-logs?limit=1')
               const countData = await countRes.json()
               if (Array.isArray(countData) && countData.length >= 3) {
                 addAgentMessage('You\'ve logged enough data for appetite intelligence:', {
@@ -74,12 +67,7 @@ export function useFoodFlow() {
       items = [{ food_name: entities.food_name }]
     } else {
       try {
-        const res = await fetch(`${API}/api/v2/extract-food-entity`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ text }),
-        })
+        const res = await apiRequest('POST', '/api/v2/extract-food-entity', { text })
         const data = await res.json()
         items = data.items?.length ? data.items : [{ food_name: text }]
       } catch {
@@ -92,9 +80,9 @@ export function useFoodFlow() {
     const searches = await Promise.all(
       items.map(async (item) => {
         try {
-          const res = await fetch(
-            `${API}/api/food-database/search?q=${encodeURIComponent(item.food_name)}`,
-            { credentials: 'include' }
+          const res = await apiRequest(
+            'GET',
+            `/api/food-database/search?q=${encodeURIComponent(item.food_name)}`
           )
           const data = await res.json()
           const results: FoodResult[] = (Array.isArray(data) ? data : []).slice(0, 3)
@@ -131,12 +119,7 @@ export function useFoodFlow() {
 
   const handleBarcodeIntent = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/api/features/check`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ feature: 'barcode_scan' }),
-      })
+      const res = await apiRequest('POST', '/api/features/check', { feature: 'barcode_scan' })
       const gate = await res.json()
 
       if (!gate.allowed) {

@@ -116,10 +116,15 @@ export interface IStorage {
 
   // Dashboard data
   getDashboardData(userId: string): Promise<{
-    todaysCalories: number;
+    todayCalories: number;
     weeklyWeightChange: number;
     currentStreak: number;
     upcomingMedication: Medication | null;
+    medicationType: string | null;
+    dosage: string | null;
+    medicationStatus: 'overdue' | 'due-today' | 'on-track' | 'unknown';
+    lastDoseLabel: string;
+    avgHungerLevel: number | null;
   }>;
 
   // Dose escalation operations
@@ -486,10 +491,15 @@ export class DatabaseStorage implements IStorage {
 
   // Dashboard data
   async getDashboardData(userId: string): Promise<{
-    todaysCalories: number;
+    todayCalories: number;
     weeklyWeightChange: number;
     currentStreak: number;
     upcomingMedication: Medication | null;
+    medicationType: string | null;
+    dosage: string | null;
+    medicationStatus: 'overdue' | 'due-today' | 'on-track' | 'unknown';
+    lastDoseLabel: string;
+    avgHungerLevel: number | null;
   }> {
     const today = new Date();
     const startOfDay = new Date(today);
@@ -500,7 +510,7 @@ export class DatabaseStorage implements IStorage {
     weekAgo.setDate(weekAgo.getDate() - 7);
 
     // Run all queries in parallel to avoid N+1 problem
-    const [todaysFood, recentWeights, streakResult, medicationResult] = await Promise.all([
+    const [todaysFood, recentWeights, streakResult, medicationResult, latestMedLog, todaysHungerLogs] = await Promise.all([
       // Today's calories
       db.select()
         .from(foodEntries)
@@ -538,9 +548,25 @@ export class DatabaseStorage implements IStorage {
         .where(eq(medications.userId, userId))
         .orderBy(medications.nextDueDate)
         .limit(1),
+      // Latest medication log
+      db.select()
+        .from(medicationLogs)
+        .where(eq(medicationLogs.userId, userId))
+        .orderBy(desc(medicationLogs.takenAt))
+        .limit(1),
+      // Today's hunger logs
+      db.select()
+        .from(hungerLogs)
+        .where(
+          and(
+            eq(hungerLogs.userId, userId),
+            gte(hungerLogs.loggedAt, startOfDay),
+            lte(hungerLogs.loggedAt, endOfDay)
+          )
+        ),
     ]);
 
-    const todaysCalories = todaysFood.reduce((sum, entry) => sum + entry.calories, 0);
+    const todayCalories = todaysFood.reduce((sum, entry) => sum + entry.calories, 0);
 
     let weeklyWeightChange = 0;
     if (recentWeights.length >= 2) {
@@ -548,12 +574,58 @@ export class DatabaseStorage implements IStorage {
     }
 
     const currentStreak = streakResult[0]?.currentStreak || 0;
+    const upcomingMedication = medicationResult[0] || null;
+
+    // Medication status derivation
+    let medicationStatus: 'overdue' | 'due-today' | 'on-track' | 'unknown' = 'unknown';
+    if (upcomingMedication) {
+      const nextDue = new Date(upcomingMedication.nextDueDate);
+      const nextDueStart = new Date(nextDue);
+      nextDueStart.setHours(0, 0, 0, 0);
+      if (nextDue < today) {
+        medicationStatus = 'overdue';
+      } else if (nextDueStart.getTime() === startOfDay.getTime()) {
+        medicationStatus = 'due-today';
+      } else {
+        medicationStatus = 'on-track';
+      }
+    }
+
+    // Last dose relative label
+    let lastDoseLabel = '';
+    if (latestMedLog.length > 0) {
+      const takenAt = new Date(latestMedLog[0].takenAt);
+      const diffMs = today.getTime() - takenAt.getTime();
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      if (diffHours < 1) {
+        lastDoseLabel = 'just now';
+      } else if (diffHours < 24) {
+        lastDoseLabel = `${diffHours}h ago`;
+      } else if (diffDays === 1) {
+        lastDoseLabel = 'yesterday';
+      } else {
+        lastDoseLabel = `${diffDays}d ago`;
+      }
+    }
+
+    // Average hunger level from today's logs
+    let avgHungerLevel: number | null = null;
+    if (todaysHungerLogs.length > 0) {
+      const sum = todaysHungerLogs.reduce((acc, log) => acc + log.hungerBefore, 0);
+      avgHungerLevel = Math.round((sum / todaysHungerLogs.length) * 10) / 10;
+    }
 
     return {
-      todaysCalories,
+      todayCalories,
       weeklyWeightChange,
       currentStreak,
-      upcomingMedication: medicationResult[0] || null,
+      upcomingMedication,
+      medicationType: upcomingMedication?.medicationType || null,
+      dosage: upcomingMedication?.dosage || null,
+      medicationStatus,
+      lastDoseLabel,
+      avgHungerLevel,
     };
   }
 

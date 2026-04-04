@@ -225,10 +225,10 @@ export default function Dashboard() {
                 <span className="text-xs md:text-sm font-medium text-muted-foreground truncate">Calories</span>
               </div>
               <div className="text-xl md:text-2xl font-bold text-foreground" data-testid="text-todays-calories">
-                {(dashboardData as any)?.todaysCalories || 0}
+                {(dashboardData as any)?.todayCalories || 0}
               </div>
               <p className="text-xs text-muted-foreground truncate">
-                {(dashboardData as any)?.todaysCalories < 1400 ? "On track" : "Above target"}
+                {(dashboardData as any)?.todayCalories < 1400 ? "On track" : "Above target"}
               </p>
             </CardContent>
           </Card>

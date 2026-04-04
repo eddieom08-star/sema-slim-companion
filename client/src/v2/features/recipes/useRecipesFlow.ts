@@ -2,12 +2,10 @@ import { useCallback } from 'react'
 import { createElement } from 'react'
 import { useAgent } from '@/v2/agent/AgentContext'
 import { useSubscription } from '@/contexts/SubscriptionContext'
-import { getApiBaseUrl } from '@/lib/queryClient'
+import { apiRequest } from '@/lib/queryClient'
 import RecipeCard from './RecipeCard'
 import SavedRecipesCarousel from './SavedRecipesCarousel'
 import ProMomentCard from '@/v2/monetisation/ProMomentCard'
-
-const API = getApiBaseUrl()
 
 export function useRecipesFlow() {
   const { addAgentMessage } = useAgent()
@@ -41,23 +39,15 @@ export function useRecipesFlow() {
     addAgentMessage('On it...', { isTemplated: true })
 
     try {
-      const res = await fetch(`${API}/api/recipes/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
+      const res = await apiRequest('POST', '/api/recipes/generate', {
           preferences: preferences || 'high protein, easy to digest, GLP-1 friendly',
-        }),
-      })
+        })
       const recipe = await res.json()
 
       let saved = false
       const handleSave = async () => {
         if (recipe.id) {
-          await fetch(`${API}/api/recipes/${recipe.id}/favorite`, {
-            method: 'POST',
-            credentials: 'include',
-          })
+          await apiRequest('POST', `/api/recipes/${recipe.id}/favorite`)
           saved = true
           addAgentMessage('Saved! Find it in your saved recipes anytime.', { isTemplated: true })
         }
@@ -75,7 +65,7 @@ export function useRecipesFlow() {
 
   const handleSavedRecipes = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/api/recipes/favorites`, { credentials: 'include' })
+      const res = await apiRequest('GET', '/api/recipes/favorites')
       const recipes = await res.json()
 
       if (!recipes.length) {

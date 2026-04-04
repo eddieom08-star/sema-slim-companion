@@ -452,6 +452,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/food-entries', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.auth.userId;
+      const startDate = req.query.startDate as string | undefined;
+      const endDate = req.query.endDate as string | undefined;
+
+      if (startDate && endDate) {
+        const entries = await storage.getFoodEntriesByDateRange(
+          userId,
+          new Date(startDate),
+          new Date(endDate)
+        );
+        return res.json(entries);
+      }
+
       const date = req.query.date ? new Date(req.query.date as string) : undefined;
       const entries = await storage.getUserFoodEntries(userId, date);
       res.json(entries);
@@ -996,14 +1008,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.auth.userId;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 30;
-      const logs = await storage.getUserHungerLogs(userId, limit);
+      const dateParam = req.query.date as string | undefined;
+      const daysParam = req.query.days as string | undefined;
+
+      let cutoffDate: Date | undefined;
+
+      if (dateParam) {
+        // Single day filter: return logs for that specific day
+        const dayStart = new Date(dateParam);
+        dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = new Date(dateParam);
+        dayEnd.setHours(23, 59, 59, 999);
+
+        const logs = await storage.getUserHungerLogs(userId, limit, dayStart);
+        const filtered = logs.filter((log: any) => new Date(log.loggedAt) <= dayEnd);
+        return res.json(filtered);
+      }
+
+      if (daysParam) {
+        // Rolling window: last N days
+        cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - parseInt(daysParam));
+      }
+
+      const logs = await storage.getUserHungerLogs(userId, limit, cutoffDate);
 
       // Apply history retention limit based on entitlements
       const entitlements = await entitlementsService.getUserEntitlements(userId);
       if (entitlements.historyRetentionDays !== -1) {
-        const cutoffDate = new Date();
-        cutoffDate.setDate(cutoffDate.getDate() - entitlements.historyRetentionDays);
-        const filteredLogs = logs.filter((log: any) => new Date(log.loggedAt) >= cutoffDate);
+        const retentionCutoff = new Date();
+        retentionCutoff.setDate(retentionCutoff.getDate() - entitlements.historyRetentionDays);
+        const filteredLogs = logs.filter((log: any) => new Date(log.loggedAt) >= retentionCutoff);
         return res.json(filteredLogs);
       }
 

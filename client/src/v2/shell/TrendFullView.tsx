@@ -106,7 +106,7 @@ export default function TrendFullView() {
         {trendTab === 'calories' && (
           <div className="bg-gray-50 rounded-2xl p-3 mb-3" style={{ height: 180 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={calData} margin={{ top: 4, right: 4, bottom: 16, left: -24 }}>
+              <BarChart data={calData} margin={{ top: 4, right: 4, bottom: 16, left: 0 }}>
                 <Bar dataKey="calories" fill="#3B82F6" radius={[3, 3, 0, 0]} maxBarSize={period === 7 ? 28 : 14} />
                 <ReferenceLine y={1400} stroke="#E0DDD6" strokeDasharray="4 3" />
                 <XAxis dataKey="label" tick={{ fontSize: 8, fill: '#bbb' }} tickLine={false} axisLine={false} interval={period === 7 ? 0 : 'preserveStartEnd'} />
@@ -117,7 +117,7 @@ export default function TrendFullView() {
         {trendTab === 'weight' && (
           <div className="bg-gray-50 rounded-2xl p-3 mb-3" style={{ height: 180 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={wtData} margin={{ top: 8, right: 4, bottom: 16, left: -24 }}>
+              <LineChart data={wtData} margin={{ top: 8, right: 4, bottom: 16, left: 0 }}>
                 <Line type="monotone" dataKey="weight" stroke="#1D9E75" strokeWidth={2} dot={false} activeDot={{ r: 3 }} />
                 <XAxis dataKey="date" tick={{ fontSize: 8, fill: '#bbb' }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
                 <Tooltip formatter={(v: number) => [`${v.toFixed(1)}kg`]} contentStyle={{ fontSize: 10, borderRadius: 8 }} />
@@ -136,7 +136,7 @@ export default function TrendFullView() {
                     before: l.hungerBefore,
                     after: l.hungerAfter,
                   }))}
-                margin={{ top: 4, right: 4, bottom: 16, left: -24 }}
+                margin={{ top: 4, right: 4, bottom: 16, left: 0 }}
               >
                 <Line type="monotone" dataKey="before" stroke="#D85A30" strokeWidth={1.5} dot={false} />
                 <Line type="monotone" dataKey="after" stroke="#3B82F6" strokeWidth={1.5} dot={false} />
@@ -151,7 +151,7 @@ export default function TrendFullView() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={buildWeeklyAdherence(medLogs, period)}
-                margin={{ top: 4, right: 4, bottom: 16, left: -24 }}
+                margin={{ top: 4, right: 4, bottom: 16, left: 0 }}
               >
                 <Bar dataKey="pct" fill="#1D9E75" radius={[4, 4, 0, 0]} maxBarSize={40} />
                 <ReferenceLine y={100} stroke="#E0DDD6" strokeDasharray="4 3" />

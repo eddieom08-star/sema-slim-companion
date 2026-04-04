@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { apiRequest, getApiBaseUrl } from '@/lib/queryClient'
+import { apiRequest } from '@/lib/queryClient'
 import { useAgent } from '@/v2/agent/AgentContext'
 import { useHealthPanel } from '@/v2/agent/HealthPanelContext'
 import { classifyIntent, getContextualChips } from '@/v2/agent/agentRouter'
@@ -136,9 +136,9 @@ function AgentShellInner() {
         await handleBarcodeIntent()
         break
       case 'food.appetite':
-        addAgentMessage('How hungry are you right now? (1-10)', {
+        addAgentMessage('How hungry are you feeling right now? Rate from 1-10:', {
           isTemplated: true,
-          suggestions: ['1-3 still hungry', '4-6 moderate', '7-10 satisfied'],
+          suggestions: ['1-3 Very hungry', '4-6 Moderate', '7-10 Satisfied'],
         })
         break
       case 'medication.quick_log':
@@ -158,21 +158,33 @@ function AgentShellInner() {
         await handleWeightInput(text)
         break
       case 'weight.progress':
-        handleTrendsRequest('weight')
+        await handleTrendsRequest('weight')
         break
       case 'trends.general':
-        handleTrendsRequest('weight')
+        await handleTrendsRequest('weight')
+        break
+      case 'medication.detailed':
+        addAgentMessage('What would you like to update?', {
+          isTemplated: true,
+          suggestions: ['Change my dose', 'Switch medication', 'Log a detailed entry'],
+        })
+        break
+      case 'recipe.receipt':
+        addAgentMessage('Receipt scanning is coming soon! For now, I can help you:', {
+          isTemplated: true,
+          suggestions: ['Log a meal manually', 'Generate a recipe', 'Show saved recipes'],
+        })
         break
       default:
-        addAgentMessage(
-          `Got it — I'll help with that. (${intent} — full flow coming soon)`,
-          { isTemplated: true }
-        )
+        addAgentMessage("I'm not sure how to help with that yet. Try one of these:", {
+          isTemplated: true,
+          suggestions: getContextualChips(userContext),
+        })
     }
   }
 
   return (
-    <div className="flex flex-col w-full max-w-full overflow-x-hidden bg-white dark:bg-gray-900 relative touch-pan-y" style={{ height: '100dvh' }}>
+    <div className="flex flex-col w-full max-w-full overflow-hidden bg-white dark:bg-gray-900 relative touch-pan-y" style={{ height: '100dvh' }}>
       <HealthPanel userInitials={initials} />
       <HeaderStats
         userContext={userContext}

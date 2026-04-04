@@ -26,7 +26,7 @@ export default function HeaderStats({
     : 'satisfied'
 
   return (
-    <div className="sticky top-0 z-50 bg-gradient-to-r from-blue-500 to-purple-600 px-4 pb-4 flex-shrink-0 w-full max-w-full overflow-x-hidden" style={{ paddingTop: 'max(env(safe-area-inset-top), 12px)' }}>
+    <div className="z-50 bg-gradient-to-r from-blue-500 to-purple-600 px-4 pb-4 flex-shrink-0 w-full max-w-full overflow-x-hidden" style={{ paddingTop: 'max(env(safe-area-inset-top), 48px)' }}>
       {/* Top row */}
       <div className="flex items-center justify-between mb-4">
         <button
@@ -50,13 +50,13 @@ export default function HeaderStats({
       <div className="grid grid-cols-3 gap-2">
         <button
           onClick={onDoseTap}
-          className="bg-white/20 rounded-2xl p-3 text-left active:bg-white/30 transition-colors"
+          className="bg-white/20 rounded-2xl p-3 text-left active:bg-white/30 transition-colors min-w-0"
         >
           <div className="flex items-center gap-1 mb-1">
             <Pill className="w-3 h-3 text-white/70" />
             <span className="text-white/70 text-[10px]">Dose</span>
           </div>
-          <p className={`font-bold text-base ${doseColor}`}>
+          <p className={`font-bold text-base truncate ${doseColor}`}>
             {userContext.medicationStatus === 'overdue' ? 'Overdue'
               : userContext.medicationStatus === 'on-track' ? 'On track'
               : userContext.medicationStatus === 'due-today' ? 'Due today'
@@ -67,13 +67,13 @@ export default function HeaderStats({
 
         <button
           onClick={onHungerTap}
-          className="bg-white/20 rounded-2xl p-3 text-left active:bg-white/30 transition-colors"
+          className="bg-white/20 rounded-2xl p-3 text-left active:bg-white/30 transition-colors min-w-0"
         >
           <div className="flex items-center gap-1 mb-1">
             <Activity className="w-3 h-3 text-white/70" />
             <span className="text-white/70 text-[10px]">Hunger</span>
           </div>
-          <p className="text-white font-bold text-base">
+          <p className="text-white font-bold text-base truncate">
             {userContext.hungerLevel ? `${userContext.hungerLevel}/10` : '—'}
           </p>
           <p className="text-white/55 text-[10px] mt-0.5">{hungerWord}</p>
@@ -81,13 +81,13 @@ export default function HeaderStats({
 
         <button
           onClick={onCalorieTap}
-          className="bg-white/20 rounded-2xl p-3 text-left active:bg-white/30 transition-colors"
+          className="bg-white/20 rounded-2xl p-3 text-left active:bg-white/30 transition-colors min-w-0"
         >
           <div className="flex items-center gap-1 mb-1">
             <Utensils className="w-3 h-3 text-white/70" />
             <span className="text-white/70 text-[10px]">Today</span>
           </div>
-          <p className="text-white font-bold text-base">{userContext.todayCalories}</p>
+          <p className="text-white font-bold text-base truncate">{userContext.todayCalories}</p>
           <p className="text-white/55 text-[10px] mt-0.5">calories</p>
         </button>
       </div>

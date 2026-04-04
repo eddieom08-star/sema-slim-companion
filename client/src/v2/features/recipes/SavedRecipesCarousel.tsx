@@ -11,9 +11,9 @@ export default function SavedRecipesCarousel({ recipes, isPro, onUpgrade }: Save
   const visible = isPro ? recipes : recipes.slice(0, MAX_FREE)
 
   return (
-    <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollSnapType: 'x mandatory' }}>
+    <div className="flex gap-3 overflow-x-auto pb-2 px-1" style={{ scrollSnapType: 'x mandatory' }}>
       {visible.map((recipe: any, i: number) => (
-        <div key={i} className="flex-shrink-0 w-56" style={{ scrollSnapAlign: 'start' }}>
+        <div key={i} className="flex-shrink-0 w-[min(224px,80vw)]" style={{ scrollSnapAlign: 'start' }}>
           <RecipeCard recipe={recipe} onSave={() => {}} isSaved />
         </div>
       ))}

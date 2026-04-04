@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { logger } from "./logger";
 import { clerkMiddleware, requireAuth } from "./clerkAuth";
 import monetizationRoutes from "./routes/monetization";
+import v2Routes from "./routes/v2";
 import { entitlementsService } from "./services/entitlements";
 import { FEATURE_TYPES } from "@shared/features";
 
@@ -1810,7 +1811,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           response = await anthropic.messages.create({
             model,
             max_tokens: 2048,
-            system: systemPrompt,
+            system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
             messages: formattedMessages,
           });
           logger.info(`Claude API call successful with model: ${model}`);
@@ -2001,7 +2002,7 @@ Always respond with valid JSON only, no additional text.`;
           response = await anthropic.messages.create({
             model,
             max_tokens: 2048,
-            system: systemPrompt,
+            system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
             messages: [{
               role: 'user',
               content: [
@@ -2148,8 +2149,109 @@ Always respond with valid JSON only, no additional text.`;
     }
   });
 
+  // AI Recipe Generate endpoint - Two-step Haiku (prefs extraction) + Sonnet (recipe generation)
+  app.post('/api/recipes/generate', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.auth?.userId;
+      logger.info('Recipe generate endpoint called', { userId });
+
+      // Check entitlements before allowing recipe generation
+      const canUse = await entitlementsService.canUseFeature(userId, FEATURE_TYPES.AI_RECIPE, 1);
+      if (!canUse.allowed) {
+        logger.info('Recipe generation blocked - limit reached', { userId, reason: canUse.reason });
+        return res.status(403).json({
+          error: 'limit_reached',
+          reason: canUse.reason,
+          upsellType: canUse.upsellType,
+          message: 'You have reached your monthly recipe generation limit. Upgrade to Pro for more recipes or purchase AI tokens.'
+        });
+      }
+
+      const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+      if (!anthropicApiKey || anthropicApiKey === 'your_anthropic_api_key_here') {
+        logger.error('Anthropic API key not configured');
+        return res.status(500).json({
+          message: "AI service is not configured. Please add your Anthropic API key to the environment variables."
+        });
+      }
+
+      let anthropic;
+      try {
+        const anthropicModule = await import('@anthropic-ai/sdk');
+        const Anthropic = anthropicModule.Anthropic || anthropicModule.default;
+        anthropic = new Anthropic({ apiKey: anthropicApiKey });
+      } catch (initError: any) {
+        logger.error('Failed to initialize Anthropic client', initError);
+        return res.status(500).json({
+          message: "Failed to initialize AI service",
+          error: initError.message
+        });
+      }
+
+      const userInput = req.body.preferences || req.body.prompt || 'glp-1 friendly meal';
+
+      // Step 1: Haiku extracts structured preferences (cached system prompt)
+      const PREFS_SYSTEM = `Extract dietary preferences. Return JSON only, no markdown:
+{"high_protein":bool,"low_carb":bool,"vegetarian":bool,"quick_cook":bool,"avoid":[],"servings":1}`;
+
+      logger.info('Step 1: Extracting preferences with Haiku', { userInput });
+      const prefsRes = await anthropic.messages.create({
+        model: 'claude-3-haiku-20240307',
+        max_tokens: 100,
+        system: [{ type: 'text', text: PREFS_SYSTEM, cache_control: { type: 'ephemeral' } }],
+        messages: [{ role: 'user', content: userInput }],
+      });
+      const prefs = JSON.parse((prefsRes.content[0] as { type: string; text: string }).text);
+      logger.info('Preferences extracted', { prefs });
+
+      // Step 2: Sonnet generates recipe from structured prefs (cached system prompt)
+      const RECIPE_SYSTEM = `You are a GLP-1 nutrition expert. Generate a single recipe optimised for people on Ozempic, Mounjaro, Wegovy, or Rybelsus.
+Requirements: high protein (>25g), moderate calories (300-500), easy to eat in small portions, gentle on the stomach.
+Return JSON only, no markdown:
+{"name":"string","prepTime":number,"cookTime":number,"servings":1,"ingredients":[{"name":"string","quantity":"string","unit":"string"}],"instructions":"string","calories":number,"protein":number,"carbs":number,"fat":number,"tags":["string"]}`;
+
+      logger.info('Step 2: Generating recipe with Sonnet');
+      const recipeRes = await anthropic.messages.create({
+        model: 'claude-sonnet-4-5-20250929',
+        max_tokens: 800,
+        system: [{ type: 'text', text: RECIPE_SYSTEM, cache_control: { type: 'ephemeral' } }],
+        messages: [{ role: 'user', content: JSON.stringify(prefs) }],
+      });
+
+      const recipeText = (recipeRes.content[0] as { type: string; text: string }).text;
+      const recipe = JSON.parse(recipeText);
+
+      // Record usage after successful generation
+      await entitlementsService.consumeFeature(userId, FEATURE_TYPES.AI_RECIPE, 1);
+
+      logger.info('Recipe generated successfully', { recipeName: recipe.name });
+      res.json(recipe);
+    } catch (error: any) {
+      console.error("Error generating recipe:", error);
+      logger.error('Recipe generation error:', error);
+
+      if (error.status === 401) {
+        return res.status(500).json({
+          message: "AI service authentication failed. Please check the API key.",
+          error: error.message
+        });
+      } else if (error.status === 429) {
+        return res.status(429).json({
+          message: "AI service rate limit exceeded. Please try again later.",
+          error: error.message
+        });
+      }
+
+      res.status(500).json({
+        message: "Failed to generate recipe",
+        error: error.message
+      });
+    }
+  });
+
   // Mount monetization routes
   app.use('/api', monetizationRoutes);
+  app.use('/api', v2Routes);
 
   const httpServer = createServer(app);
 

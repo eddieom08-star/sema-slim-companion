@@ -205,6 +205,7 @@ CREATE TABLE "medications" (
 	"start_date" date NOT NULL,
 	"next_due_date" timestamp NOT NULL,
 	"reminder_enabled" boolean DEFAULT true,
+	"reminder_time" varchar(5) DEFAULT '09:00',
 	"adherence_score" integer DEFAULT 100,
 	"created_at" timestamp DEFAULT now()
 );
@@ -437,7 +438,20 @@ CREATE TABLE "users" (
 	"medication_type" varchar(20),
 	"start_date" date,
 	"onboarding_completed" boolean DEFAULT false,
+	"v2_enabled" boolean DEFAULT false NOT NULL,
+	"v2_enabled_at" timestamp,
+	"v2_opt_out" boolean DEFAULT false NOT NULL,
 	CONSTRAINT "users_email_unique" UNIQUE("email")
+);
+--> statement-breakpoint
+CREATE TABLE "waitlist" (
+	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "waitlist_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1),
+	"email" varchar(255) NOT NULL,
+	"source" varchar(50) DEFAULT 'landing',
+	"created_at" timestamp DEFAULT now(),
+	"invited_at" timestamp,
+	"converted_at" timestamp,
+	CONSTRAINT "waitlist_email_unique" UNIQUE("email")
 );
 --> statement-breakpoint
 CREATE TABLE "weight_logs" (
@@ -512,6 +526,8 @@ CREATE INDEX "idx_upsell_events_trigger" ON "upsell_events" USING btree ("trigge
 CREATE INDEX "idx_upsell_events_action" ON "upsell_events" USING btree ("action");--> statement-breakpoint
 CREATE INDEX "idx_upsell_events_created_at" ON "upsell_events" USING btree ("created_at");--> statement-breakpoint
 CREATE INDEX "idx_user_cosmetics_user_id" ON "user_cosmetics" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "idx_waitlist_email" ON "waitlist" USING btree ("email");--> statement-breakpoint
+CREATE INDEX "idx_waitlist_created" ON "waitlist" USING btree ("created_at");--> statement-breakpoint
 CREATE INDEX "idx_weight_logs_user_id" ON "weight_logs" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "idx_weight_logs_logged_at" ON "weight_logs" USING btree ("logged_at");--> statement-breakpoint
 CREATE INDEX "idx_weight_logs_user_logged" ON "weight_logs" USING btree ("user_id","logged_at");

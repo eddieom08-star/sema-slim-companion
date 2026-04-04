@@ -9,6 +9,8 @@ import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
 import { SubscriptionProvider, useSubscription } from "@/contexts/SubscriptionContext";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { AgentProvider } from "@/v2/agent/AgentContext";
+import { HealthPanelProvider } from "@/v2/agent/HealthPanelContext";
 
 // Lazy load pages for code splitting
 const NotFound = lazy(() => import("@/pages/not-found"));
@@ -23,6 +25,7 @@ const Progress = lazy(() => import("@/pages/progress"));
 const Profile = lazy(() => import("@/pages/profile"));
 const Recipes = lazy(() => import("@/pages/recipes"));
 const MobileCheckout = lazy(() => import("@/pages/MobileCheckout"));
+const AgentShell = lazy(() => import("@/v2/shell/AgentShell"));
 const CheckoutSuccess = lazy(() => import("@/pages/CheckoutSuccess"));
 const Privacy = lazy(() => import("@/pages/privacy"));
 
@@ -122,6 +125,15 @@ function Router() {
         <Route path="/recipes" component={Recipes} />
         <Route path="/progress" component={Progress} />
         <Route path="/profile" component={Profile} />
+        <Route path="/v2">
+          {() => (
+            <AgentProvider>
+              <HealthPanelProvider>
+                <AgentShell />
+              </HealthPanelProvider>
+            </AgentProvider>
+          )}
+        </Route>
         <Route component={NotFound} />
       </Switch>
     </Suspense>

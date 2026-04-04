@@ -31,6 +31,11 @@ export function LimitReachedBanner({ type, onDismiss, onUpgrade }: LimitReachedB
   const { openCheckout, purchaseTokens, isLoading } = useSubscription();
   const { title, description } = bannerMessages[type] || bannerMessages.general;
 
+  // Suppress on v2 routes — v2 handles upsells inline
+  if (window.location.pathname.startsWith('/v2') || window.location.pathname === '/') {
+    return null
+  }
+
   const handleUpgrade = async () => {
     if (onUpgrade) {
       onUpgrade();

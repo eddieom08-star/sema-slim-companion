@@ -46,6 +46,9 @@ export const users = pgTable("users", {
   medicationType: varchar("medication_type", { length: 20 }), // ozempic, mounjaro, wegovy, rybelsus
   startDate: date("start_date"),
   onboardingCompleted: boolean("onboarding_completed").default(false),
+  v2Enabled: boolean("v2_enabled").notNull().default(false),
+  v2EnabledAt: timestamp("v2_enabled_at"),
+  v2OptOut: boolean("v2_opt_out").notNull().default(false),
 });
 
 // Medication tracking

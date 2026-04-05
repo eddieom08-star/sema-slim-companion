@@ -56,7 +56,7 @@ export default function HeaderStats({
       <div className="grid grid-cols-3 gap-2">
         <button
           onClick={onDoseTap}
-          className="bg-white/20 rounded-2xl p-3 text-left active:bg-white/30 transition-colors min-w-0"
+          className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 text-left active:bg-white/25 transition-all duration-200 shadow-lg border border-white/10 min-w-0"
         >
           <div className="flex items-center gap-1 mb-1">
             <Pill className="w-3 h-3 text-white/70" />
@@ -68,12 +68,16 @@ export default function HeaderStats({
               : userContext.medicationStatus === 'due-today' ? 'Due today'
               : '—'}
           </p>
-          <p className="text-white/55 text-[10px] mt-0.5">{userContext.lastDoseLabel}</p>
+          <p className="text-white/55 text-[10px] mt-0.5 truncate">
+            {userContext.medicationType
+              ? `${userContext.medicationType}${userContext.dosage ? ` ${userContext.dosage}` : ''}`
+              : userContext.lastDoseLabel}
+          </p>
         </button>
 
         <button
           onClick={onHungerTap}
-          className="bg-white/20 rounded-2xl p-3 text-left active:bg-white/30 transition-colors min-w-0"
+          className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 text-left active:bg-white/25 transition-all duration-200 shadow-lg border border-white/10 min-w-0"
         >
           <div className="flex items-center gap-1 mb-1">
             <Activity className="w-3 h-3 text-white/70" />
@@ -87,7 +91,7 @@ export default function HeaderStats({
 
         <button
           onClick={onCalorieTap}
-          className="bg-white/20 rounded-2xl p-3 text-left active:bg-white/30 transition-colors min-w-0"
+          className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 text-left active:bg-white/25 transition-all duration-200 shadow-lg border border-white/10 min-w-0"
         >
           <div className="flex items-center gap-1 mb-1">
             <Utensils className="w-3 h-3 text-white/70" />

@@ -19,8 +19,8 @@ export default function DisambiguationCard({ itemName, options, onSelect }: Disa
 
   if (selected) {
     return (
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden w-full">
-        <div className="bg-gray-50 px-4 py-2.5 text-xs font-medium text-gray-600">
+      <div className="bg-white rounded-2xl border border-gray-200/80 overflow-hidden w-full shadow-md">
+        <div className="bg-gray-50/80 px-4 py-2.5 text-xs font-medium text-gray-600">
           How much {selected.name}?
         </div>
         <div className="flex gap-2 p-3 flex-wrap">
@@ -60,8 +60,8 @@ export default function DisambiguationCard({ itemName, options, onSelect }: Disa
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden w-full">
-      <div className="bg-gray-50 px-4 py-2.5 text-xs font-medium text-gray-600">
+    <div className="bg-white rounded-2xl border border-gray-200/80 overflow-hidden w-full shadow-md">
+      <div className="bg-gray-50/80 px-4 py-2.5 text-xs font-medium text-gray-600">
         Which type of {itemName}?
       </div>
       {hasBigVariance && (

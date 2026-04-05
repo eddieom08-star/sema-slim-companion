@@ -14,6 +14,8 @@ async function getUserContext(userId: string): Promise<string> {
     const parts: string[] = [];
     if (d.medicationType) parts.push(`On ${d.medicationType}${d.dosage ? ` ${d.dosage}` : ''}`);
     if (d.medicationStatus === 'overdue') parts.push('dose overdue');
+    if (d.currentWeight) parts.push(`current weight ${d.currentWeight}kg`);
+    if (d.targetWeight) parts.push(`target ${d.targetWeight}kg`);
     if (d.todayCalories > 0) parts.push(`${d.todayCalories} cal today`);
     if (d.avgHungerLevel !== null) parts.push(`hunger ${d.avgHungerLevel}/10`);
     return parts.length ? `User: ${parts.join(', ')}.` : '';

@@ -32,6 +32,9 @@ export interface UserContext {
   lastDoseLabel: string
   hungerLevel: number | null
   todayCalories: number
+  currentWeight: number | null
+  targetWeight: number | null
+  startDate: string | null
   subscriptionTier: 'free' | 'pro'
   userId: string
 }

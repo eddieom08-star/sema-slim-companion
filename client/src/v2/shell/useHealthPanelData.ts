@@ -28,6 +28,15 @@ export function useHealthPanelData() {
     queryKey: ['panel-hunger-today', today], enabled: isOpen,
     queryFn: () => apiRequest('GET', `/api/hunger-logs?date=${today}`).then(r => r.json()),
   })
+  const weekStart = new Date(Date.now() - 6 * 86400000).toISOString().split('T')[0]
+  const { data: foodWeek } = useQuery({
+    queryKey: ['panel-food-week', weekStart], enabled: isOpen,
+    queryFn: () => apiRequest('GET', `/api/food-entries?startDate=${weekStart}&endDate=${today}`).then(r => r.json()),
+  })
+  const { data: hungerWeek } = useQuery({
+    queryKey: ['panel-hunger-week'], enabled: isOpen,
+    queryFn: () => apiRequest('GET', '/api/hunger-logs?days=7').then(r => r.json()),
+  })
   const { data: foodRange } = useQuery({
     queryKey: ['panel-food-range', period, today], enabled: isOpen && trendOpen,
     queryFn: () => apiRequest('GET', `/api/food-entries?startDate=${startDate}&endDate=${today}`).then(r => r.json()),
@@ -42,8 +51,8 @@ export function useHealthPanelData() {
   })
 
   return {
-    dashboard, foodToday, weightLogs, medications,
-    hungerToday, foodRange, hungerLogs, medLogs,
+    dashboard, foodToday, foodWeek, weightLogs, medications,
+    hungerToday, hungerWeek, foodRange, hungerLogs, medLogs,
     refetchFood, refetchWeight, refetchHunger,
   }
 }

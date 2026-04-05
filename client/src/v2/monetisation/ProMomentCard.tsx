@@ -44,8 +44,8 @@ export default function ProMomentCard({ trigger, onUpgrade, onBuyTokens, onDismi
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-purple-200 overflow-hidden w-full">
-      <div className="bg-purple-50 px-4 py-3">
+    <div className="bg-white rounded-2xl border border-purple-200/80 overflow-hidden w-full shadow-lg">
+      <div className="bg-purple-50/80 px-4 py-3">
         <p className="text-sm font-semibold text-purple-900">{config.headline}</p>
         <p className="text-xs text-purple-600 mt-0.5">{config.sub}</p>
       </div>
@@ -59,7 +59,7 @@ export default function ProMomentCard({ trigger, onUpgrade, onBuyTokens, onDismi
       <div className="px-4 pb-4 space-y-2">
         <button
           onClick={() => handleUpgrade('annual')}
-          className="w-full bg-purple-600 text-white text-sm font-medium py-2.5 rounded-xl"
+          className="w-full bg-purple-600 text-white text-sm font-medium py-2.5 rounded-xl shadow-md hover:shadow-lg active:shadow-sm transition-shadow duration-200"
         >
           Unlock Pro — £80/year
         </button>

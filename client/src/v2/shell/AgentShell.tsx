@@ -85,6 +85,9 @@ function AgentShellInner() {
     lastDoseLabel: dashboard?.lastDoseLabel ?? '',
     hungerLevel: dashboard?.avgHungerLevel ?? null,
     todayCalories: dashboard?.todayCalories ?? 0,
+    currentWeight: dashboard?.currentWeight ?? null,
+    targetWeight: dashboard?.targetWeight ?? null,
+    startDate: dashboard?.startDate ?? null,
     subscriptionTier: isPro ? 'pro' : 'free',
     userId: userId ?? '',
   }
@@ -442,7 +445,7 @@ function AgentShellInner() {
             if (e?.message?.includes('User cancelled')) return
             addAgentMessage('Camera is not available.', { isTemplated: true })
           }
-        }} />
+        }} onError={(msg) => addAgentMessage(msg, { isTemplated: true })} />
       </div>
     </div>
   )

@@ -24,17 +24,56 @@ function InlineSpark({ data, color }: InlineSparkProps) {
   )
 }
 
+// Build daily calorie totals for the last N days from food entries
+function buildDailyTotals(entries: any[] | undefined, field: string, days: number): number[] {
+  if (!entries?.length) return []
+  const result: number[] = []
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() - i)
+    const next = new Date(d); next.setDate(next.getDate() + 1)
+    const dayTotal = entries
+      .filter((e: any) => { const t = new Date(e.consumedAt || e.loggedAt); return t >= d && t < next })
+      .reduce((s: number, e: any) => s + (Number(e[field]) || 0), 0)
+    result.push(dayTotal)
+  }
+  return result
+}
+
+// Build daily hunger averages for the last N days
+function buildDailyAverages(logs: any[] | undefined, days: number): number[] {
+  if (!logs?.length) return []
+  const result: number[] = []
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() - i)
+    const next = new Date(d); next.setDate(next.getDate() + 1)
+    const dayLogs = logs.filter((l: any) => { const t = new Date(l.loggedAt); return t >= d && t < next })
+    if (dayLogs.length) {
+      result.push(dayLogs.reduce((s: number, l: any) => s + (l.hungerAfter || l.hungerBefore || 5), 0) / dayLogs.length)
+    }
+  }
+  return result
+}
+
 export default function HealthPanel({ userInitials }: { userInitials: string }) {
   const { isOpen, setIsOpen, section, setSection, openTrend } = useHealthPanel()
-  const { dashboard, foodToday, weightLogs, hungerToday } = useHealthPanelData()
+  const { dashboard, foodToday, foodWeek, weightLogs, hungerToday, hungerWeek } = useHealthPanelData()
   const { user } = useAuth()
   const { isPro } = useSubscription()
 
-  const wtData = (weightLogs || []).slice(-7).map((l: any) => parseFloat(l.weight))
-  const calData = (foodToday || []).reduce((s: number, e: any) => s + (e.calories || 0), 0)
+  const wtData = (weightLogs || []).slice(-7).map((l: any) => Number(l.weight)).filter((v: number) => !isNaN(v))
+  const calData = (foodToday || []).reduce((s: number, e: any) => s + (Number(e.calories) || 0), 0)
+  const proteinData = (foodToday || []).reduce((s: number, e: any) => s + (Number(e.protein) || 0), 0)
   const avgHunger = hungerToday?.length
     ? (hungerToday.reduce((s: number, l: any) => s + (l.hungerAfter || l.hungerBefore || 5), 0) / hungerToday.length)
     : null
+
+  // Build real 7-day sparkline data from actual logs
+  const calWeekData = buildDailyTotals(foodWeek, 'calories', 7)
+  const hungerWeekData = buildDailyAverages(hungerWeek, 7)
+
+  // Weight display — fallback to profile weight if no logs
+  const latestWeight = weightLogs?.length ? Number(weightLogs[weightLogs.length - 1].weight) : null
+  const displayWeight = latestWeight ?? dashboard?.currentWeight ?? null
 
   return (
     <>
@@ -45,7 +84,7 @@ export default function HealthPanel({ userInitials }: { userInitials: string }) 
       />
 
       {/* Panel */}
-      <div className={`absolute top-0 bottom-0 left-0 w-[90%] max-w-full bg-white z-[70] flex flex-col overflow-x-hidden transition-transform duration-[280ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <div className={`absolute top-0 bottom-0 left-0 w-full bg-white z-[70] flex flex-col overflow-x-hidden transition-transform duration-[280ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
 
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-4 pb-3 flex-shrink-0 w-full max-w-full overflow-x-hidden" style={{ paddingTop: 'max(env(safe-area-inset-top), 48px)' }}>
@@ -85,9 +124,9 @@ export default function HealthPanel({ userInitials }: { userInitials: string }) 
               <div className="grid grid-cols-2 gap-3">
                 {[
                   { label: 'Calories', value: calData.toString(), sub: 'today' },
-                  { label: 'Protein', value: `${Math.round(((foodToday || []).reduce((s: number, e: any) => s + (e.protein || 0), 0)))}g`, sub: 'today' },
+                  { label: 'Protein', value: `${Math.round(proteinData)}g`, sub: 'today' },
                   { label: 'Dose', value: dashboard?.medicationStatus === 'on-track' ? 'On track' : dashboard?.medicationStatus || '\u2014', sub: dashboard?.lastDoseLabel || '' },
-                  { label: 'Weight', value: weightLogs?.length ? `${parseFloat(weightLogs[weightLogs.length-1].weight).toFixed(1)}kg` : '\u2014', sub: '\u25BC logging' },
+                  { label: 'Weight', value: displayWeight ? `${displayWeight.toFixed(1)}kg` : '\u2014', sub: latestWeight ? '\u25BC logging' : 'from profile' },
                 ].map(tile => (
                   <div key={tile.label} className="bg-white rounded-2xl p-3 shadow-md border border-gray-100/80 hover:shadow-lg transition-shadow duration-200">
                     <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide mb-1">{tile.label}</p>
@@ -112,7 +151,7 @@ export default function HealthPanel({ userInitials }: { userInitials: string }) 
                   <div><p className="text-sm font-semibold text-gray-900">Calories</p><p className="text-[10px] text-gray-400">{calData} cal today</p></div>
                   <p className="text-[9px] text-blue-500 font-medium">Full graph &rarr;</p>
                 </div>
-                <InlineSpark data={[820,790,850,810,780,830,calData].filter(Boolean)} color="#3B82F6" />
+                <InlineSpark data={calWeekData.length ? calWeekData : (calData ? [calData] : [])} color="#3B82F6" />
               </div>
 
               {/* Appetite sparkline */}
@@ -121,16 +160,16 @@ export default function HealthPanel({ userInitials }: { userInitials: string }) 
                   <div><p className="text-sm font-semibold text-gray-900">Appetite</p><p className="text-[10px] text-gray-400">{avgHunger ? `${avgHunger.toFixed(1)}/10 avg` : 'No logs today'}</p></div>
                   <p className="text-[9px] text-blue-500 font-medium">Full graph &rarr;</p>
                 </div>
-                <InlineSpark data={[6.8,6.2,5.8,5.5,5.2,5.0,avgHunger||5.2]} color="#8B5CF6" />
+                <InlineSpark data={hungerWeekData.length ? hungerWeekData : (avgHunger ? [avgHunger] : [])} color="#8B5CF6" />
               </div>
 
               {/* Adherence sparkline */}
               <div className="bg-white rounded-2xl p-3 shadow-md border border-gray-100/80 cursor-pointer hover:shadow-lg active:shadow-sm transition-shadow duration-200" onClick={() => openTrend('adherence')}>
                 <div className="flex justify-between items-start mb-2">
-                  <div><p className="text-sm font-semibold text-gray-900">Adherence</p><p className="text-[10px] text-gray-400">92% overall</p></div>
+                  <div><p className="text-sm font-semibold text-gray-900">Adherence</p><p className="text-[10px] text-gray-400">Dose tracking</p></div>
                   <p className="text-[9px] text-blue-500 font-medium">Full graph &rarr;</p>
                 </div>
-                <InlineSpark data={[100,100,100,100,85]} color="#1D9E75" />
+                <InlineSpark data={[]} color="#1D9E75" />
               </div>
             </div>
           )}

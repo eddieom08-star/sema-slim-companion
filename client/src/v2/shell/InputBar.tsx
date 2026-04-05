@@ -5,13 +5,15 @@ import { useSpeechInput } from './useSpeechInput'
 interface InputBarProps {
   onSend: (text: string) => void
   onCamera: () => void
+  onError?: (msg: string) => void
 }
 
-export default function InputBar({ onSend, onCamera }: InputBarProps) {
+export default function InputBar({ onSend, onCamera, onError }: InputBarProps) {
   const [text, setText] = useState('')
-  const { isListening, startListening } = useSpeechInput((t) => {
-    onSend(t)
-  })
+  const { isListening, startListening } = useSpeechInput(
+    (t) => onSend(t),
+    (msg) => onError?.(msg),
+  )
 
   const handleSend = () => {
     const t = text.trim()
@@ -34,6 +36,7 @@ export default function InputBar({ onSend, onCamera }: InputBarProps) {
       }
     } catch (e: any) {
       if (e?.message?.includes('User cancelled')) return
+      onError?.('Photo library is not available on this device.')
     }
   }
 

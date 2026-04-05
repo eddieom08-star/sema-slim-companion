@@ -125,6 +125,9 @@ export interface IStorage {
     medicationStatus: 'overdue' | 'due-today' | 'on-track' | 'unknown';
     lastDoseLabel: string;
     avgHungerLevel: number | null;
+    currentWeight: number | null;
+    targetWeight: number | null;
+    startDate: string | null;
   }>;
 
   // Dose escalation operations
@@ -500,6 +503,9 @@ export class DatabaseStorage implements IStorage {
     medicationStatus: 'overdue' | 'due-today' | 'on-track' | 'unknown';
     lastDoseLabel: string;
     avgHungerLevel: number | null;
+    currentWeight: number | null;
+    targetWeight: number | null;
+    startDate: string | null;
   }> {
     const today = new Date();
     const startOfDay = new Date(today);
@@ -510,7 +516,7 @@ export class DatabaseStorage implements IStorage {
     weekAgo.setDate(weekAgo.getDate() - 7);
 
     // Run all queries in parallel to avoid N+1 problem
-    const [todaysFood, recentWeights, streakResult, medicationResult, latestMedLog, todaysHungerLogs] = await Promise.all([
+    const [todaysFood, recentWeights, streakResult, medicationResult, latestMedLog, todaysHungerLogs, userProfile] = await Promise.all([
       // Today's calories
       db.select()
         .from(foodEntries)
@@ -564,6 +570,8 @@ export class DatabaseStorage implements IStorage {
             lte(hungerLogs.loggedAt, endOfDay)
           )
         ),
+      // User profile (for weight/goal fallback)
+      db.select().from(users).where(eq(users.id, userId)).limit(1),
     ]);
 
     const todayCalories = todaysFood.reduce((sum, entry) => sum + entry.calories, 0);
@@ -616,6 +624,8 @@ export class DatabaseStorage implements IStorage {
       avgHungerLevel = Math.round((sum / todaysHungerLogs.length) * 10) / 10;
     }
 
+    const profile = userProfile?.[0];
+
     return {
       todayCalories,
       weeklyWeightChange,
@@ -626,6 +636,9 @@ export class DatabaseStorage implements IStorage {
       medicationStatus,
       lastDoseLabel,
       avgHungerLevel,
+      currentWeight: profile?.currentWeight ? Number(profile.currentWeight) : null,
+      targetWeight: profile?.targetWeight ? Number(profile.targetWeight) : null,
+      startDate: profile?.startDate || null,
     };
   }
 

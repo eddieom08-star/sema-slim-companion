@@ -116,13 +116,19 @@ export default function TrendFullView() {
         )}
         {trendTab === 'weight' && (
           <div className="bg-gray-50 rounded-2xl p-3 mb-3" style={{ height: 180 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={wtData} margin={{ top: 8, right: 4, bottom: 16, left: 0 }}>
-                <Line type="monotone" dataKey="weight" stroke="#1D9E75" strokeWidth={2} dot={false} activeDot={{ r: 3 }} />
-                <XAxis dataKey="date" tick={{ fontSize: 8, fill: '#bbb' }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
-                <Tooltip formatter={(v: number) => [`${v.toFixed(1)}kg`]} contentStyle={{ fontSize: 10, borderRadius: 8 }} />
-              </LineChart>
-            </ResponsiveContainer>
+            {wtData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={wtData} margin={{ top: 8, right: 4, bottom: 16, left: 0 }}>
+                  <Line type="monotone" dataKey="weight" stroke="#1D9E75" strokeWidth={2} dot={false} activeDot={{ r: 3 }} />
+                  <XAxis dataKey="date" tick={{ fontSize: 8, fill: '#bbb' }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                  <Tooltip formatter={(v: number) => [`${v.toFixed(1)}kg`]} contentStyle={{ fontSize: 10, borderRadius: 8 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-400 text-sm">
+                No weight data yet. Log your weight to see trends.
+              </div>
+            )}
           </div>
         )}
         {trendTab === 'appetite' && (

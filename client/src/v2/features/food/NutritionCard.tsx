@@ -14,7 +14,7 @@ export default function NutritionCard({ food, quantity, onLog, onEdit }: Nutriti
   const fat = Math.round(Number(food.fat) * quantity)
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 space-y-3">
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/80 dark:border-gray-700 p-4 space-y-3 shadow-md hover:shadow-lg transition-shadow duration-200">
       <div className="flex items-start justify-between">
         <div>
           <p className="font-medium text-sm text-gray-900 dark:text-gray-100">{food.name}</p>
@@ -37,7 +37,7 @@ export default function NutritionCard({ food, quantity, onLog, onEdit }: Nutriti
       <div className="flex gap-2 pt-1">
         <button
           onClick={onLog}
-          className="flex-1 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg active:bg-blue-700"
+          className="flex-1 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg shadow-md active:bg-blue-700 active:shadow-sm transition-shadow duration-200"
         >
           Log this
         </button>

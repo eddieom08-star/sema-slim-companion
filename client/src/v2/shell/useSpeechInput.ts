@@ -2,13 +2,13 @@ import { useState, useCallback } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { SpeechRecognition } from '@capacitor-community/speech-recognition'
 
-export function useSpeechInput(onTranscript: (text: string) => void) {
+export function useSpeechInput(onTranscript: (text: string) => void, onError?: (msg: string) => void) {
   const [isListening, setIsListening] = useState(false)
 
   const startListening = useCallback(async () => {
     if (!Capacitor.isNativePlatform()) {
       const SpeechAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-      if (!SpeechAPI) return
+      if (!SpeechAPI) { onError?.('Microphone is not available on this device.'); return }
       const r = new SpeechAPI()
       r.lang = navigator.language || 'en-GB'
       r.onresult = (e: any) => onTranscript(e.results[0][0].transcript)
@@ -21,9 +21,9 @@ export function useSpeechInput(onTranscript: (text: string) => void) {
 
     try {
       const { available } = await SpeechRecognition.available()
-      if (!available) return
+      if (!available) { onError?.('Microphone is not available on this device.'); return }
       const perm = await SpeechRecognition.requestPermission()
-      if (perm.speechRecognition !== 'granted') return
+      if (perm.speechRecognition !== 'granted') { onError?.('Microphone permission denied.'); return }
       setIsListening(true)
 
       // Use partialResults: true because the iOS plugin resolves the promise
@@ -52,7 +52,7 @@ export function useSpeechInput(onTranscript: (text: string) => void) {
     } catch {
       setIsListening(false)
     }
-  }, [onTranscript])
+  }, [onTranscript, onError])
 
   const stopListening = useCallback(async () => {
     setIsListening(false)

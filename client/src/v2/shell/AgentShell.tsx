@@ -195,8 +195,25 @@ function AgentShellInner() {
         onCalorieTap={() => handleSend('Show my food today')}
       />
       <ChatArea messages={state.messages} onSuggestionTap={handleSend} />
-      <InputBar onSend={handleSend} onCamera={() => {
-        addAgentMessage('Camera coming soon.', { isTemplated: true })
+      <InputBar onSend={handleSend} onCamera={async () => {
+        try {
+          const { Camera: CapCamera, CameraResultType, CameraSource } = await import('@capacitor/camera')
+          const photo = await CapCamera.getPhoto({
+            quality: 80,
+            allowEditing: false,
+            resultType: CameraResultType.Base64,
+            source: CameraSource.Camera,
+          })
+          if (photo.base64String) {
+            addAgentMessage('Photo captured! Receipt scanning is coming soon — for now, tell me what you ate and I\'ll log it.', {
+              isTemplated: true,
+              suggestions: ['Log a meal manually', 'Generate a recipe'],
+            })
+          }
+        } catch (e: any) {
+          if (e?.message?.includes('User cancelled')) return
+          addAgentMessage('Camera is not available right now.', { isTemplated: true })
+        }
       }} />
     </div>
   )

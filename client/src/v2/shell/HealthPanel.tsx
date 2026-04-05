@@ -40,15 +40,15 @@ export default function HealthPanel({ userInitials }: { userInitials: string }) 
     <>
       {/* Overlay */}
       <div
-        className={`absolute inset-0 bg-black/45 z-10 transition-opacity duration-300 ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+        className={`absolute inset-0 bg-black/45 z-[60] transition-opacity duration-300 ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
         onClick={() => setIsOpen(false)}
       />
 
       {/* Panel */}
-      <div className={`absolute top-0 bottom-0 left-0 w-[90%] max-w-full bg-white z-20 flex flex-col overflow-x-hidden overflow-y-hidden transition-transform duration-[280ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <div className={`absolute top-0 bottom-0 left-0 w-[90%] max-w-full bg-white z-[70] flex flex-col overflow-x-hidden overflow-y-hidden transition-transform duration-[280ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
 
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-4 pb-3 flex-shrink-0 w-full max-w-full overflow-x-hidden" style={{ paddingTop: 'max(env(safe-area-inset-top), 12px)' }}>
+        <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-4 pb-3 flex-shrink-0 w-full max-w-full overflow-x-hidden" style={{ paddingTop: 'max(env(safe-area-inset-top), 48px)' }}>
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <div className="w-10 h-10 rounded-full bg-white/25 flex items-center justify-center text-white text-sm font-semibold">

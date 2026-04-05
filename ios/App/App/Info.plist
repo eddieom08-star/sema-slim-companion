@@ -19,7 +19,7 @@
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
-	<string>22</string>
+	<string>23</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
@@ -49,6 +49,10 @@
 	<string>This app needs access to your photo library to select and upload photos for your health tracking.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>This app needs access to your camera to take photos for your health tracking.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>GLP Friend uses the microphone for voice input so you can log meals, medication, and weight by speaking.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>GLP Friend uses speech recognition to convert your voice into text for quick health logging.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>This app needs permission to save photos to your library.</string>
 	<key>CFBundleURLTypes</key>

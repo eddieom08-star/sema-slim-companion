@@ -76,6 +76,8 @@ export interface IStorage {
   // Medication operations
   createMedication(medication: InsertMedication): Promise<Medication>;
   getUserMedications(userId: string): Promise<Medication[]>;
+  getMedication(id: string): Promise<Medication | null>;
+  updateMedicationNextDue(id: string, nextDueDate: Date): Promise<void>;
   updateMedication(id: string, userId: string, data: Partial<Medication>): Promise<Medication | null>;
   deleteMedication(id: string, userId: string): Promise<boolean>;
 
@@ -249,6 +251,15 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(medications.id, id), eq(medications.userId, userId)))
       .returning();
     return result || null;
+  }
+
+  async getMedication(id: string): Promise<Medication | null> {
+    const [result] = await db.select().from(medications).where(eq(medications.id, id));
+    return result || null;
+  }
+
+  async updateMedicationNextDue(id: string, nextDueDate: Date): Promise<void> {
+    await db.update(medications).set({ nextDueDate }).where(eq(medications.id, id));
   }
 
   async deleteMedication(id: string, userId: string): Promise<boolean> {

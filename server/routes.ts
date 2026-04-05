@@ -434,6 +434,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertMedicationLogSchema.parse({ ...req.body, userId });
       const log = await storage.createMedicationLog(validatedData);
 
+      // Update medication's nextDueDate based on frequency
+      if (validatedData.medicationId) {
+        try {
+          const med = await storage.getMedication(validatedData.medicationId);
+          if (med) {
+            const takenAt = new Date(validatedData.takenAt);
+            const nextDue = new Date(takenAt);
+            if (med.frequency === 'daily') nextDue.setDate(nextDue.getDate() + 1);
+            else nextDue.setDate(nextDue.getDate() + 7); // weekly default
+            await storage.updateMedicationNextDue(med.id, nextDue);
+          }
+        } catch (e) { console.warn('Failed to update nextDueDate:', e); }
+      }
+
       // Award points for taking medication
       await storage.addPoints(userId, 5, 'medication_taken', 'Logged medication');
 

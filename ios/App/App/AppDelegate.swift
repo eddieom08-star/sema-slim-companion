@@ -7,10 +7,21 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Clerk SDK initialization is handled by ClerkPlugin.initialize() called from JS
-        // This ensures the publishable key comes from the environment (VITE_CLERK_PUBLISHABLE_KEY)
-        // and initialization is properly awaited before auth UI is presented
-        print("[AppDelegate] App launched - Clerk init deferred to ClerkPlugin")
+        // Clear webview caches and service workers on every launch
+        // Preserves cookies/localStorage (Clerk auth) but removes stale JS/CSS/SW caches
+        let cacheTypes: Set<String> = [
+            WKWebsiteDataTypeDiskCache,
+            WKWebsiteDataTypeMemoryCache,
+            WKWebsiteDataTypeOfflineWebApplicationCache,
+            WKWebsiteDataTypeFetchCache,
+            WKWebsiteDataTypeServiceWorkerRegistrations,
+        ]
+        WKWebsiteDataStore.default().removeData(ofTypes: cacheTypes, modifiedSince: Date.distantPast) {
+            print("[AppDelegate] Cleared WKWebView caches + service workers")
+        }
+        URLCache.shared.removeAllCachedResponses()
+
+        print("[AppDelegate] App launched - caches cleared, Clerk init deferred to ClerkPlugin")
         return true
     }
 

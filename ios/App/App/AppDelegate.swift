@@ -1,4 +1,6 @@
 import UIKit
+import WebKit
+import Security
 import Capacitor
 
 @UIApplicationMain
@@ -7,8 +9,35 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Clear webview caches and service workers on every launch
-        // Preserves cookies/localStorage (Clerk auth) but removes stale JS/CSS/SW caches
+        // Detect fresh install — UserDefaults is wiped on uninstall, Keychain is NOT
+        let defaults = UserDefaults.standard
+        let hasLaunchedKey = "com.semaslim.hasLaunchedBefore"
+
+        if !defaults.bool(forKey: hasLaunchedKey) {
+            // First launch after install/reinstall
+            // Clear Clerk Keychain items so user must sign in again
+            // Scoped to generic passwords only (Clerk uses SimpleKeychain)
+            let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword]
+            SecItemDelete(query as CFDictionary)
+            print("[AppDelegate] Fresh install — cleared Keychain generic passwords (Clerk auth reset)")
+
+            // Clear all webview data (caches, service workers, etc.)
+            let sem = DispatchSemaphore(value: 0)
+            WKWebsiteDataStore.default().removeData(
+                ofTypes: WKWebsiteDataStore.allWebsiteDataTypes(),
+                modifiedSince: Date.distantPast
+            ) {
+                sem.signal()
+            }
+            _ = sem.wait(timeout: .now() + 2.0)
+            URLCache.shared.removeAllCachedResponses()
+            print("[AppDelegate] Fresh install — cleared webview data")
+
+            defaults.set(true, forKey: hasLaunchedKey)
+        }
+
+        // On EVERY launch: clear caches and service workers (not cookies/localStorage)
+        // This ensures fresh JS/CSS is always loaded without breaking auth persistence
         let cacheTypes: Set<String> = [
             WKWebsiteDataTypeDiskCache,
             WKWebsiteDataTypeMemoryCache,
@@ -16,12 +45,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             WKWebsiteDataTypeFetchCache,
             WKWebsiteDataTypeServiceWorkerRegistrations,
         ]
+        let cacheSem = DispatchSemaphore(value: 0)
         WKWebsiteDataStore.default().removeData(ofTypes: cacheTypes, modifiedSince: Date.distantPast) {
-            print("[AppDelegate] Cleared WKWebView caches + service workers")
+            cacheSem.signal()
         }
+        _ = cacheSem.wait(timeout: .now() + 2.0)
         URLCache.shared.removeAllCachedResponses()
 
-        print("[AppDelegate] App launched - caches cleared, Clerk init deferred to ClerkPlugin")
+        print("[AppDelegate] App launched — caches cleared")
         return true
     }
 

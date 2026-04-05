@@ -262,7 +262,7 @@ function AgentShellInner() {
   }
 
   return (
-    <div className="relative w-full h-screen" style={{ height: '100vh' }}>
+    <div className="relative w-full overflow-hidden" style={{ height: '100dvh' }}>
       {/* Fixed status bar strip for Dynamic Island */}
       <div className="fixed top-0 left-0 right-0 z-[80] bg-gradient-to-r from-blue-500 to-purple-600"
            style={{ height: 'env(safe-area-inset-top, 48px)' }} />

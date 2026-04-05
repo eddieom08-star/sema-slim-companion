@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Camera, Image, Send, Mic } from 'lucide-react'
-import { Capacitor } from '@capacitor/core'
 import { useSpeechInput } from './useSpeechInput'
 
 interface InputBarProps {
@@ -13,20 +12,6 @@ export default function InputBar({ onSend, onCamera }: InputBarProps) {
   const { isListening, startListening } = useSpeechInput((t) => {
     onSend(t)
   })
-
-  const [keyboardOpen, setKeyboardOpen] = useState(false)
-
-  useEffect(() => {
-    if (!Capacitor.isNativePlatform()) return
-    const onShow = () => setKeyboardOpen(true)
-    const onHide = () => setKeyboardOpen(false)
-    window.addEventListener('keyboardWillShow', onShow)
-    window.addEventListener('keyboardDidHide', onHide)
-    return () => {
-      window.removeEventListener('keyboardWillShow', onShow)
-      window.removeEventListener('keyboardDidHide', onHide)
-    }
-  }, [])
 
   const handleSend = () => {
     const t = text.trim()
@@ -53,7 +38,7 @@ export default function InputBar({ onSend, onCamera }: InputBarProps) {
   }
 
   return (
-    <div className="z-50 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 flex-shrink-0 w-full max-w-full overflow-x-hidden" style={{ paddingBottom: keyboardOpen ? '4px' : 'max(env(safe-area-inset-bottom), 16px)' }}>
+    <div className="z-50 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 flex-shrink-0 w-full max-w-full overflow-x-hidden" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 16px)' }}>
       <div className="flex items-center gap-2">
         <button onClick={onCamera} className="p-1.5 text-gray-500 dark:text-gray-400">
           <Camera className="w-5 h-5" />
@@ -67,7 +52,7 @@ export default function InputBar({ onSend, onCamera }: InputBarProps) {
           onChange={e => setText(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleSend() } }}
           placeholder="Ask me anything..."
-          className="flex-1 min-w-0 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full px-4 py-2.5 text-sm outline-none"
+          className="flex-1 min-w-0 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full px-4 py-2.5 text-base outline-none"
         />
         <button onClick={handleSend} className="p-2.5 bg-gray-900 dark:bg-white rounded-xl">
           <Send className="w-4 h-4 text-white dark:text-gray-900" />

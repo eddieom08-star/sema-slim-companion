@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Camera, Image, Send, Mic } from 'lucide-react'
+import { Capacitor } from '@capacitor/core'
 import { useSpeechInput } from './useSpeechInput'
 
 interface InputBarProps {
@@ -12,6 +13,20 @@ export default function InputBar({ onSend, onCamera }: InputBarProps) {
   const { isListening, startListening } = useSpeechInput((t) => {
     onSend(t)
   })
+
+  const [keyboardOpen, setKeyboardOpen] = useState(false)
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return
+    const onShow = () => setKeyboardOpen(true)
+    const onHide = () => setKeyboardOpen(false)
+    window.addEventListener('keyboardWillShow', onShow)
+    window.addEventListener('keyboardDidHide', onHide)
+    return () => {
+      window.removeEventListener('keyboardWillShow', onShow)
+      window.removeEventListener('keyboardDidHide', onHide)
+    }
+  }, [])
 
   const handleSend = () => {
     const t = text.trim()
@@ -38,7 +53,7 @@ export default function InputBar({ onSend, onCamera }: InputBarProps) {
   }
 
   return (
-    <div className="z-50 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 flex-shrink-0 w-full max-w-full overflow-x-hidden" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 16px)' }}>
+    <div className="z-50 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 flex-shrink-0 w-full max-w-full overflow-x-hidden" style={{ paddingBottom: keyboardOpen ? '4px' : 'max(env(safe-area-inset-bottom), 16px)' }}>
       <div className="flex items-center gap-2">
         <button onClick={onCamera} className="p-1.5 text-gray-500 dark:text-gray-400">
           <Camera className="w-5 h-5" />

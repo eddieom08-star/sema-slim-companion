@@ -17,14 +17,8 @@ const NotFound = lazy(() => import("@/pages/not-found"));
 const Landing = lazy(() => import("@/pages/landing"));
 const SignInPage = lazy(() => import("@/pages/sign-in"));
 const SignUpPage = lazy(() => import("@/pages/sign-up"));
-// v1 Dashboard commented out — v2 AgentShell replaces it
-// const Dashboard = lazy(() => import("@/pages/dashboard"));
 const Onboarding = lazy(() => import("@/pages/onboarding"));
-const FoodTracking = lazy(() => import("@/pages/food-tracking"));
-const Medication = lazy(() => import("@/pages/medication"));
-const Progress = lazy(() => import("@/pages/progress"));
 const Profile = lazy(() => import("@/pages/profile"));
-const Recipes = lazy(() => import("@/pages/recipes"));
 const MobileCheckout = lazy(() => import("@/pages/MobileCheckout"));
 const AgentShell = lazy(() => import("@/v2/shell/AgentShell"));
 const CheckoutSuccess = lazy(() => import("@/pages/CheckoutSuccess"));
@@ -122,10 +116,6 @@ function Router() {
             <Route path="/privacy" component={Privacy} />
             <Route path="/checkout/success" component={CheckoutSuccess} />
             <Route path="/checkout" component={MobileCheckout} />
-            <Route path="/food-tracking" component={FoodTracking} />
-            <Route path="/medication" component={Medication} />
-            <Route path="/recipes" component={Recipes} />
-            <Route path="/progress" component={Progress} />
             <Route path="/profile" component={Profile} />
             <Route path="/">
               {() => <AgentShell />}

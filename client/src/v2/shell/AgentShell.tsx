@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { apiRequest } from '@/lib/queryClient'
 import { useAgent } from '@/v2/agent/AgentContext'
@@ -95,12 +95,8 @@ function AgentShellInner() {
     }
   }, [dashboard, hasWelcomed])
 
-  // Check overdue medication after welcome
-  useEffect(() => {
-    if (hasWelcomed && medications?.length) {
-      checkAndAlertOverdue(medications)
-    }
-  }, [hasWelcomed, medications])
+  // Overdue medication status is shown in HeaderStats cards (Dose → "Overdue").
+  // Don't auto-add chat messages — keep the empty state clean until user interacts.
 
   // Edge swipe to open panel
   useEffect(() => {
@@ -266,7 +262,7 @@ function AgentShellInner() {
   }
 
   return (
-    <div className="relative w-full" style={{ height: '100dvh' }}>
+    <div className="relative w-full h-screen" style={{ height: '100vh' }}>
       {/* Fixed status bar strip for Dynamic Island */}
       <div className="fixed top-0 left-0 right-0 z-[80] bg-gradient-to-r from-blue-500 to-purple-600"
            style={{ height: 'env(safe-area-inset-top, 48px)' }} />
@@ -283,6 +279,24 @@ function AgentShellInner() {
           onCalorieTap={() => handleSend('Show my food today')}
         />
         <ChatArea messages={state.messages} onSuggestionTap={handleSend} />
+        {/* Persistent quick action pills — always visible above input */}
+        <div className="flex-shrink-0 px-3 py-2 bg-white dark:bg-gray-900 flex gap-2 overflow-x-auto w-full">
+          {[
+            { label: 'Log food', emoji: '🍽' },
+            { label: 'Log my dose', emoji: '💊' },
+            { label: 'Log my weight', emoji: '⚖️' },
+            { label: 'Need a recipe', emoji: '👨‍🍳' },
+          ].map(({ label, emoji }) => (
+            <button
+              key={label}
+              onClick={() => handleSend(label)}
+              className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full text-xs text-gray-700 dark:text-gray-300 active:bg-gray-200 transition-colors"
+            >
+              <span>{emoji}</span>
+              {label}
+            </button>
+          ))}
+        </div>
         <InputBar onSend={handleSend} onCamera={async () => {
           try {
             const { Camera: CapCamera, CameraResultType, CameraSource } = await import('@capacitor/camera')
@@ -324,9 +338,3 @@ function AgentShellInner() {
   )
 }
 
-function getTimeOfDay() {
-  const h = new Date().getHours()
-  if (h < 12) return 'morning'
-  if (h < 17) return 'afternoon'
-  return 'evening'
-}

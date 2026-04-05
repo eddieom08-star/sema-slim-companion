@@ -21,11 +21,19 @@ export function useWeightFlow() {
     }
 
     // Fetch recent logs for delta
-    const logsRes = await apiRequest('GET', '/api/weight-logs?limit=8')
-    const logs = await logsRes.json()
+    let logs: any[] = []
+    try {
+      const logsRes = await apiRequest('GET', '/api/weight-logs?limit=8')
+      logs = await logsRes.json()
+    } catch { /* proceed with empty logs */ }
 
     // Log the new weight
-    await apiRequest('POST', '/api/weight-logs', { weight: weight.kg, loggedAt: new Date().toISOString() })
+    try {
+      await apiRequest('POST', '/api/weight-logs', { weight: weight.kg, loggedAt: new Date().toISOString() })
+    } catch {
+      addAgentMessage('Failed to save your weight. Try again.', { isTemplated: true })
+      return
+    }
 
     const startWeight = logs?.length ? parseFloat(logs[logs.length - 1].weight) : weight.kg
     const delta = Math.round((weight.kg - startWeight) * 10) / 10

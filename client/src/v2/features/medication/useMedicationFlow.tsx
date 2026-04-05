@@ -63,17 +63,19 @@ export function useMedicationFlow() {
       })
       const data = await res.json()
       setLastLogId(data.id)
-    } catch {
-      // still show confirmation even if log fails
-    }
 
-    addAgentMessage(
-      `Done. Logged your ${medication.dosage || ''} ${medication.medicationType || 'dose'} at ${timeStr}. Any side effects today?`,
-      {
-        isTemplated: true,
-        suggestions: ['Feeling good', 'Some nausea', 'Tired today', 'Injection site sore', 'Headache']
-      }
-    )
+      addAgentMessage(
+        `Done. Logged your ${medication.dosage || ''} ${medication.medicationType || 'dose'} at ${timeStr}. Any side effects today?`,
+        {
+          isTemplated: true,
+          suggestions: ['Feeling good', 'Some nausea', 'Tired today', 'Injection site sore', 'Headache']
+        }
+      )
+    } catch {
+      addAgentMessage('Failed to log your dose. Check your connection and try again.', {
+        isTemplated: true, suggestions: ['Try again'],
+      })
+    }
   }, [addAgentMessage])
 
   const handleSideEffectMention = useCallback((sideEffect: string) => {

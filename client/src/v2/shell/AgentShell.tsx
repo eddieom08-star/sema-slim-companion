@@ -18,6 +18,29 @@ import InputBar from './InputBar'
 import HealthPanel from './HealthPanel'
 import type { UserContext } from '@/v2/agent/types'
 
+const SUB_ACTIONS: Record<string, { label: string; send: string }[]> = {
+  'Log food': [
+    { label: 'Add food', send: 'Log a meal' },
+    { label: 'Barcode scan', send: 'Scan barcode' },
+    { label: 'Appetite & Satiety intel', send: 'How am I doing with appetite' },
+    { label: 'Log appetite', send: 'Log my appetite level' },
+  ],
+  'Log my dose': [
+    { label: 'Quick log', send: 'Log my dose now' },
+    { label: 'Detailed log', send: 'Change dose' },
+    { label: 'Side effect log', send: 'I have a side effect' },
+  ],
+  'Need a recipe': [
+    { label: 'Generate instant recipe', send: 'Generate a recipe' },
+    { label: 'Saved recipes', send: 'My saved recipes' },
+    { label: 'Scan receipt', send: 'Scan receipt' },
+  ],
+  'Log my weight': [
+    { label: 'Log weight', send: 'I weighed myself' },
+    { label: 'Weight progress', send: 'Weight trend' },
+  ],
+}
+
 export default function AgentShell() {
   return <AgentShellInner />
 }
@@ -103,6 +126,28 @@ function AgentShellInner() {
   }, [panel.isOpen])
 
   const handleSend = async (text: string) => {
+    // Parent action -> show sub-actions
+    const subActions = SUB_ACTIONS[text]
+    if (subActions) {
+      addUserMessage(text)
+      addAgentMessage('What would you like to do?', {
+        isTemplated: true,
+        suggestions: subActions.map(a => a.label),
+      })
+      return
+    }
+
+    // Sub-action label -> route to correct intent
+    for (const actions of Object.values(SUB_ACTIONS)) {
+      const match = actions.find(a => a.label === text)
+      if (match) {
+        addUserMessage(text)
+        const intent = classifyIntent(match.send)
+        await dispatchIntent(intent, text)
+        return
+      }
+    }
+
     addUserMessage(text)
     const intent = classifyIntent(text)
 
@@ -111,12 +156,15 @@ function AgentShellInner() {
       try {
         const res = await apiRequest('POST', '/api/v2/classify', { text })
         const data = await res.json()
-        dispatchIntent(data.intent ?? 'general', text, data.entities)
+        await dispatchIntent(data.intent ?? 'general', text, data.entities)
       } catch {
-        dispatchIntent('general', text)
+        addAgentMessage("I didn't catch that — could you rephrase?", {
+          isTemplated: true,
+          suggestions: getContextualChips(userContext),
+        })
       }
     } else {
-      dispatchIntent(intent, text)
+      await dispatchIntent(intent, text)
     }
   }
 
@@ -184,37 +232,60 @@ function AgentShellInner() {
   }
 
   return (
-    <div className="flex flex-col w-full max-w-full overflow-hidden bg-white dark:bg-gray-900 relative touch-pan-y" style={{ height: '100dvh' }}>
+    <div className="relative w-full" style={{ height: '100dvh' }}>
+      {/* Fixed status bar strip for Dynamic Island */}
+      <div className="fixed top-0 left-0 right-0 z-[80] bg-gradient-to-r from-blue-500 to-purple-600"
+           style={{ height: 'env(safe-area-inset-top, 48px)' }} />
+      {/* Panel outside overflow-hidden container */}
       <HealthPanel userInitials={initials} />
-      <HeaderStats
-        userContext={userContext}
-        userInitials={initials}
-        onMenuOpen={() => panel.setIsOpen(true)}
-        onDoseTap={() => handleSend('Log my dose')}
-        onHungerTap={() => handleSend('Log my hunger level')}
-        onCalorieTap={() => handleSend('Show my food today')}
-      />
-      <ChatArea messages={state.messages} onSuggestionTap={handleSend} />
-      <InputBar onSend={handleSend} onCamera={async () => {
-        try {
-          const { Camera: CapCamera, CameraResultType, CameraSource } = await import('@capacitor/camera')
-          const photo = await CapCamera.getPhoto({
-            quality: 80,
-            allowEditing: false,
-            resultType: CameraResultType.Base64,
-            source: CameraSource.Camera,
-          })
-          if (photo.base64String) {
-            addAgentMessage('Photo captured! Receipt scanning is coming soon — for now, tell me what you ate and I\'ll log it.', {
-              isTemplated: true,
-              suggestions: ['Log a meal manually', 'Generate a recipe'],
+      {/* Main content */}
+      <div className="flex flex-col w-full h-full overflow-hidden bg-white dark:bg-gray-900 touch-pan-y">
+        <HeaderStats
+          userContext={userContext}
+          userInitials={initials}
+          onMenuOpen={() => panel.setIsOpen(true)}
+          onDoseTap={() => handleSend('Log my dose')}
+          onHungerTap={() => handleSend('Log my hunger level')}
+          onCalorieTap={() => handleSend('Show my food today')}
+        />
+        <ChatArea messages={state.messages} onSuggestionTap={handleSend} />
+        <InputBar onSend={handleSend} onCamera={async () => {
+          try {
+            const { Camera: CapCamera, CameraResultType, CameraSource } = await import('@capacitor/camera')
+            const photo = await CapCamera.getPhoto({
+              quality: 80,
+              allowEditing: false,
+              resultType: CameraResultType.Base64,
+              source: CameraSource.Camera,
             })
+            if (photo.base64String) {
+              addAgentMessage('Analyzing your receipt...', { isTemplated: true })
+              try {
+                const res = await apiRequest('POST', '/api/v2/scan-receipt', { image: photo.base64String })
+                const data = await res.json()
+                if (data.items?.length) {
+                  for (const item of data.items) {
+                    await handleFoodInput(item.food_name)
+                  }
+                } else {
+                  addAgentMessage('No food items found in the image. Try a clearer photo or tell me what you ate.', {
+                    isTemplated: true,
+                    suggestions: ['Log a meal manually', 'Try again'],
+                  })
+                }
+              } catch {
+                addAgentMessage('Failed to scan the receipt. Try again or log manually.', {
+                  isTemplated: true,
+                  suggestions: ['Log a meal manually'],
+                })
+              }
+            }
+          } catch (e: any) {
+            if (e?.message?.includes('User cancelled')) return
+            addAgentMessage('Camera is not available right now.', { isTemplated: true })
           }
-        } catch (e: any) {
-          if (e?.message?.includes('User cancelled')) return
-          addAgentMessage('Camera is not available right now.', { isTemplated: true })
-        }
-      }} />
+        }} />
+      </div>
     </div>
   )
 }

@@ -9,7 +9,7 @@ import ProMomentCard from '@/v2/monetisation/ProMomentCard'
 
 export function useRecipesFlow() {
   const { addAgentMessage } = useAgent()
-  const { isPro, checkFeature, consumeFeature, openCheckout, purchaseTokens } = useSubscription()
+  const { isPro, checkFeature, openCheckout, purchaseTokens } = useSubscription()
 
   const handleGenerateRecipe = useCallback(async (preferences?: string) => {
     const gate = await checkFeature('ai_recipe', 1)
@@ -33,8 +33,6 @@ export function useRecipesFlow() {
         { isTemplated: true }
       )
     }
-
-    await consumeFeature('ai_recipe', 1)
 
     addAgentMessage('On it...', { isTemplated: true })
 
@@ -61,7 +59,7 @@ export function useRecipesFlow() {
     } catch {
       addAgentMessage('Recipe generation failed. Try again in a moment.', { isTemplated: true })
     }
-  }, [addAgentMessage, checkFeature, consumeFeature])
+  }, [addAgentMessage, checkFeature, openCheckout, purchaseTokens])
 
   const handleSavedRecipes = useCallback(async () => {
     try {

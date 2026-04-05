@@ -12,7 +12,7 @@ export function classifyIntent(text: string): Intent {
   if (has(['change dose','new dose','detailed log','different dose'])) return 'medication.detailed'
   if (has(['scan','barcode'])) return 'food.barcode'
   if (has(['i ate','i had','i\'ve had','just ate','just had','for breakfast','for lunch','for dinner','for tea','for supper','calories in','log meal','log food','ate a','had a','had some'])) return 'food.search'
-  if (has(['still hungry','feel full','quite full','very full','not hungry','craving','satiety','fullness'])) return 'food.appetite'
+  if (has(['still hungry','feel full','quite full','very full','not hungry','craving','satiety','fullness','appetite level','log my appetite','doing with appetite'])) return 'food.appetite'
   if (has(['my recipes','saved recipes','show me my recipes','my saved'])) return 'recipe.saved'
   if (has(['recipe','what should i cook','what should i eat','meal idea','suggest something','what can i make'])) return 'recipe.generate'
   if (has(['i weigh','my weight','on the scales','weighed myself','lost weight','gained weight'])) return 'weight.log'

@@ -93,4 +93,32 @@ Plain text only, no markdown, no lists. Be specific and actionable.`;
   }
 });
 
+// POST /api/v2/scan-receipt — RECEIPT SCANNING
+router.post('/v2/scan-receipt', requireAuth, async (req: any, res) => {
+  try {
+    const { image } = req.body;
+    if (!image) return res.status(400).json({ error: 'No image provided' });
+
+    const response = await anthropic.messages.create({
+      model: 'claude-3-haiku-20240307',
+      max_tokens: 500,
+      system: [{ type: 'text', text: 'Extract food items from this receipt or menu photo. Return JSON only, no markdown: { "items": [{ "food_name": "string", "quantity": "string or null", "estimated_calories": number or null }] }', cache_control: { type: 'ephemeral' } }],
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: image } },
+          { type: 'text', text: 'Extract all food items from this image.' }
+        ]
+      }],
+    });
+
+    const text = (response.content[0] as { type: string; text: string }).text;
+    const parsed = JSON.parse(text);
+    res.json(parsed);
+  } catch (error: any) {
+    console.error('Receipt scan error:', error);
+    res.json({ items: [] });
+  }
+});
+
 export default router;

@@ -55,7 +55,7 @@ export function useFoodFlow() {
         onEdit: () => addAgentMessage('What would you like to change?', { isTemplated: true }),
       }),
     })
-  }, [addAgentMessage])
+  }, [addAgentMessage, isPro, openCheckout])
 
   const handleFoodInput = useCallback(async (
     text: string,

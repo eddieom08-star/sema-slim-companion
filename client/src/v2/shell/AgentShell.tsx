@@ -87,18 +87,10 @@ function AgentShellInner() {
     userId: userId ?? '',
   }
 
-  // Welcome message on mount
+  // Mark welcomed once dashboard loads (no message — empty state IS the welcome)
   useEffect(() => {
     if (!hasWelcomed && dashboard) {
       setHasWelcomed(true)
-      const chips = getContextualChips(userContext)
-      const calStr = dashboard.todayCalories > 0
-        ? ` You've logged ${dashboard.todayCalories} calories today.`
-        : ''
-      addAgentMessage(
-        `Good ${getTimeOfDay()}!${calStr} How can I help?`,
-        { isTemplated: true, suggestions: chips }
-      )
     }
   }, [dashboard, hasWelcomed])
 

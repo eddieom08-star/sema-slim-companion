@@ -85,6 +85,22 @@ export async function initializeMobile() {
 
   console.log('[Mobile Init] Initializing mobile features...');
 
+  // Unregister any cached service worker — native app doesn't need it
+  // This fixes stale cache issues where old UI is served despite app updates
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(registrations => {
+      for (const reg of registrations) {
+        reg.unregister();
+        console.log('[Mobile Init] Unregistered service worker:', reg.scope);
+      }
+    });
+    // Also clear all caches
+    if ('caches' in window) {
+      caches.keys().then(names => names.forEach(name => caches.delete(name)));
+      console.log('[Mobile Init] Cleared all caches');
+    }
+  }
+
   // Fix iOS keyboard issues - must be done early
   setupKeyboardFocusFix();
 

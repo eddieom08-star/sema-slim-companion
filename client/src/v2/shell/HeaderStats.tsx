@@ -1,4 +1,5 @@
 import { Pill, Activity, Utensils } from 'lucide-react'
+import { useLocation } from 'wouter'
 import type { UserContext } from '@/v2/agent/types'
 
 interface HeaderStatsProps {
@@ -14,6 +15,8 @@ export default function HeaderStats({
   userContext, userInitials, onMenuOpen,
   onDoseTap, onHungerTap, onCalorieTap,
 }: HeaderStatsProps) {
+  const [, setLocation] = useLocation()
+
   const doseColor = userContext.medicationStatus === 'overdue'
     ? 'text-red-200'
     : userContext.medicationStatus === 'on-track'
@@ -41,9 +44,12 @@ export default function HeaderStats({
           <p className="text-white font-semibold text-base">GLP Friend</p>
           <p className="text-white/65 text-[10px]">Health Assistant</p>
         </div>
-        <div className="w-9 h-9 rounded-full bg-white/25 flex items-center justify-center text-white text-xs font-semibold">
+        <button
+          onClick={() => setLocation('/profile')}
+          className="w-9 h-9 rounded-full bg-white/25 flex items-center justify-center text-white text-xs font-semibold"
+        >
           {userInitials}
-        </div>
+        </button>
       </div>
 
       {/* Stat cards */}

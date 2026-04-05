@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { Bot, Utensils, Pill, Scale, ChefHat, Trash2 } from 'lucide-react'
+import { Bot, Utensils, Pill, Scale, ChefHat, Trash2, X } from 'lucide-react'
 import type { Message } from '@/v2/agent/types'
 
 const DEFAULT_QUICK_ACTIONS = [
@@ -22,68 +22,72 @@ interface ChatAreaProps {
   onClear: () => void
 }
 
-const PULL_THRESHOLD = 80
-
 export default function ChatArea({ messages, onSuggestionTap, onClear }: ChatAreaProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const isEmpty = messages.length === 0
 
-  // Pull-to-clear state
-  const [pullDistance, setPullDistance] = useState(0)
-  const [isPulling, setIsPulling] = useState(false)
+  // Swipe-down-to-clear: detect a fast downward swipe anywhere in the chat
+  const [showClearPrompt, setShowClearPrompt] = useState(false)
   const touchStartY = useRef(0)
+  const touchStartTime = useRef(0)
+  const scrollAtStart = useRef(0)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
   const onTouchStart = useCallback((e: React.TouchEvent) => {
-    if (isEmpty) return
-    const el = scrollRef.current
-    if (el && el.scrollTop <= 0) {
-      touchStartY.current = e.touches[0].clientY
-      setIsPulling(true)
-    }
-  }, [isEmpty])
+    touchStartY.current = e.touches[0].clientY
+    touchStartTime.current = Date.now()
+    scrollAtStart.current = scrollRef.current?.scrollTop ?? 0
+  }, [])
 
-  const onTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!isPulling) return
-    const el = scrollRef.current
-    if (!el || el.scrollTop > 0) { setPullDistance(0); return }
-    const dy = e.touches[0].clientY - touchStartY.current
-    if (dy > 0) {
-      setPullDistance(Math.min(dy * 0.5, 120))
-    }
-  }, [isPulling])
+  const onTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (isEmpty || showClearPrompt) return
+    const dy = e.changedTouches[0].clientY - touchStartY.current
+    const dt = Date.now() - touchStartTime.current
+    const scrollDelta = (scrollRef.current?.scrollTop ?? 0) - scrollAtStart.current
 
-  const onTouchEnd = useCallback(() => {
-    if (pullDistance >= PULL_THRESHOLD) {
-      onClear()
+    // Fast swipe down (>120px in <400ms) while the scroll didn't actually move much
+    // This means they're at the bottom and swiping down, or overscrolling
+    if (dy > 120 && dt < 400 && Math.abs(scrollDelta) < 20) {
+      setShowClearPrompt(true)
     }
-    setPullDistance(0)
-    setIsPulling(false)
-  }, [pullDistance, onClear])
+  }, [isEmpty, showClearPrompt])
 
-  const triggered = pullDistance >= PULL_THRESHOLD
+  const handleConfirmClear = useCallback(() => {
+    setShowClearPrompt(false)
+    onClear()
+  }, [onClear])
 
   return (
     <div
       ref={scrollRef}
-      className="flex-1 overflow-y-auto overflow-x-hidden w-full max-w-full"
+      className="flex-1 overflow-y-auto overflow-x-hidden w-full max-w-full relative"
       onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
-      {/* Pull-to-clear indicator */}
-      {!isEmpty && pullDistance > 10 && (
-        <div
-          className="flex flex-col items-center justify-end overflow-hidden transition-opacity"
-          style={{ height: pullDistance, opacity: Math.min(pullDistance / PULL_THRESHOLD, 1) }}
-        >
-          <div className={`flex items-center gap-2 pb-2 text-xs font-medium ${triggered ? 'text-red-500' : 'text-gray-400'}`}>
-            <Trash2 className={`w-3.5 h-3.5 transition-transform ${triggered ? 'scale-110' : ''}`} />
-            {triggered ? 'Release to clear' : 'Pull down to clear chat'}
+      {/* Clear chat confirmation */}
+      {showClearPrompt && (
+        <div className="sticky top-0 z-20 flex items-center justify-between px-4 py-3 bg-gray-900/90 dark:bg-gray-100/90 backdrop-blur-sm">
+          <div className="flex items-center gap-2">
+            <Trash2 className="w-4 h-4 text-white dark:text-gray-900" />
+            <span className="text-sm font-medium text-white dark:text-gray-900">Clear this conversation?</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleConfirmClear}
+              className="px-3 py-1 bg-red-500 text-white text-xs font-medium rounded-full"
+            >
+              Clear
+            </button>
+            <button
+              onClick={() => setShowClearPrompt(false)}
+              className="p-1 text-white/70 dark:text-gray-500"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         </div>
       )}

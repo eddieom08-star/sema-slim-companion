@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Camera, Send, Mic } from 'lucide-react'
+import { Camera, Image, Send, Mic } from 'lucide-react'
 import { useSpeechInput } from './useSpeechInput'
 
 interface InputBarProps {
@@ -20,33 +20,49 @@ export default function InputBar({ onSend, onCamera }: InputBarProps) {
     setText('')
   }
 
+  const handleGallery = async () => {
+    try {
+      const { Camera: CapCamera, CameraResultType, CameraSource } = await import('@capacitor/camera')
+      const photo = await CapCamera.getPhoto({
+        quality: 80,
+        allowEditing: false,
+        resultType: CameraResultType.Base64,
+        source: CameraSource.Photos,
+      })
+      if (photo.base64String) {
+        onSend('__PHOTO__' + photo.base64String)
+      }
+    } catch (e: any) {
+      if (e?.message?.includes('User cancelled')) return
+    }
+  }
+
   return (
     <div className="z-50 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 flex-shrink-0 w-full max-w-full overflow-x-hidden" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 16px)' }}>
-      <div className="flex items-end gap-2">
-        <button onClick={onCamera} className="p-2 text-gray-400">
+      <div className="flex items-center gap-2">
+        <button onClick={onCamera} className="p-1.5 text-gray-500 dark:text-gray-400">
           <Camera className="w-5 h-5" />
         </button>
-        <textarea
+        <button onClick={handleGallery} className="p-1.5 text-gray-500 dark:text-gray-400">
+          <Image className="w-5 h-5" />
+        </button>
+        <input
+          type="text"
           value={text}
           onChange={e => setText(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleSend() } }}
           placeholder="Ask me anything..."
-          rows={1}
-          className="flex-1 min-w-0 resize-none bg-gray-100 dark:bg-gray-800 rounded-2xl px-4 py-2.5 text-sm outline-none max-h-24 overflow-y-auto"
-          style={{ minHeight: '40px' }}
+          className="flex-1 min-w-0 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full px-4 py-2.5 text-sm outline-none"
         />
-        {text.trim() ? (
-          <button onClick={handleSend} className="p-2.5 bg-gray-900 dark:bg-white rounded-xl">
-            <Send className="w-4 h-4 text-white dark:text-gray-900" />
-          </button>
-        ) : (
-          <button
-            onClick={isListening ? undefined : startListening}
-            className={`p-2.5 rounded-xl ${isListening ? 'bg-red-500' : 'bg-gray-900 dark:bg-white'}`}
-          >
-            <Mic className={`w-4 h-4 ${isListening ? 'text-white' : 'text-white dark:text-gray-900'}`} />
-          </button>
-        )}
+        <button onClick={handleSend} className="p-2.5 bg-gray-900 dark:bg-white rounded-xl">
+          <Send className="w-4 h-4 text-white dark:text-gray-900" />
+        </button>
+        <button
+          onClick={isListening ? undefined : startListening}
+          className={`p-2 ${isListening ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`}
+        >
+          <Mic className="w-5 h-5" />
+        </button>
       </div>
     </div>
   )

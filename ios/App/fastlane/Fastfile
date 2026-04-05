@@ -1,8 +1,33 @@
 default_platform(:ios)
 
 platform :ios do
-  desc "Submit latest build for External TestFlight review"
+  desc "Build, upload and distribute to External TestFlight"
   lane :beta do
+    api_key = app_store_connect_api_key(
+      key_id: "96TSNBQ4VH",
+      issuer_id: "f0c705ca-0c8e-4f5a-acad-03f37840b0d0",
+      key_filepath: File.expand_path("../../../AuthKey_96TSNBQ4VH.p8", __dir__)
+    )
+
+    build_app(
+      workspace: "App.xcworkspace",
+      scheme: "App",
+      export_method: "app-store",
+      clean: true,
+      output_directory: "./build",
+      output_name: "App.ipa"
+    )
+
+    upload_to_testflight(
+      api_key: api_key,
+      app_identifier: "com.semaslim.app",
+      skip_waiting_for_build_processing: true,
+      distribute_external: false
+    )
+  end
+
+  desc "Distribute latest build to External TestFlight testers"
+  lane :distribute do
     api_key = app_store_connect_api_key(
       key_id: "96TSNBQ4VH",
       issuer_id: "f0c705ca-0c8e-4f5a-acad-03f37840b0d0",
@@ -20,10 +45,10 @@ platform :ios do
       notify_external_testers: true,
       groups: ["External Testers"],
       app_version: "1.0",
-      build_number: "31",
+      build_number: "32",
       localized_build_info: {
         "default" => {
-          whats_new: "What to test:\n- NEW: Agent-first chat experience is now the home screen after login\n- Chat with your AI health companion to log food, medication, weight\n- AI recipe generation (ask for GLP-1 friendly meals)\n- Health panel with daily stats\n- Sign up and complete onboarding\n- Test subscription upgrade flow (Pro tier)"
+          whats_new: "Build 32:\n- Fixed conversation flow — switching between food/recipe/weight/dose flows now works smoothly\n- Recipe cards now show instructions, tags, dark mode support\n- Save recipe button works (AI recipes persist to your account)\n- Photo-to-recipe: snap ingredients or a receipt to generate a recipe\n- Camera and microphone now connected\n- Fixed keyboard black strip and horizontal scroll issues"
         }
       }
     )

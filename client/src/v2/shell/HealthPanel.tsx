@@ -45,7 +45,7 @@ export default function HealthPanel({ userInitials }: { userInitials: string }) 
       />
 
       {/* Panel */}
-      <div className={`absolute top-0 bottom-0 left-0 w-[90%] max-w-full bg-white z-[70] flex flex-col overflow-x-hidden overflow-y-hidden transition-transform duration-[280ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <div className={`absolute top-0 bottom-0 left-0 w-[90%] max-w-full bg-white z-[70] flex flex-col overflow-x-hidden transition-transform duration-[280ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
 
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-4 pb-3 flex-shrink-0 w-full max-w-full overflow-x-hidden" style={{ paddingTop: 'max(env(safe-area-inset-top), 48px)' }}>
@@ -78,19 +78,19 @@ export default function HealthPanel({ userInitials }: { userInitials: string }) 
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto -webkit-overflow-scrolling-touch" style={{ WebkitOverflowScrolling: 'touch' }}>
           {section === 'dashboard' && (
             <div className="p-4 space-y-3">
               {/* Today snapshot */}
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-3">
                 {[
                   { label: 'Calories', value: calData.toString(), sub: 'today' },
                   { label: 'Protein', value: `${Math.round(((foodToday || []).reduce((s: number, e: any) => s + (e.protein || 0), 0)))}g`, sub: 'today' },
                   { label: 'Dose', value: dashboard?.medicationStatus === 'on-track' ? 'On track' : dashboard?.medicationStatus || '\u2014', sub: dashboard?.lastDoseLabel || '' },
                   { label: 'Weight', value: weightLogs?.length ? `${parseFloat(weightLogs[weightLogs.length-1].weight).toFixed(1)}kg` : '\u2014', sub: '\u25BC logging' },
                 ].map(tile => (
-                  <div key={tile.label} className="bg-gray-50 rounded-2xl p-3">
-                    <p className="text-[10px] text-gray-400 mb-1">{tile.label}</p>
+                  <div key={tile.label} className="bg-white rounded-2xl p-3 shadow-md border border-gray-100/80 hover:shadow-lg transition-shadow duration-200">
+                    <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide mb-1">{tile.label}</p>
                     <p className="text-lg font-bold text-gray-900">{tile.value}</p>
                     <p className="text-[10px] text-gray-400 mt-0.5">{tile.sub}</p>
                   </div>
@@ -98,7 +98,7 @@ export default function HealthPanel({ userInitials }: { userInitials: string }) 
               </div>
 
               {/* Weight sparkline */}
-              <div className="bg-gray-50 rounded-2xl p-3 cursor-pointer active:bg-gray-100" onClick={() => openTrend('weight')}>
+              <div className="bg-white rounded-2xl p-3 shadow-md border border-gray-100/80 cursor-pointer hover:shadow-lg active:shadow-sm transition-shadow duration-200" onClick={() => openTrend('weight')}>
                 <div className="flex justify-between items-start mb-2">
                   <div><p className="text-sm font-semibold text-gray-900">Weight</p><p className="text-[10px] text-gray-400">Last 7 days</p></div>
                   <p className="text-[9px] text-blue-500 font-medium">Full graph &rarr;</p>
@@ -107,7 +107,7 @@ export default function HealthPanel({ userInitials }: { userInitials: string }) 
               </div>
 
               {/* Calories sparkline */}
-              <div className="bg-gray-50 rounded-2xl p-3 cursor-pointer active:bg-gray-100" onClick={() => openTrend('calories')}>
+              <div className="bg-white rounded-2xl p-3 shadow-md border border-gray-100/80 cursor-pointer hover:shadow-lg active:shadow-sm transition-shadow duration-200" onClick={() => openTrend('calories')}>
                 <div className="flex justify-between items-start mb-2">
                   <div><p className="text-sm font-semibold text-gray-900">Calories</p><p className="text-[10px] text-gray-400">{calData} cal today</p></div>
                   <p className="text-[9px] text-blue-500 font-medium">Full graph &rarr;</p>
@@ -116,7 +116,7 @@ export default function HealthPanel({ userInitials }: { userInitials: string }) 
               </div>
 
               {/* Appetite sparkline */}
-              <div className="bg-gray-50 rounded-2xl p-3 cursor-pointer active:bg-gray-100" onClick={() => openTrend('appetite')}>
+              <div className="bg-white rounded-2xl p-3 shadow-md border border-gray-100/80 cursor-pointer hover:shadow-lg active:shadow-sm transition-shadow duration-200" onClick={() => openTrend('appetite')}>
                 <div className="flex justify-between items-start mb-2">
                   <div><p className="text-sm font-semibold text-gray-900">Appetite</p><p className="text-[10px] text-gray-400">{avgHunger ? `${avgHunger.toFixed(1)}/10 avg` : 'No logs today'}</p></div>
                   <p className="text-[9px] text-blue-500 font-medium">Full graph &rarr;</p>
@@ -125,7 +125,7 @@ export default function HealthPanel({ userInitials }: { userInitials: string }) 
               </div>
 
               {/* Adherence sparkline */}
-              <div className="bg-gray-50 rounded-2xl p-3 cursor-pointer active:bg-gray-100" onClick={() => openTrend('adherence')}>
+              <div className="bg-white rounded-2xl p-3 shadow-md border border-gray-100/80 cursor-pointer hover:shadow-lg active:shadow-sm transition-shadow duration-200" onClick={() => openTrend('adherence')}>
                 <div className="flex justify-between items-start mb-2">
                   <div><p className="text-sm font-semibold text-gray-900">Adherence</p><p className="text-[10px] text-gray-400">92% overall</p></div>
                   <p className="text-[9px] text-blue-500 font-medium">Full graph &rarr;</p>

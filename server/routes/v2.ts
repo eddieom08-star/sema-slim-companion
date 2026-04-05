@@ -7,6 +7,19 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const router = Router();
 
+// Build a short user context string for AI calls (~50 tokens)
+async function getUserContext(userId: string): Promise<string> {
+  try {
+    const d = await storage.getDashboardData(userId);
+    const parts: string[] = [];
+    if (d.medicationType) parts.push(`On ${d.medicationType}${d.dosage ? ` ${d.dosage}` : ''}`);
+    if (d.medicationStatus === 'overdue') parts.push('dose overdue');
+    if (d.todayCalories > 0) parts.push(`${d.todayCalories} cal today`);
+    if (d.avgHungerLevel !== null) parts.push(`hunger ${d.avgHungerLevel}/10`);
+    return parts.length ? `User: ${parts.join(', ')}.` : '';
+  } catch { return ''; }
+}
+
 const CLASSIFY_SYSTEM = `You are an intent classifier for a GLP-1 health app. Return JSON only, no markdown.
 Format: {"intent":"string","entities":{"food_name":"string or null","weight_value":"number or null","weight_unit":"string or null","side_effect":"string or null","meal_type":"string or null"}}
 Valid intents: food.search, food.barcode, food.appetite, medication.quick_log, medication.detailed, medication.side_effect, recipe.generate, recipe.saved, recipe.receipt, weight.log, weight.progress, trends.general, general`;
@@ -22,10 +35,12 @@ router.post('/v2/classify', requireAuth, async (req: any, res) => {
       return res.json({ intent: 'general', entities: {} });
     }
 
+    const ctx = await getUserContext(userId);
+
     const response = await anthropic.messages.create({
       model: 'claude-3-haiku-20240307',
       max_tokens: 120,
-      system: [{ type: 'text', text: CLASSIFY_SYSTEM, cache_control: { type: 'ephemeral' } }],
+      system: [{ type: 'text', text: CLASSIFY_SYSTEM + (ctx ? `\n${ctx}` : ''), cache_control: { type: 'ephemeral' } }],
       messages: [{ role: 'user', content: text.trim() }],
     });
 
@@ -148,8 +163,9 @@ router.post('/v2/recipe-from-image', requireAuth, async (req: any, res) => {
     }
 
     // Step 2: Generate a GLP-1 friendly recipe from those ingredients
+    const ctx = await getUserContext(userId);
     const RECIPE_SYSTEM = `You are a GLP-1 nutrition expert. Generate a single recipe using ONLY the provided ingredients (plus basic pantry staples like salt, pepper, oil).
-Requirements: high protein (>25g), moderate calories (300-500), easy to eat in small portions, gentle on the stomach.
+Requirements: high protein (>25g), moderate calories (300-500), easy to eat in small portions, gentle on the stomach.${ctx ? `\n${ctx}` : ''}
 Return JSON only, no markdown:
 {"name":"string","prepTime":number,"cookTime":number,"servings":1,"ingredients":[{"name":"string","quantity":"string","unit":"string"}],"instructions":"string","calories":number,"protein":number,"carbs":number,"fat":number,"tags":["string"]}`;
 

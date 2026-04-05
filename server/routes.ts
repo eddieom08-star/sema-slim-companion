@@ -2225,6 +2225,17 @@ Always respond with valid JSON only, no additional text.`;
 
       const userInput = req.body.preferences || req.body.prompt || 'glp-1 friendly meal';
 
+      // Fetch user context for personalised recipes
+      let userCtx = '';
+      try {
+        const d = await storage.getDashboardData(userId);
+        const parts: string[] = [];
+        if (d.medicationType) parts.push(`on ${d.medicationType}${d.dosage ? ` ${d.dosage}` : ''}`);
+        if (d.todayCalories > 0) parts.push(`${d.todayCalories} cal eaten today`);
+        if (d.avgHungerLevel !== null) parts.push(`appetite ${d.avgHungerLevel}/10`);
+        if (parts.length) userCtx = `\nUser profile: ${parts.join(', ')}.`;
+      } catch { /* non-critical */ }
+
       // Step 1: Haiku extracts structured preferences (cached system prompt)
       const PREFS_SYSTEM = `Extract dietary preferences. Return JSON only, no markdown:
 {"high_protein":bool,"low_carb":bool,"vegetarian":bool,"quick_cook":bool,"avoid":[],"servings":1}`;
@@ -2241,7 +2252,7 @@ Always respond with valid JSON only, no additional text.`;
 
       // Step 2: Sonnet generates recipe from structured prefs (cached system prompt)
       const RECIPE_SYSTEM = `You are a GLP-1 nutrition expert. Generate a single recipe optimised for people on Ozempic, Mounjaro, Wegovy, or Rybelsus.
-Requirements: high protein (>25g), moderate calories (300-500), easy to eat in small portions, gentle on the stomach.
+Requirements: high protein (>25g), moderate calories (300-500), easy to eat in small portions, gentle on the stomach.${userCtx}
 Return JSON only, no markdown:
 {"name":"string","prepTime":number,"cookTime":number,"servings":1,"ingredients":[{"name":"string","quantity":"string","unit":"string"}],"instructions":"string","calories":number,"protein":number,"carbs":number,"fat":number,"tags":["string"]}`;
 

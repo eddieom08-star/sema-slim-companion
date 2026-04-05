@@ -1,11 +1,14 @@
 PODS:
   - Capacitor (7.4.3):
     - CapacitorCordova
+  - CapacitorCommunitySpeechRecognition (7.0.1):
+    - Capacitor
   - CapacitorCordova (7.4.3)
   - RevenueCat (5.56.1)
 
 DEPENDENCIES:
   - "Capacitor (from `../../node_modules/@capacitor/ios`)"
+  - "CapacitorCommunitySpeechRecognition (from `../../node_modules/@capacitor-community/speech-recognition`)"
   - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
   - RevenueCat (~> 5.0)
 
@@ -16,14 +19,17 @@ SPEC REPOS:
 EXTERNAL SOURCES:
   Capacitor:
     :path: "../../node_modules/@capacitor/ios"
+  CapacitorCommunitySpeechRecognition:
+    :path: "../../node_modules/@capacitor-community/speech-recognition"
   CapacitorCordova:
     :path: "../../node_modules/@capacitor/ios"
 
 SPEC CHECKSUMS:
   Capacitor: 28d6c01026a9a3f7156529498ec1f389a2a28dbc
+  CapacitorCommunitySpeechRecognition: 3e03566c44c2bb3b52391a33d4518b1adbdeb38f
   CapacitorCordova: 435121e81a2df4d0034f0fb11fcefab5104cfdb5
   RevenueCat: 633c9c51182f868cd4244e183b2ce3f8a66f9b55
 
-PODFILE CHECKSUM: 7e736b1c85af6332dc598d30a4fd4aa047fa4968
+PODFILE CHECKSUM: a5d8a98dc6d739851898cff219cec809a19b25c0
 
 COCOAPODS: 1.16.2

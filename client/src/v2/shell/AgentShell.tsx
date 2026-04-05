@@ -56,6 +56,7 @@ function AgentShellInner() {
   const { user, userId } = useAuth()
   const { isPro } = useSubscription()
   const [hasWelcomed, setHasWelcomed] = useState(false)
+  const [activeAppetiteFlow, setActiveAppetiteFlow] = useState(false)
   useTrialBanner()
 
   const initials = [
@@ -140,6 +141,27 @@ function AgentShellInner() {
       }
     }
 
+    // Follow-up label intercepts (from dispatchIntent suggestions that would re-trigger the same intent)
+    const FOLLOWUP_LABELS: Record<string, () => void> = {
+      'Update my dosage': () => {
+        addUserMessage(text)
+        addAgentMessage('What is your new dose? (e.g. "0.5mg", "1mg")', { isTemplated: true })
+      },
+      'Go to settings': () => {
+        addUserMessage(text)
+        addAgentMessage('Tap your avatar in the top right to open settings.', { isTemplated: true })
+      },
+      'Add notes to last dose': () => {
+        addUserMessage(text)
+        addAgentMessage('Tell me about your dose — what medication, dosage, and any notes?', { isTemplated: true })
+      },
+    }
+    const followupAction = FOLLOWUP_LABELS[text]
+    if (followupAction) {
+      followupAction()
+      return
+    }
+
     addUserMessage(text)
     const intent = classifyIntent(text)
 
@@ -161,6 +183,25 @@ function AgentShellInner() {
   }
 
   const dispatchIntent = async (intent: string, text: string, entities?: Record<string, string | null>) => {
+    // If awaiting appetite input, intercept the response
+    if (activeAppetiteFlow) {
+      setActiveAppetiteFlow(false)
+      const level = text.match(/\d/)?.[0] ? parseInt(text.match(/\d/)![0]) : 5
+      try {
+        await apiRequest('POST', '/api/hunger-logs', { hungerBefore: level, loggedAt: new Date().toISOString() })
+        const tip = level <= 3 ? 'Try a high-protein snack to help with hunger.'
+          : level <= 6 ? 'Moderate appetite is normal on GLP-1 medication.'
+          : 'Feeling satisfied — your medication is working well.'
+        addAgentMessage(`Logged hunger level ${level}/10. ${tip}`, {
+          isTemplated: true,
+          suggestions: ['Log a meal', 'How am I doing?'],
+        })
+      } catch {
+        addAgentMessage('Failed to log appetite. Try again.', { isTemplated: true })
+      }
+      return
+    }
+
     // If we're awaiting severity input (activeSideEffect is set), intercept numeric replies
     if (activeSideEffect && /^\d/.test(text.trim())) {
       await handleSeverityInput(text)
@@ -176,6 +217,7 @@ function AgentShellInner() {
         await handleBarcodeIntent()
         break
       case 'food.appetite':
+        setActiveAppetiteFlow(true)
         addAgentMessage('How hungry are you feeling right now? Rate from 1-10:', {
           isTemplated: true,
           suggestions: ['1-3 Very hungry', '4-6 Moderate', '7-10 Satisfied'],
@@ -206,7 +248,7 @@ function AgentShellInner() {
       case 'medication.detailed':
         addAgentMessage('What would you like to update?', {
           isTemplated: true,
-          suggestions: ['Change my dose', 'Switch medication', 'Log a detailed entry'],
+          suggestions: ['Update my dosage', 'Go to settings', 'Add notes to last dose'],
         })
         break
       case 'recipe.receipt':

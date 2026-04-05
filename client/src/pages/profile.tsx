@@ -7,13 +7,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { updateUserProfileSchema } from "@shared/schema";
 import { z } from "zod";
-import Navigation from "@/components/ui/navigation";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Edit, Save, X, LogOut } from "lucide-react";
+import { ArrowLeft, Edit, Save, X, LogOut } from "lucide-react";
 
 const profileFormSchema = updateUserProfileSchema.extend({
   currentWeight: z.preprocess(
@@ -33,6 +33,7 @@ const profileFormSchema = updateUserProfileSchema.extend({
 type ProfileFormData = z.infer<typeof updateUserProfileSchema>;
 
 export default function Profile() {
+  const [, setLocation] = useLocation();
   const { user, signOut } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -103,16 +104,21 @@ export default function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20 md:pb-8 overflow-x-hidden">
-      <Navigation />
+    <div className="min-h-screen bg-background overflow-x-hidden">
+      {/* Header with back navigation */}
+      <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-4 pb-4 flex-shrink-0" style={{ paddingTop: 'max(env(safe-area-inset-top), 48px)' }}>
+        <div className="flex items-center gap-3">
+          <button onClick={() => setLocation('/')} className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
+            <ArrowLeft className="w-4 h-4 text-white" />
+          </button>
+          <div>
+            <h1 className="text-white font-semibold text-lg">Settings</h1>
+            <p className="text-white/65 text-xs">Manage your profile and preferences</p>
+          </div>
+        </div>
+      </div>
 
       <main className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 md:py-8">
-        <div className="mb-6 md:mb-8">
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2" data-testid="heading-profile">Profile Settings</h1>
-          <p className="text-sm md:text-base text-muted-foreground">
-            Manage your personal information and health settings
-          </p>
-        </div>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>

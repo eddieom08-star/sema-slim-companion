@@ -18,6 +18,7 @@ target 'App' do
   capacitor_pods
   # Add your Pods here
   pod 'RevenueCat', '~> 5.0'
+  pod 'CapacitorCommunitySpeechRecognition', :path => '../../node_modules/@capacitor-community/speech-recognition'
 end
 
 post_install do |installer|

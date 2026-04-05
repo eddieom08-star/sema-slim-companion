@@ -78,12 +78,13 @@ export function useMedicationFlow() {
     }
   }, [addAgentMessage])
 
-  const handleSideEffectMention = useCallback((sideEffect: string) => {
+  const handleSideEffectMention = useCallback((sideEffect: string, onAwait?: () => void) => {
     if (sideEffect === 'Feeling good' || sideEffect === 'No issues') {
       addAgentMessage('Great — no side effects logged. Keep it up.', { isTemplated: true })
       return
     }
     setActiveSideEffect(sideEffect)
+    onAwait?.()
     addAgentMessage(
       `How bad is the ${sideEffect.toLowerCase()}? (1–5)`,
       {

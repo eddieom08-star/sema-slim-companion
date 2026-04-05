@@ -42,18 +42,20 @@ export function useRecipesFlow() {
         })
       const recipe = await res.json()
 
-      let saved = false
       const handleSave = async () => {
         if (recipe.id) {
-          await apiRequest('POST', `/api/recipes/${recipe.id}/favorite`)
-          saved = true
-          addAgentMessage('Saved! Find it in your saved recipes anytime.', { isTemplated: true })
+          try {
+            await apiRequest('POST', `/api/recipes/${recipe.id}/favorite`)
+            addAgentMessage('Saved! Find it in your saved recipes anytime.', { isTemplated: true })
+          } catch {
+            addAgentMessage('Failed to save. Try again.', { isTemplated: true })
+          }
         }
       }
 
       addAgentMessage("Here's one I think you'll like:", {
         isTemplated: true,
-        component: createElement(RecipeCard, { recipe, onSave: handleSave, isSaved: saved }),
+        component: createElement(RecipeCard, { recipe, onSave: handleSave, isSaved: false }),
         suggestions: ['Generate another', 'Something different', 'Show saved recipes'],
       })
     } catch {
@@ -87,5 +89,64 @@ export function useRecipesFlow() {
     }
   }, [addAgentMessage, isPro, openCheckout])
 
-  return { handleGenerateRecipe, handleSavedRecipes }
+  const handleRecipeFromImage = useCallback(async (base64: string) => {
+    const gate = await checkFeature('ai_recipe', 1)
+
+    if (!gate.allowed) {
+      addAgentMessage('', {
+        isTemplated: true,
+        component: createElement(ProMomentCard, {
+          trigger: 'recipe_limit',
+          onUpgrade: openCheckout,
+          onBuyTokens: purchaseTokens,
+          onDismiss: () => {},
+        }),
+      })
+      return
+    }
+
+    addAgentMessage('Scanning your photo for ingredients...', { isTemplated: true })
+
+    try {
+      const res = await apiRequest('POST', '/api/v2/recipe-from-image', { image: base64 })
+      const data = await res.json()
+
+      if (data.error === 'no_ingredients') {
+        addAgentMessage("I couldn't spot any ingredients in that photo. Try a clearer shot of your receipt or ingredients.", {
+          isTemplated: true,
+          suggestions: ['Try again', 'Generate a recipe instead'],
+        })
+        return
+      }
+
+      if (!data.recipe) {
+        addAgentMessage('Failed to generate a recipe from that image. Try again.', { isTemplated: true })
+        return
+      }
+
+      const handleImageSave = async () => {
+        if (data.recipe.id) {
+          try {
+            await apiRequest('POST', `/api/recipes/${data.recipe.id}/favorite`)
+            addAgentMessage('Saved! Find it in your saved recipes anytime.', { isTemplated: true })
+          } catch {
+            addAgentMessage('Failed to save. Try again.', { isTemplated: true })
+          }
+        }
+      }
+
+      addAgentMessage(`Found ${data.ingredients.length} ingredients — here's what I came up with:`, {
+        isTemplated: true,
+        component: createElement(RecipeCard, { recipe: data.recipe, onSave: handleImageSave, isSaved: false }),
+        suggestions: ['Generate another', 'Show saved recipes'],
+      })
+    } catch {
+      addAgentMessage('Failed to process the image. Try again.', {
+        isTemplated: true,
+        suggestions: ['Try again', 'Generate a recipe instead'],
+      })
+    }
+  }, [addAgentMessage, checkFeature, openCheckout, purchaseTokens])
+
+  return { handleGenerateRecipe, handleSavedRecipes, handleRecipeFromImage }
 }

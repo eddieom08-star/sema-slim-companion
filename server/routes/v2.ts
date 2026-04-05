@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import Anthropic from '@anthropic-ai/sdk';
 import { requireAuth } from '../clerkAuth';
+import { storage } from '../storage';
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -118,6 +119,77 @@ router.post('/v2/scan-receipt', requireAuth, async (req: any, res) => {
   } catch (error: any) {
     console.error('Receipt scan error:', error);
     res.json({ items: [] });
+  }
+});
+
+// POST /api/v2/recipe-from-image — Generate recipe from photo of ingredients/receipt
+router.post('/v2/recipe-from-image', requireAuth, async (req: any, res) => {
+  try {
+    const { image } = req.body;
+    if (!image) return res.status(400).json({ error: 'No image provided' });
+
+    // Step 1: Extract ingredients from the image
+    const extractRes = await anthropic.messages.create({
+      model: 'claude-3-haiku-20240307',
+      max_tokens: 300,
+      system: [{ type: 'text', text: 'Extract food ingredients from this image (receipt, grocery haul, fridge photo, or pantry). Return JSON only, no markdown: {"ingredients":["string"],"notes":"string or null"}', cache_control: { type: 'ephemeral' } }],
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: image } },
+          { type: 'text', text: 'List all food ingredients you can see.' }
+        ]
+      }],
+    });
+
+    const extracted = JSON.parse((extractRes.content[0] as { type: string; text: string }).text);
+    if (!extracted.ingredients?.length) {
+      return res.json({ error: 'no_ingredients', message: 'No ingredients found in the image.' });
+    }
+
+    // Step 2: Generate a GLP-1 friendly recipe from those ingredients
+    const RECIPE_SYSTEM = `You are a GLP-1 nutrition expert. Generate a single recipe using ONLY the provided ingredients (plus basic pantry staples like salt, pepper, oil).
+Requirements: high protein (>25g), moderate calories (300-500), easy to eat in small portions, gentle on the stomach.
+Return JSON only, no markdown:
+{"name":"string","prepTime":number,"cookTime":number,"servings":1,"ingredients":[{"name":"string","quantity":"string","unit":"string"}],"instructions":"string","calories":number,"protein":number,"carbs":number,"fat":number,"tags":["string"]}`;
+
+    const recipeRes = await anthropic.messages.create({
+      model: 'claude-sonnet-4-5-20250929',
+      max_tokens: 800,
+      system: [{ type: 'text', text: RECIPE_SYSTEM, cache_control: { type: 'ephemeral' } }],
+      messages: [{ role: 'user', content: `Available ingredients: ${extracted.ingredients.join(', ')}` }],
+    });
+
+    const recipe = JSON.parse((recipeRes.content[0] as { type: string; text: string }).text);
+
+    // Persist to DB so user can save/favourite it
+    const userId = req.auth?.userId;
+    let savedRecipe = recipe;
+    try {
+      savedRecipe = await storage.createRecipe({
+        userId,
+        name: recipe.name,
+        description: `Recipe from photo — ${extracted.ingredients.length} ingredients`,
+        recipeType: 'dinner',
+        difficulty: 'easy',
+        prepTime: recipe.prepTime ?? 10,
+        cookTime: recipe.cookTime ?? 20,
+        servings: recipe.servings ?? 1,
+        ingredients: recipe.ingredients ?? [],
+        instructions: recipe.instructions ?? '',
+        calories: recipe.calories ?? 0,
+        protein: String(recipe.protein ?? 0),
+        carbs: String(recipe.carbs ?? 0),
+        fat: String(recipe.fat ?? 0),
+        isGlp1Friendly: true,
+        tags: recipe.tags ?? [],
+      });
+    } catch { /* non-critical — return without id */ }
+
+    res.json({ recipe: { ...recipe, id: savedRecipe.id }, ingredients: extracted.ingredients });
+  } catch (error: any) {
+    console.error('Recipe from image error:', error);
+    res.status(500).json({ error: 'Failed to generate recipe from image' });
   }
 });
 

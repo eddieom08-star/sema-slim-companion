@@ -2256,11 +2256,36 @@ Return JSON only, no markdown:
       const recipeText = (recipeRes.content[0] as { type: string; text: string }).text;
       const recipe = JSON.parse(recipeText);
 
+      // Persist to DB so user can save/favourite it
+      let savedRecipe = recipe;
+      try {
+        savedRecipe = await storage.createRecipe({
+          userId,
+          name: recipe.name,
+          description: `AI-generated GLP-1 friendly recipe`,
+          recipeType: 'dinner',
+          difficulty: 'easy',
+          prepTime: recipe.prepTime ?? 10,
+          cookTime: recipe.cookTime ?? 20,
+          servings: recipe.servings ?? 1,
+          ingredients: recipe.ingredients ?? [],
+          instructions: recipe.instructions ?? '',
+          calories: recipe.calories ?? 0,
+          protein: String(recipe.protein ?? 0),
+          carbs: String(recipe.carbs ?? 0),
+          fat: String(recipe.fat ?? 0),
+          isGlp1Friendly: true,
+          tags: recipe.tags ?? [],
+        });
+      } catch (saveErr) {
+        logger.warn('Failed to persist recipe to DB, returning without id', saveErr);
+      }
+
       // Record usage after successful generation
       await entitlementsService.consumeFeature(userId, FEATURE_TYPES.AI_RECIPE, 1);
 
       logger.info('Recipe generated successfully', { recipeName: recipe.name });
-      res.json(recipe);
+      res.json({ ...recipe, id: savedRecipe.id });
     } catch (error: any) {
       console.error("Error generating recipe:", error);
       logger.error('Recipe generation error:', error);

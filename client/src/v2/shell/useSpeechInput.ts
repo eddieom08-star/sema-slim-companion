@@ -25,17 +25,29 @@ export function useSpeechInput(onTranscript: (text: string) => void) {
       const perm = await SpeechRecognition.requestPermission()
       if (perm.speechRecognition !== 'granted') return
       setIsListening(true)
+
+      // Use partialResults: true because the iOS plugin resolves the promise
+      // on the first partial result when false, losing the full transcription.
+      // Listen for partials and submit when speech stops.
+      let lastTranscript = ''
+      let silenceTimer: ReturnType<typeof setTimeout> | null = null
+
+      const listener = await SpeechRecognition.addListener('partialResults', (data: { matches: string[] }) => {
+        if (data.matches?.[0]) {
+          lastTranscript = data.matches[0]
+          if (silenceTimer) clearTimeout(silenceTimer)
+          silenceTimer = setTimeout(async () => {
+            listener.remove()
+            setIsListening(false)
+            await SpeechRecognition.stop()
+            if (lastTranscript) onTranscript(lastTranscript)
+          }, 1500)
+        }
+      })
+
       await SpeechRecognition.start({
         language: 'en-GB', maxResults: 1,
-        prompt: 'What did you eat, your weight, or how you feel',
-        partialResults: false, popup: false,
-      })
-      SpeechRecognition.addListener('partialResults', (data: { matches: string[] }) => {
-        if (data.matches?.[0]) {
-          onTranscript(data.matches[0])
-          setIsListening(false)
-          SpeechRecognition.stop()
-        }
+        partialResults: true, popup: false,
       })
     } catch {
       setIsListening(false)

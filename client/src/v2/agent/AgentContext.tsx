@@ -18,6 +18,7 @@ interface AgentContextValue {
     component?: ReactNode
     isTemplated?: boolean
   }) => void
+  clearMessages: () => void
   setActiveFlow: (intent: Intent | null) => void
   advanceStep: () => void
   resetFlow: () => void
@@ -51,6 +52,10 @@ export function AgentProvider({ children }: PropsWithChildren) {
     }))
   }, [])
 
+  const clearMessages = useCallback(() => {
+    setState({ messages: [], activeFlow: null, flowStep: 0, pendingData: {} })
+  }, [])
+
   const setActiveFlow = useCallback((intent: Intent | null) => {
     setState(prev => ({ ...prev, activeFlow: intent, flowStep: 0, pendingData: {} }))
   }, [])
@@ -69,7 +74,7 @@ export function AgentProvider({ children }: PropsWithChildren) {
 
   return (
     <AgentContext.Provider value={{
-      state, addUserMessage, addAgentMessage,
+      state, addUserMessage, addAgentMessage, clearMessages,
       setActiveFlow, advanceStep, resetFlow, updatePendingData,
     }}>
       {children}

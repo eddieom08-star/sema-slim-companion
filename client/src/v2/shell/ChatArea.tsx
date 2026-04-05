@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react'
-import { Bot, Utensils, Pill, Scale, ChefHat } from 'lucide-react'
+import { useEffect, useRef, useState, useCallback } from 'react'
+import { Bot, Utensils, Pill, Scale, ChefHat, Trash2 } from 'lucide-react'
 import type { Message } from '@/v2/agent/types'
 
 const DEFAULT_QUICK_ACTIONS = [
@@ -19,111 +19,170 @@ function getGreeting(): string {
 interface ChatAreaProps {
   messages: Message[]
   onSuggestionTap: (text: string) => void
+  onClear: () => void
 }
 
-export default function ChatArea({ messages, onSuggestionTap }: ChatAreaProps) {
+const PULL_THRESHOLD = 80
+
+export default function ChatArea({ messages, onSuggestionTap, onClear }: ChatAreaProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
   const isEmpty = messages.length === 0
+
+  // Pull-to-clear state
+  const [pullDistance, setPullDistance] = useState(0)
+  const [isPulling, setIsPulling] = useState(false)
+  const touchStartY = useRef(0)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  const onTouchStart = useCallback((e: React.TouchEvent) => {
+    if (isEmpty) return
+    const el = scrollRef.current
+    if (el && el.scrollTop <= 0) {
+      touchStartY.current = e.touches[0].clientY
+      setIsPulling(true)
+    }
+  }, [isEmpty])
+
+  const onTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!isPulling) return
+    const el = scrollRef.current
+    if (!el || el.scrollTop > 0) { setPullDistance(0); return }
+    const dy = e.touches[0].clientY - touchStartY.current
+    if (dy > 0) {
+      setPullDistance(Math.min(dy * 0.5, 120))
+    }
+  }, [isPulling])
+
+  const onTouchEnd = useCallback(() => {
+    if (pullDistance >= PULL_THRESHOLD) {
+      onClear()
+    }
+    setPullDistance(0)
+    setIsPulling(false)
+  }, [pullDistance, onClear])
+
+  const triggered = pullDistance >= PULL_THRESHOLD
+
   return (
-    <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 space-y-4 w-full max-w-full">
-      {isEmpty && (
-        <div className="flex flex-col items-center justify-center h-full px-2">
-          <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/40 rounded-full flex items-center justify-center mb-4">
-            <Bot className="w-6 h-6 text-blue-500" />
-          </div>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">
-            {getGreeting()}
-          </h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-6 max-w-[260px]">
-            Your GLP-1 companion is ready. What would you like to do?
-          </p>
-          <div className="w-full space-y-2">
-            {DEFAULT_QUICK_ACTIONS.map(({ label, icon: Icon }) => (
-              <button
-                key={label}
-                onClick={() => onSuggestionTap(label)}
-                className="flex items-center gap-3 w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-800 dark:text-gray-200 active:bg-gray-100 dark:active:bg-gray-700 transition-colors"
-              >
-                <Icon className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                {label}
-              </button>
-            ))}
-          </div>
-          <div className="mt-6 w-full">
-            <div className="flex gap-2 justify-center flex-wrap">
-              {['How am I doing?', 'My progress today', 'My saved recipes'].map(chip => (
-                <button
-                  key={chip}
-                  onClick={() => onSuggestionTap(chip)}
-                  className="px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-full text-xs text-gray-600 dark:text-gray-300 whitespace-nowrap active:bg-gray-100 dark:active:bg-gray-600 transition-colors"
-                >
-                  {chip}
-                </button>
-              ))}
-            </div>
+    <div
+      ref={scrollRef}
+      className="flex-1 overflow-y-auto overflow-x-hidden w-full max-w-full"
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
+      {/* Pull-to-clear indicator */}
+      {!isEmpty && pullDistance > 10 && (
+        <div
+          className="flex flex-col items-center justify-end overflow-hidden transition-opacity"
+          style={{ height: pullDistance, opacity: Math.min(pullDistance / PULL_THRESHOLD, 1) }}
+        >
+          <div className={`flex items-center gap-2 pb-2 text-xs font-medium ${triggered ? 'text-red-500' : 'text-gray-400'}`}>
+            <Trash2 className={`w-3.5 h-3.5 transition-transform ${triggered ? 'scale-110' : ''}`} />
+            {triggered ? 'Release to clear' : 'Pull down to clear chat'}
           </div>
         </div>
       )}
-      {messages.map(msg => (
-        <div key={msg.id}>
-          {msg.role === 'user' ? (
-            <div className="flex justify-end">
-              <div className="bg-blue-500 text-white rounded-2xl rounded-tr-sm px-4 py-3 max-w-[80%] text-sm overflow-hidden break-words">
-                {msg.content}
+
+      <div className="px-4 py-4 space-y-4">
+        {isEmpty && (
+          <div className="flex flex-col items-center justify-center min-h-[60vh] px-2">
+            <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/40 rounded-full flex items-center justify-center mb-4">
+              <Bot className="w-6 h-6 text-blue-500" />
+            </div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">
+              {getGreeting()}
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-6 max-w-[260px]">
+              Your GLP-1 companion is ready. What would you like to do?
+            </p>
+            <div className="w-full space-y-2">
+              {DEFAULT_QUICK_ACTIONS.map(({ label, icon: Icon }) => (
+                <button
+                  key={label}
+                  onClick={() => onSuggestionTap(label)}
+                  className="flex items-center gap-3 w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-800 dark:text-gray-200 active:bg-gray-100 dark:active:bg-gray-700 transition-colors"
+                >
+                  <Icon className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="mt-6 w-full">
+              <div className="flex gap-2 justify-center flex-wrap">
+                {['How am I doing?', 'My progress today', 'My saved recipes'].map(chip => (
+                  <button
+                    key={chip}
+                    onClick={() => onSuggestionTap(chip)}
+                    className="px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-full text-xs text-gray-600 dark:text-gray-300 whitespace-nowrap active:bg-gray-100 dark:active:bg-gray-600 transition-colors"
+                  >
+                    {chip}
+                  </button>
+                ))}
               </div>
             </div>
-          ) : (
-            <div className="flex items-start gap-2">
-              <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <Bot className="w-3.5 h-3.5 text-blue-500" />
+          </div>
+        )}
+        {messages.map(msg => (
+          <div key={msg.id}>
+            {msg.role === 'user' ? (
+              <div className="flex justify-end">
+                <div className="bg-blue-500 text-white rounded-2xl rounded-tr-sm px-4 py-3 max-w-[80%] text-sm overflow-hidden break-words">
+                  {msg.content}
+                </div>
               </div>
-              <div className="space-y-2 max-w-[82%]">
-                {msg.content && (
-                  <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-gray-800 dark:text-gray-100 overflow-hidden break-words">
-                    {msg.content}
-                  </div>
-                )}
-                {msg.component && (
-                  <div className="overflow-hidden w-full">{msg.component}</div>
-                )}
-                {msg.suggestions && msg.suggestions.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {msg.suggestions.map(s => (
-                      <button
-                        key={s}
-                        onClick={() => onSuggestionTap(s)}
-                        className="px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-full text-xs text-gray-700 dark:text-gray-200 active:bg-gray-100"
-                      >
-                        {s}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {msg.actions && msg.actions.length > 0 && (
-                  <div className="space-y-2">
-                    {msg.actions.map((a, i) => (
-                      <button
-                        key={i}
-                        onClick={a.onClick}
-                        className="flex items-center gap-2 w-full px-4 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-full text-sm font-medium"
-                      >
-                        {a.icon && <span className="w-4 h-4">{a.icon}</span>}
-                        {a.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
+            ) : (
+              <div className="flex items-start gap-2">
+                <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Bot className="w-3.5 h-3.5 text-blue-500" />
+                </div>
+                <div className="space-y-2 max-w-[82%]">
+                  {msg.content && (
+                    <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-gray-800 dark:text-gray-100 overflow-hidden break-words">
+                      {msg.content}
+                    </div>
+                  )}
+                  {msg.component && (
+                    <div className="overflow-hidden w-full">{msg.component}</div>
+                  )}
+                  {msg.suggestions && msg.suggestions.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {msg.suggestions.map(s => (
+                        <button
+                          key={s}
+                          onClick={() => onSuggestionTap(s)}
+                          className="px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-full text-xs text-gray-700 dark:text-gray-200 active:bg-gray-100"
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {msg.actions && msg.actions.length > 0 && (
+                    <div className="space-y-2">
+                      {msg.actions.map((a, i) => (
+                        <button
+                          key={i}
+                          onClick={a.onClick}
+                          className="flex items-center gap-2 w-full px-4 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-full text-sm font-medium"
+                        >
+                          {a.icon && <span className="w-4 h-4">{a.icon}</span>}
+                          {a.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-      ))}
-      <div ref={bottomRef} />
+            )}
+          </div>
+        ))}
+        <div ref={bottomRef} />
+      </div>
     </div>
   )
 }

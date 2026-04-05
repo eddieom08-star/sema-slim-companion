@@ -38,7 +38,7 @@ export default function InputBar({ onSend, onCamera }: InputBarProps) {
   }
 
   return (
-    <div className="z-50 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 flex-shrink-0 w-full max-w-full overflow-x-hidden" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 16px)' }}>
+    <div className="z-50 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 pt-2 flex-shrink-0 w-full max-w-full overflow-x-hidden" style={{ paddingBottom: 'env(safe-area-inset-bottom, 8px)' }}>
       <div className="flex items-center gap-2">
         <button onClick={onCamera} className="p-1.5 text-gray-500 dark:text-gray-400">
           <Camera className="w-5 h-5" />

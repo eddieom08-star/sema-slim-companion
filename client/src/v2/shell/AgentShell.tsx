@@ -47,7 +47,7 @@ export default function AgentShell() {
 }
 
 function AgentShellInner() {
-  const { state, addUserMessage, addAgentMessage, setActiveFlow } = useAgent()
+  const { state, addUserMessage, addAgentMessage, clearMessages, setActiveFlow } = useAgent()
   const { handleFoodInput, handleBarcodeIntent } = useFoodFlow()
   const { checkAndAlertOverdue, quickLog, handleSideEffectMention, handleSeverityInput } = useMedicationFlow()
   const { handleGenerateRecipe, handleSavedRecipes, handleRecipeFromImage } = useRecipesFlow()
@@ -386,7 +386,7 @@ function AgentShellInner() {
           onHungerTap={() => handleSend('Log my hunger level')}
           onCalorieTap={() => handleSend('Show my food today')}
         />
-        <ChatArea messages={state.messages} onSuggestionTap={handleSend} />
+        <ChatArea messages={state.messages} onSuggestionTap={handleSend} onClear={() => { setAwaitingInput(null); clearMessages() }} />
         {/* Persistent quick action pills — always visible above input */}
         <div className="flex-shrink-0 px-3 py-2 bg-white dark:bg-gray-900 flex gap-2 overflow-x-auto w-full">
           {[

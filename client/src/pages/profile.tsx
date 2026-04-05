@@ -104,7 +104,7 @@ export default function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden">
+    <div className="bg-background overflow-x-hidden overflow-y-auto" style={{ height: '100dvh', WebkitOverflowScrolling: 'touch' as any }}>
       {/* Header with back navigation */}
       <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-4 pb-4 flex-shrink-0" style={{ paddingTop: 'max(env(safe-area-inset-top), 48px)' }}>
         <div className="flex items-center gap-3">

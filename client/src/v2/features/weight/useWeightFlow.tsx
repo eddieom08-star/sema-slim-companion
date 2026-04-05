@@ -1,4 +1,5 @@
 import { useCallback } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAgent } from '@/v2/agent/AgentContext'
 import { useSubscription } from '@/contexts/SubscriptionContext'
 import { apiRequest } from '@/lib/queryClient'
@@ -9,6 +10,7 @@ import ProMomentCard from '@/v2/monetisation/ProMomentCard'
 export function useWeightFlow() {
   const { addAgentMessage } = useAgent()
   const { isPro, openCheckout, purchaseTokens } = useSubscription()
+  const queryClient = useQueryClient()
 
   const handleWeightInput = useCallback(async (text: string) => {
     const weight = parseWeightFromText(text)
@@ -30,6 +32,9 @@ export function useWeightFlow() {
     // Log the new weight
     try {
       await apiRequest('POST', '/api/weight-logs', { weight: weight.kg, loggedAt: new Date().toISOString() })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['panel-dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['panel-weight'] })
     } catch {
       addAgentMessage('Failed to save your weight. Try again.', { isTemplated: true })
       return
@@ -48,7 +53,7 @@ export function useWeightFlow() {
     addAgentMessage(msg, {
       isTemplated: true,
       component: <WeightSparkline logs={recentLogs} delta={delta} />,
-      suggestions: delta < 0 ? ['View my trends', 'Set a goal'] : ['View my trends', 'How am I doing?']
+      suggestions: ['Log a meal', 'Need a recipe', 'How am I doing?'],
     })
 
     // History upsell on significant weight loss

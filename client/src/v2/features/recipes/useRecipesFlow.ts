@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 import { createElement } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAgent } from '@/v2/agent/AgentContext'
 import { useSubscription } from '@/contexts/SubscriptionContext'
 import { apiRequest } from '@/lib/queryClient'
@@ -10,6 +11,7 @@ import ProMomentCard from '@/v2/monetisation/ProMomentCard'
 export function useRecipesFlow() {
   const { addAgentMessage } = useAgent()
   const { isPro, checkFeature, openCheckout, purchaseTokens } = useSubscription()
+  const queryClient = useQueryClient()
 
   const handleGenerateRecipe = useCallback(async (preferences?: string) => {
     const gate = await checkFeature('ai_recipe', 1)
@@ -46,6 +48,7 @@ export function useRecipesFlow() {
         if (recipe.id) {
           try {
             await apiRequest('POST', `/api/recipes/${recipe.id}/favorite`)
+            queryClient.invalidateQueries({ queryKey: ['recipes'] })
             addAgentMessage('Saved! Find it in your saved recipes anytime.', { isTemplated: true })
           } catch {
             addAgentMessage('Failed to save. Try again.', { isTemplated: true })
@@ -128,6 +131,7 @@ export function useRecipesFlow() {
         if (data.recipe.id) {
           try {
             await apiRequest('POST', `/api/recipes/${data.recipe.id}/favorite`)
+            queryClient.invalidateQueries({ queryKey: ['recipes'] })
             addAgentMessage('Saved! Find it in your saved recipes anytime.', { isTemplated: true })
           } catch {
             addAgentMessage('Failed to save. Try again.', { isTemplated: true })

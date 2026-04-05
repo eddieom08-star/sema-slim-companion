@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 import { createElement } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAgent } from '@/v2/agent/AgentContext'
 import { useSubscription } from '@/contexts/SubscriptionContext'
 import { needsDisambiguation, inferMealType, type FoodResult } from './foodVariance'
@@ -11,6 +12,7 @@ import ProMomentCard from '@/v2/monetisation/ProMomentCard'
 export function useFoodFlow() {
   const { addAgentMessage } = useAgent()
   const { isPro, openCheckout } = useSubscription()
+  const queryClient = useQueryClient()
 
   const logAndConfirm = useCallback(async (food: FoodResult, qty: number, mealType: string) => {
     addAgentMessage('Here\'s what I found:', {
@@ -30,6 +32,10 @@ export function useFoodFlow() {
               mealType,
               consumedAt: new Date().toISOString(),
             })
+          queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+          queryClient.invalidateQueries({ queryKey: ['panel-dashboard'] })
+          queryClient.invalidateQueries({ queryKey: ['panel-food-today'] })
+          queryClient.invalidateQueries({ queryKey: ['panel-food-week'] })
           addAgentMessage(
             `Logged! ${Math.round(Number(food.calories) * qty)} calories for ${mealType}. How full are you feeling?`,
             { isTemplated: true, suggestions: ['Still hungry', 'Satisfied', 'Very full', 'Skip'] }

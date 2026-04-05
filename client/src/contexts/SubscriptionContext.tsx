@@ -304,13 +304,12 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
     if (Capacitor.isNativePlatform()) {
       try {
         const productId = RC_PRODUCT_MAP[plan];
-        if (!productId) throw new Error(`Unknown plan: ${plan}`);
+        if (!productId) { setError('Plan not available'); return; }
 
         const result = await Purchases.purchase({ productId });
         if (result.cancelled) return;
 
         if (result.success) {
-          // Sync entitlements with server
           await fetchWithAuth('/api/mobile/sync-purchases', {
             method: 'POST',
             body: JSON.stringify({ source: 'revenuecat' }),
@@ -319,8 +318,9 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
           await refreshSubscription(true);
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Purchase failed');
-        throw err;
+        // Don't crash the app — RevenueCat may not be configured yet
+        console.warn('Purchase failed:', err);
+        setError('In-app purchases are being set up. Try again later.');
       }
       return;
     }
@@ -366,8 +366,8 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
         throw new Error('Failed to create billing portal session');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-      throw err;
+      console.warn('Billing portal failed:', err);
+      setError('Billing portal is not available right now.');
     }
   }, [fetchWithAuth]);
 
@@ -388,8 +388,8 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
           await refreshTokenBalance(true);
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Purchase failed');
-        throw err;
+        console.warn('Token purchase failed:', err);
+        setError('In-app purchases are being set up. Try again later.');
       }
       return;
     }

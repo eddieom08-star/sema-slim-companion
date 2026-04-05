@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiRequest } from '@/lib/queryClient'
 import { useAgent } from '@/v2/agent/AgentContext'
 import { useHealthPanel } from '@/v2/agent/HealthPanelContext'
@@ -48,6 +48,7 @@ export default function AgentShell() {
 
 function AgentShellInner() {
   const { state, addUserMessage, addAgentMessage, clearMessages, setActiveFlow } = useAgent()
+  const queryClient = useQueryClient()
   const { handleFoodInput, handleBarcodeIntent } = useFoodFlow()
   const { checkAndAlertOverdue, quickLog, handleSideEffectMention, handleSeverityInput } = useMedicationFlow()
   const { handleGenerateRecipe, handleSavedRecipes, handleRecipeFromImage } = useRecipesFlow()
@@ -145,8 +146,9 @@ function AgentShellInner() {
       })
     },
     'Feeling good': () => {
-      addAgentMessage('Great — no side effects logged. Keep it up.', {
-        isTemplated: true, suggestions: getContextualChips(userContext),
+      addAgentMessage('No side effects logged. Keep it up.', {
+        isTemplated: true,
+        suggestions: ['Log a meal', 'Log my weight', 'Need a recipe', 'How am I doing?'],
       })
     },
     'Skip': () => {
@@ -271,6 +273,9 @@ function AgentShellInner() {
           const level = text.match(/\d/)?.[0] ? parseInt(text.match(/\d/)![0]) : 5
           try {
             await apiRequest('POST', '/api/hunger-logs', { hungerBefore: level, loggedAt: new Date().toISOString() })
+            queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+            queryClient.invalidateQueries({ queryKey: ['panel-dashboard'] })
+            queryClient.invalidateQueries({ queryKey: ['panel-hunger-today'] })
             const tip = level <= 3 ? 'Try a high-protein snack to help with hunger.'
               : level <= 6 ? 'Moderate appetite is normal on GLP-1 medication.'
               : 'Feeling satisfied — your medication is working well.'

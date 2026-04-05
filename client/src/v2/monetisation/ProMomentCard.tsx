@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useSubscription } from '@/contexts/SubscriptionContext'
 import { useUpsellTracker } from './useUpsellTracker'
 
@@ -28,14 +28,21 @@ const CONFIG: Record<TriggerType, { headline: string; sub: string; hasTokenPath:
 export default function ProMomentCard({ trigger, onUpgrade, onBuyTokens, onDismiss }: ProMomentCardProps) {
   const config = CONFIG[trigger]
   const { track } = useUpsellTracker()
+  const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle')
 
   useEffect(() => {
     track(trigger, 'pro_subscription', 'shown')
   }, [trigger])
 
-  const handleUpgrade = (plan: 'monthly' | 'annual') => {
+  const handleUpgrade = async (plan: 'monthly' | 'annual') => {
     track(trigger, 'pro_subscription', 'clicked')
-    onUpgrade(plan)
+    setStatus('loading')
+    try {
+      await onUpgrade(plan)
+      setStatus('idle')
+    } catch {
+      setStatus('error')
+    }
   }
 
   const handleDismiss = () => {
@@ -57,15 +64,22 @@ export default function ProMomentCard({ trigger, onUpgrade, onBuyTokens, onDismi
       </div>
 
       <div className="px-4 pb-4 space-y-2">
+        {status === 'error' && (
+          <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2 text-center">
+            In-app purchases are being set up. Try again later.
+          </p>
+        )}
         <button
           onClick={() => handleUpgrade('annual')}
-          className="w-full bg-purple-600 text-white text-sm font-medium py-2.5 rounded-xl shadow-md hover:shadow-lg active:shadow-sm transition-shadow duration-200"
+          disabled={status === 'loading'}
+          className="w-full bg-purple-600 text-white text-sm font-medium py-2.5 rounded-xl shadow-md hover:shadow-lg active:shadow-sm transition-shadow duration-200 disabled:opacity-50"
         >
-          Unlock Pro — £80/year
+          {status === 'loading' ? 'Processing...' : 'Unlock Pro — £80/year'}
         </button>
         <button
           onClick={() => handleUpgrade('monthly')}
-          className="w-full border border-gray-200 text-gray-600 text-xs py-2 rounded-xl"
+          disabled={status === 'loading'}
+          className="w-full border border-gray-200 text-gray-600 text-xs py-2 rounded-xl disabled:opacity-50"
         >
           Monthly — £9.99/month
         </button>

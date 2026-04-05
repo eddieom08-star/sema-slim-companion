@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAgent } from '@/v2/agent/AgentContext'
 import { useSubscription } from '@/contexts/SubscriptionContext'
 import { apiRequest } from '@/lib/queryClient'
@@ -22,6 +23,7 @@ const TIPS: Record<string, string> = {
 export function useMedicationFlow() {
   const { addAgentMessage } = useAgent()
   const { isPro, openCheckout, purchaseTokens } = useSubscription()
+  const queryClient = useQueryClient()
   const [lastLogId, setLastLogId] = useState<string | null>(null)
   const [activeSideEffect, setActiveSideEffect] = useState<string | null>(null)
 
@@ -63,6 +65,10 @@ export function useMedicationFlow() {
       })
       const data = await res.json()
       setLastLogId(data.id)
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['medications'] })
+      queryClient.invalidateQueries({ queryKey: ['panel-dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['panel-medlogs'] })
 
       addAgentMessage(
         `Done. Logged your ${medication.dosage || ''} ${medication.medicationType || 'dose'} at ${timeStr}. Any side effects today?`,
@@ -80,7 +86,10 @@ export function useMedicationFlow() {
 
   const handleSideEffectMention = useCallback((sideEffect: string, onAwait?: () => void) => {
     if (sideEffect === 'Feeling good' || sideEffect === 'No issues') {
-      addAgentMessage('Great — no side effects logged. Keep it up.', { isTemplated: true })
+      addAgentMessage('No side effects logged. Keep it up.', {
+        isTemplated: true,
+        suggestions: ['Log a meal', 'Log my weight', 'Need a recipe', 'How am I doing?'],
+      })
       return
     }
     setActiveSideEffect(sideEffect)
@@ -107,13 +116,14 @@ export function useMedicationFlow() {
     if (lastLogId && field && field !== 'notes') {
       try {
         await apiRequest('PATCH', `/api/medication-logs/${lastLogId}`, { [field]: severity })
+        queryClient.invalidateQueries({ queryKey: ['dashboard'] })
       } catch { /* non-critical */ }
     }
 
     const tip = TIPS[field || 'notes'] || TIPS.notes
     const nextSuggestions = severity >= 4
-      ? ['Share with doctor', 'Log another symptom', 'Done']
-      : ['Log another symptom', 'Done']
+      ? ['Log another symptom', 'Log a meal', 'How am I doing?']
+      : ['Log a meal', 'Log my weight', 'How am I doing?']
 
     addAgentMessage(tip, { isTemplated: true, suggestions: nextSuggestions })
 

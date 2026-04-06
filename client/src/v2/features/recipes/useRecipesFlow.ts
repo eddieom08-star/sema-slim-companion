@@ -41,7 +41,7 @@ export function useRecipesFlow() {
     try {
       const res = await apiRequest('POST', '/api/recipes/generate', {
           preferences: preferences || 'high protein, easy to digest, GLP-1 friendly',
-        })
+        }, { timeout: 30000 })
       const recipe = await res.json()
 
       const handleSave = async () => {
@@ -111,7 +111,7 @@ export function useRecipesFlow() {
     addAgentMessage('Scanning your photo for ingredients...', { isTemplated: true })
 
     try {
-      const res = await apiRequest('POST', '/api/v2/recipe-from-image', { image: base64 })
+      const res = await apiRequest('POST', '/api/v2/recipe-from-image', { image: base64 }, { timeout: 30000 })
       const data = await res.json()
 
       if (data.error === 'no_ingredients') {

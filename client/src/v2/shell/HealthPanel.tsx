@@ -56,7 +56,7 @@ function buildDailyAverages(logs: any[] | undefined, days: number): number[] {
 
 export default function HealthPanel({ userInitials }: { userInitials: string }) {
   const { isOpen, setIsOpen, section, setSection, openTrend } = useHealthPanel()
-  const { dashboard, foodToday, foodWeek, weightLogs, hungerToday, hungerWeek } = useHealthPanelData()
+  const { dashboard, foodToday, foodWeek, weightLogs, hungerToday, hungerWeek, medLogsWeek } = useHealthPanelData()
   const { user } = useAuth()
   const { isPro } = useSubscription()
 
@@ -70,6 +70,17 @@ export default function HealthPanel({ userInitials }: { userInitials: string }) 
   // Build real 7-day sparkline data from actual logs
   const calWeekData = buildDailyTotals(foodWeek, 'calories', 7)
   const hungerWeekData = buildDailyAverages(hungerWeek, 7)
+  const adherenceData = (() => {
+    if (!medLogsWeek?.length) return []
+    const result: number[] = []
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() - i)
+      const next = new Date(d); next.setDate(next.getDate() + 1)
+      const took = medLogsWeek.some((l: any) => { const t = new Date(l.takenAt); return t >= d && t < next })
+      result.push(took ? 1 : 0)
+    }
+    return result
+  })()
 
   // Weight display — fallback to profile weight if no logs
   const latestWeight = weightLogs?.length ? Number(weightLogs[weightLogs.length - 1].weight) : null
@@ -84,7 +95,7 @@ export default function HealthPanel({ userInitials }: { userInitials: string }) 
       />
 
       {/* Panel */}
-      <div className={`absolute top-0 bottom-0 left-0 w-full bg-white z-[70] flex flex-col overflow-x-hidden transition-transform duration-[280ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <div className={`absolute top-0 bottom-0 left-0 w-full bg-white z-[70] flex flex-col overflow-hidden transition-transform duration-[280ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
 
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-4 pb-3 flex-shrink-0 w-full max-w-full overflow-x-hidden" style={{ paddingTop: 'max(env(safe-area-inset-top), 48px)' }}>
@@ -169,7 +180,7 @@ export default function HealthPanel({ userInitials }: { userInitials: string }) 
                   <div><p className="text-sm font-semibold text-gray-900">Adherence</p><p className="text-[10px] text-gray-400">Dose tracking</p></div>
                   <p className="text-[9px] text-blue-500 font-medium">Full graph &rarr;</p>
                 </div>
-                <InlineSpark data={[]} color="#1D9E75" />
+                <InlineSpark data={adherenceData} color="#1D9E75" />
               </div>
             </div>
           )}

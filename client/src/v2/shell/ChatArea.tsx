@@ -151,7 +151,7 @@ export default function ChatArea({ messages, onSuggestionTap, onClear }: ChatAre
                     </div>
                   )}
                   {msg.component && (
-                    <div className="overflow-hidden w-full">{msg.component}</div>
+                    <div className="overflow-hidden w-full max-w-full">{msg.component}</div>
                   )}
                   {msg.suggestions && msg.suggestions.length > 0 && (
                     <div className="flex flex-wrap gap-2">

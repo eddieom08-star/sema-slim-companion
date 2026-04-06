@@ -65,6 +65,30 @@ export function useMedicationFlow() {
       })
       const data = await res.json()
       setLastLogId(data.id)
+
+      // Optimistically update dashboard cache so header shows "on-track" immediately
+      queryClient.setQueryData(['dashboard'], (old: any) => {
+        if (!old) return old
+        const nextDue = new Date(now)
+        nextDue.setDate(nextDue.getDate() + (medication.frequency === 'daily' ? 1 : 7))
+        return {
+          ...old,
+          medicationStatus: 'on-track',
+          lastDoseLabel: 'just now',
+          upcomingMedication: old.upcomingMedication
+            ? { ...old.upcomingMedication, nextDueDate: nextDue.toISOString() }
+            : old.upcomingMedication,
+        }
+      })
+      // Also update medications cache
+      queryClient.setQueryData(['medications'], (old: any) => {
+        if (!Array.isArray(old)) return old
+        return old.map((m: any) => m.id === medication.id
+          ? { ...m, nextDueDate: new Date(now.getTime() + (medication.frequency === 'daily' ? 86400000 : 604800000)).toISOString() }
+          : m
+        )
+      })
+      // Refetch in background to sync with server
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
       queryClient.invalidateQueries({ queryKey: ['medications'] })
       queryClient.invalidateQueries({ queryKey: ['panel-dashboard'] })

@@ -138,8 +138,22 @@ function AgentShellInner() {
     }
   }
 
+  const logHungerLevel = async (level: number, tip: string, suggestions: string[]) => {
+    try {
+      await apiRequest('POST', '/api/hunger-logs', { hungerBefore: level, loggedAt: new Date().toISOString() })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['panel-dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['panel-hunger-today'] })
+      queryClient.invalidateQueries({ queryKey: ['panel-hunger-week'] })
+      queryClient.invalidateQueries({ queryKey: ['panel-hunger-range'] })
+      addAgentMessage(`Logged hunger level ${level}/10. ${tip}`, { isTemplated: true, suggestions })
+    } catch {
+      addAgentMessage('Failed to log appetite. Try again.', { isTemplated: true })
+    }
+  }
+
   // ── FOLLOWUP_LABELS: suggestion buttons that need direct handling (zero API cost)
-  const FOLLOWUP_LABELS: Record<string, () => void> = {
+  const FOLLOWUP_LABELS: Record<string, () => void | Promise<void>> = {
     'Done': () => {
       addAgentMessage('All logged. Anything else?', {
         isTemplated: true, suggestions: getContextualChips(userContext),
@@ -156,6 +170,24 @@ function AgentShellInner() {
         isTemplated: true, suggestions: getContextualChips(userContext),
       })
     },
+    'Satisfied': () => {
+      addAgentMessage('Feeling satisfied — your medication is working well.', {
+        isTemplated: true, suggestions: ['Log my weight', 'Need a recipe', 'How am I doing?'],
+      })
+    },
+    'Still hungry': () => {
+      addAgentMessage('Try a high-protein snack to help with hunger.', {
+        isTemplated: true, suggestions: ['Log a meal', 'Need a recipe', 'How am I doing?'],
+      })
+    },
+    'Very full': () => {
+      addAgentMessage('Noted. Small portions work best on GLP-1 medication.', {
+        isTemplated: true, suggestions: ['Log my weight', 'Need a recipe', 'How am I doing?'],
+      })
+    },
+    '1-3 Very hungry': () => logHungerLevel(2, 'Try a high-protein snack to help with hunger.', ['Log a meal', 'Need a recipe']),
+    '4-6 Moderate': () => logHungerLevel(5, 'Moderate appetite is normal on GLP-1 medication.', ['Log a meal', 'How am I doing?']),
+    '7-10 Satisfied': () => logHungerLevel(8, 'Feeling satisfied — your medication is working well.', ['Log my weight', 'Need a recipe', 'How am I doing?']),
     'Log another symptom': () => {
       addAgentMessage('What are you experiencing?', {
         isTemplated: true,
@@ -241,7 +273,7 @@ function AgentShellInner() {
     if (followup) {
       setAwaitingInput(null)
       addUserMessage(text)
-      followup()
+      await followup()
       return
     }
 
@@ -271,20 +303,13 @@ function AgentShellInner() {
           return
         case 'appetite': {
           const level = text.match(/\d/)?.[0] ? parseInt(text.match(/\d/)![0]) : 5
-          try {
-            await apiRequest('POST', '/api/hunger-logs', { hungerBefore: level, loggedAt: new Date().toISOString() })
-            queryClient.invalidateQueries({ queryKey: ['dashboard'] })
-            queryClient.invalidateQueries({ queryKey: ['panel-dashboard'] })
-            queryClient.invalidateQueries({ queryKey: ['panel-hunger-today'] })
-            const tip = level <= 3 ? 'Try a high-protein snack to help with hunger.'
-              : level <= 6 ? 'Moderate appetite is normal on GLP-1 medication.'
-              : 'Feeling satisfied — your medication is working well.'
-            addAgentMessage(`Logged hunger level ${level}/10. ${tip}`, {
-              isTemplated: true, suggestions: ['Log a meal', 'How am I doing?'],
-            })
-          } catch {
-            addAgentMessage('Failed to log appetite. Try again.', { isTemplated: true })
-          }
+          const tip = level <= 3 ? 'Try a high-protein snack to help with hunger.'
+            : level <= 6 ? 'Moderate appetite is normal on GLP-1 medication.'
+            : 'Feeling satisfied — your medication is working well.'
+          const suggestions = level <= 3 ? ['Log a meal', 'Need a recipe']
+            : level >= 7 ? ['Log my weight', 'Need a recipe', 'How am I doing?']
+            : ['Log a meal', 'How am I doing?']
+          await logHungerLevel(level, tip, suggestions)
           return
         }
         case 'side_effect':
@@ -395,8 +420,9 @@ function AgentShellInner() {
           onCalorieTap={() => handleSend('Show my food today')}
         />
         <ChatArea messages={state.messages} onSuggestionTap={handleSend} onClear={() => { setAwaitingInput(null); clearMessages() }} />
-        {/* Persistent quick action pills — always visible above input */}
-        <div className="flex-shrink-0 px-3 py-2 bg-white dark:bg-gray-900 flex gap-2 overflow-x-auto w-full">
+        {/* Quick action pills — visible only after conversation starts */}
+        {state.messages.length > 1 && (
+        <div className="flex-shrink-0 px-3 py-2 bg-white dark:bg-gray-900 flex gap-2 overflow-x-auto w-full max-w-[100vw]">
           {[
             { label: 'Log food', emoji: '🍽' },
             { label: 'Log my dose', emoji: '💊' },
@@ -413,6 +439,7 @@ function AgentShellInner() {
             </button>
           ))}
         </div>
+        )}
         <InputBar onSend={handleSend} onCamera={async () => {
           try {
             const { Camera: CapCamera, CameraResultType, CameraSource } = await import('@capacitor/camera')

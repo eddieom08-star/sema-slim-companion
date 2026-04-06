@@ -448,8 +448,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } catch (e) { console.warn('Failed to update nextDueDate:', e); }
       }
 
-      // Award points for taking medication
-      await storage.addPoints(userId, 5, 'medication_taken', 'Logged medication');
+      // Non-critical: points should not fail the medication save
+      try { await storage.addPoints(userId, 5, 'medication_taken', 'Logged medication'); }
+      catch (e) { console.error("Non-critical: points update failed", e); }
 
       res.json(log);
     } catch (error: any) {
@@ -521,11 +522,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertFoodEntrySchema.parse({ ...req.body, userId });
       const entry = await storage.createFoodEntry(validatedData);
 
-      // Update food tracking streak
-      await storage.updateStreak(userId, 'food_tracking', true);
-
-      // Award points for logging food
-      await storage.addPoints(userId, 3, 'food_logged', 'Logged food entry');
+      // Non-critical: streak + points should not fail the food save
+      try {
+        await storage.updateStreak(userId, 'food_tracking', true);
+        await storage.addPoints(userId, 3, 'food_logged', 'Logged food entry');
+      } catch (e) { console.error("Non-critical: streak/points update failed", e); }
 
       res.json(entry);
     } catch (error: any) {
@@ -834,11 +835,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertWeightLogSchema.parse({ ...req.body, userId });
       const log = await storage.createWeightLog(validatedData);
 
-      // Update weight logging streak
-      await storage.updateStreak(userId, 'weight_logging', true);
-
-      // Award points for logging weight
-      await storage.addPoints(userId, 5, 'weight_logged', 'Logged weight');
+      // Non-critical: streak + points should not fail the weight save
+      try {
+        await storage.updateStreak(userId, 'weight_logging', true);
+        await storage.addPoints(userId, 5, 'weight_logged', 'Logged weight');
+      } catch (e) {
+        console.error("Non-critical: streak/points update failed", e);
+      }
 
       res.json(log);
     } catch (error: any) {
@@ -1005,8 +1008,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertHungerLogSchema.parse({ ...req.body, userId });
       const log = await storage.createHungerLog(validatedData);
 
-      // Award points for logging hunger
-      await storage.addPoints(userId, 5, 'hunger_logged', 'Logged hunger/satiety data');
+      // Non-critical: points should not fail the hunger save
+      try { await storage.addPoints(userId, 5, 'hunger_logged', 'Logged hunger/satiety data'); }
+      catch (e) { console.error("Non-critical: points update failed", e); }
 
       res.json(log);
     } catch (error: any) {
@@ -1835,7 +1839,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Try multiple model names in order of preference
       // The API key might not have access to newer models
       const modelPriority = [
-        'claude-sonnet-4-5-20250929',  // Claude Sonnet 4.5
+        'claude-sonnet-4-5-20250514',  // Claude Sonnet 4.5
         'claude-3-5-sonnet-20241022',  // Claude 3.5 Sonnet v2 (fallback)
         'claude-haiku-4-5-20251001',   // Claude Haiku 4.5 (fallback)
         'claude-3-haiku-20240307'      // Claude 3 Haiku (last resort)
@@ -2036,7 +2040,7 @@ Always respond with valid JSON only, no additional text.`;
 
       // Call Claude API with image
       const modelPriority = [
-        'claude-sonnet-4-5-20250929',  // Claude Sonnet 4.5
+        'claude-sonnet-4-5-20250514',  // Claude Sonnet 4.5
         'claude-3-5-sonnet-20241022',  // Claude 3.5 Sonnet v2 (fallback)
         'claude-haiku-4-5-20251001',   // Claude Haiku 4.5 (fallback)
         'claude-3-haiku-20240307'      // Claude 3 Haiku (last resort)
@@ -2271,12 +2275,23 @@ Return JSON only, no markdown:
 {"name":"string","prepTime":number,"cookTime":number,"servings":1,"ingredients":[{"name":"string","quantity":"string","unit":"string"}],"instructions":"string","calories":number,"protein":number,"carbs":number,"fat":number,"tags":["string"]}`;
 
       logger.info('Step 2: Generating recipe with Sonnet');
-      const recipeRes = await anthropic.messages.create({
-        model: 'claude-sonnet-4-5-20250929',
-        max_tokens: 800,
-        system: [{ type: 'text', text: RECIPE_SYSTEM, cache_control: { type: 'ephemeral' } }],
-        messages: [{ role: 'user', content: JSON.stringify(prefs) }],
-      });
+      let recipeRes;
+      try {
+        recipeRes = await anthropic.messages.create({
+          model: 'claude-sonnet-4-5-20250514',
+          max_tokens: 800,
+          system: [{ type: 'text', text: RECIPE_SYSTEM, cache_control: { type: 'ephemeral' } }],
+          messages: [{ role: 'user', content: JSON.stringify(prefs) }],
+        });
+      } catch (modelErr) {
+        logger.warn('Sonnet 4.5 failed, falling back to 3.5 Sonnet', modelErr);
+        recipeRes = await anthropic.messages.create({
+          model: 'claude-3-5-sonnet-20241022',
+          max_tokens: 800,
+          system: [{ type: 'text', text: RECIPE_SYSTEM }],
+          messages: [{ role: 'user', content: JSON.stringify(prefs) }],
+        });
+      }
 
       const recipeText = (recipeRes.content[0] as { type: string; text: string }).text;
       const recipe = JSON.parse(recipeText);

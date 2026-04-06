@@ -171,12 +171,22 @@ Requirements: high protein (>25g), moderate calories (300-500), easy to eat in s
 Return JSON only, no markdown:
 {"name":"string","prepTime":number,"cookTime":number,"servings":1,"ingredients":[{"name":"string","quantity":"string","unit":"string"}],"instructions":"string","calories":number,"protein":number,"carbs":number,"fat":number,"tags":["string"]}`;
 
-    const recipeRes = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
-      max_tokens: 800,
-      system: [{ type: 'text', text: RECIPE_SYSTEM, cache_control: { type: 'ephemeral' } }],
-      messages: [{ role: 'user', content: `Available ingredients: ${extracted.ingredients.join(', ')}` }],
-    });
+    let recipeRes;
+    try {
+      recipeRes = await anthropic.messages.create({
+        model: 'claude-sonnet-4-5-20250514',
+        max_tokens: 800,
+        system: [{ type: 'text', text: RECIPE_SYSTEM, cache_control: { type: 'ephemeral' } }],
+        messages: [{ role: 'user', content: `Available ingredients: ${extracted.ingredients.join(', ')}` }],
+      });
+    } catch {
+      recipeRes = await anthropic.messages.create({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 800,
+        system: [{ type: 'text', text: RECIPE_SYSTEM }],
+        messages: [{ role: 'user', content: `Available ingredients: ${extracted.ingredients.join(', ')}` }],
+      });
+    }
 
     const recipe = JSON.parse((recipeRes.content[0] as { type: string; text: string }).text);
 

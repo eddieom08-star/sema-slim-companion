@@ -167,16 +167,21 @@ export default function TrendFullView() {
           </div>
         )}
 
-        {/* Insight */}
-        <div className="bg-green-50 rounded-xl p-3 mb-2">
-          <p className="text-[9px] text-green-600 font-semibold mb-1">Insight</p>
-          <p className="text-[10px] text-green-700 leading-relaxed">
-            {trendTab === 'weight' && 'Weight trending consistently downward. Keep logging daily for better accuracy.'}
-            {trendTab === 'calories' && `Averaging ${Math.round(calData.reduce((s, d) => s + d.calories, 0) / Math.max(calData.length, 1))} cal/day \u2014 consistent with GLP-1 appetite suppression.`}
-            {trendTab === 'appetite' && 'Keep logging hunger before and after meals for pattern insights.'}
-            {trendTab === 'adherence' && 'Consistent dosing maximises GLP-1 effectiveness.'}
-          </p>
-        </div>
+        {/* Insight — only show when tab has data */}
+        {((trendTab === 'weight' && wtData.length > 0) ||
+          (trendTab === 'calories' && calData.some(d => d.calories > 0)) ||
+          trendTab === 'appetite' ||
+          trendTab === 'adherence') && (
+          <div className="bg-green-50 rounded-xl p-3 mb-2">
+            <p className="text-[9px] text-green-600 font-semibold mb-1">Insight</p>
+            <p className="text-[10px] text-green-700 leading-relaxed">
+              {trendTab === 'weight' && `${wtData.length} entries logged. Keep logging daily for better accuracy.`}
+              {trendTab === 'calories' && `Averaging ${Math.round(calData.reduce((s, d) => s + d.calories, 0) / Math.max(calData.length, 1))} cal/day \u2014 consistent with GLP-1 appetite suppression.`}
+              {trendTab === 'appetite' && 'Keep logging hunger before and after meals for pattern insights.'}
+              {trendTab === 'adherence' && 'Consistent dosing maximises GLP-1 effectiveness.'}
+            </p>
+          </div>
+        )}
 
         {isPro && aiInsight && (
           <div className="bg-purple-50 rounded-xl p-3 mb-2">

@@ -21,41 +21,47 @@ export function useFoodFlow() {
         food,
         quantity: qty,
         onLog: async () => {
-          await apiRequest('POST', '/api/food-entries', {
-              foodName: food.name,
-              calories: Math.round(Number(food.calories) * qty),
-              protein: String(Math.round(Number(food.protein) * qty)),
-              carbs: String(Math.round(Number(food.carbs) * qty)),
-              fat: String(Math.round(Number(food.fat) * qty)),
-              quantity: String(food.servingSize * qty),
-              unit: food.servingUnit,
-              mealType,
-              consumedAt: new Date().toISOString(),
-            })
-          queryClient.invalidateQueries({ queryKey: ['dashboard'] })
-          queryClient.invalidateQueries({ queryKey: ['panel-dashboard'] })
-          queryClient.invalidateQueries({ queryKey: ['panel-food-today'] })
-          queryClient.invalidateQueries({ queryKey: ['panel-food-week'] })
-          addAgentMessage(
-            `Logged! ${Math.round(Number(food.calories) * qty)} calories for ${mealType}. How full are you feeling?`,
-            { isTemplated: true, suggestions: ['Still hungry', 'Satisfied', 'Very full', 'Skip'] }
-          )
+          try {
+            await apiRequest('POST', '/api/food-entries', {
+                foodName: food.name,
+                calories: Math.round(Number(food.calories) * qty),
+                protein: String(Math.round(Number(food.protein) * qty)),
+                carbs: String(Math.round(Number(food.carbs) * qty)),
+                fat: String(Math.round(Number(food.fat) * qty)),
+                quantity: String(food.servingSize * qty),
+                unit: food.servingUnit,
+                mealType,
+                consumedAt: new Date().toISOString(),
+              })
+            queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+            queryClient.invalidateQueries({ queryKey: ['panel-dashboard'] })
+            queryClient.invalidateQueries({ queryKey: ['panel-food-today'] })
+            queryClient.invalidateQueries({ queryKey: ['panel-food-week'] })
+            addAgentMessage(
+              `Logged! ${Math.round(Number(food.calories) * qty)} calories for ${mealType}. How full are you feeling?`,
+              { isTemplated: true, suggestions: ['Still hungry', 'Satisfied', 'Very full', 'Skip'] }
+            )
 
-          if (!isPro) {
-            try {
-              const countRes = await apiRequest('GET', '/api/hunger-logs?limit=1')
-              const countData = await countRes.json()
-              if (Array.isArray(countData) && countData.length >= 3) {
-                addAgentMessage('You\'ve logged enough data for appetite intelligence:', {
-                  isTemplated: true,
-                  component: createElement(ProMomentCard, {
-                    trigger: 'satiety_intel',
-                    onUpgrade: openCheckout,
-                    onDismiss: () => {},
-                  }),
-                })
-              }
-            } catch { /* non-critical upsell */ }
+            if (!isPro) {
+              try {
+                const countRes = await apiRequest('GET', '/api/hunger-logs?limit=1')
+                const countData = await countRes.json()
+                if (Array.isArray(countData) && countData.length >= 3) {
+                  addAgentMessage('You\'ve logged enough data for appetite intelligence:', {
+                    isTemplated: true,
+                    component: createElement(ProMomentCard, {
+                      trigger: 'satiety_intel',
+                      onUpgrade: openCheckout,
+                      onDismiss: () => {},
+                    }),
+                  })
+                }
+              } catch { /* non-critical upsell */ }
+            }
+          } catch {
+            addAgentMessage('Failed to log food. Check your connection and try again.', {
+              isTemplated: true, suggestions: ['Try again', 'Log food'],
+            })
           }
         },
         onEdit: () => addAgentMessage('What would you like to change?', { isTemplated: true }),
@@ -73,7 +79,7 @@ export function useFoodFlow() {
       items = [{ food_name: entities.food_name }]
     } else {
       try {
-        const res = await apiRequest('POST', '/api/v2/extract-food-entity', { text })
+        const res = await apiRequest('POST', '/api/v2/extract-food-entity', { text }, { timeout: 30000 })
         const data = await res.json()
         items = data.items?.length ? data.items : [{ food_name: text }]
       } catch {

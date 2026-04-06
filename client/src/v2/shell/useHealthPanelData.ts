@@ -49,10 +49,14 @@ export function useHealthPanelData() {
     queryKey: ['panel-medlogs', period], enabled: isOpen && trendOpen && trendTab === 'adherence',
     queryFn: () => apiRequest('GET', '/api/medication-logs?limit=60').then(r => r.json()),
   })
+  const { data: medLogsWeek } = useQuery({
+    queryKey: ['panel-medlogs-week'], enabled: isOpen,
+    queryFn: () => apiRequest('GET', '/api/medication-logs?limit=60').then(r => r.json()),
+  })
 
   return {
     dashboard, foodToday, foodWeek, weightLogs, medications,
-    hungerToday, hungerWeek, foodRange, hungerLogs, medLogs,
+    hungerToday, hungerWeek, foodRange, hungerLogs, medLogs, medLogsWeek,
     refetchFood, refetchWeight, refetchHunger,
   }
 }

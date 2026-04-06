@@ -25,5 +25,14 @@ export function parseWeightFromText(text: string): ParsedWeight | null {
     return { kg, display: `${lbsMatch[1]}lbs` }
   }
 
+  // Bare number (no unit) — assume kg if it's a plausible weight (30-300)
+  const bareMatch = t.match(/^(\d+(?:\.\d+)?)\s*$/)
+  if (bareMatch) {
+    const val = parseFloat(bareMatch[1])
+    if (val >= 30 && val <= 300) {
+      return { kg: val, display: `${bareMatch[1]}kg` }
+    }
+  }
+
   return null
 }

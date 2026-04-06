@@ -31,7 +31,7 @@ export function useWeightFlow() {
 
     // Log the new weight
     try {
-      await apiRequest('POST', '/api/weight-logs', { weight: weight.kg, loggedAt: new Date().toISOString() })
+      await apiRequest('POST', '/api/weight-logs', { weight: String(weight.kg), loggedAt: new Date().toISOString() })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
       queryClient.invalidateQueries({ queryKey: ['panel-dashboard'] })
       queryClient.invalidateQueries({ queryKey: ['panel-weight'] })

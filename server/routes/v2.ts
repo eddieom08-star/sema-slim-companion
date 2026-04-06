@@ -40,7 +40,7 @@ router.post('/v2/classify', requireAuth, async (req: any, res) => {
     const ctx = await getUserContext(userId);
 
     const response = await anthropic.messages.create({
-      model: 'claude-3-haiku-20240307',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 120,
       system: [{ type: 'text', text: CLASSIFY_SYSTEM + (ctx ? `\n${ctx}` : ''), cache_control: { type: 'ephemeral' } }],
       messages: [{ role: 'user', content: text.trim() }],
@@ -74,7 +74,7 @@ Rules:
 - Maximum 5 items`;
 
     const response = await anthropic.messages.create({
-      model: 'claude-3-haiku-20240307',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 200,
       system: [{ type: 'text', text: SYSTEM, cache_control: { type: 'ephemeral' } }],
       messages: [{ role: 'user', content: text }],
@@ -99,7 +99,7 @@ router.post('/v2/appetite-insight', requireAuth, async (req: any, res) => {
 Plain text only, no markdown, no lists. Be specific and actionable.`;
 
     const response = await anthropic.messages.create({
-      model: 'claude-3-haiku-20240307',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 120,
       system: [{ type: 'text', text: SYSTEM, cache_control: { type: 'ephemeral' } }],
       messages: [{ role: 'user', content: `Health data for ${tab || 'general'} tab: ${JSON.stringify(stats)}` }],
@@ -118,7 +118,7 @@ router.post('/v2/scan-receipt', requireAuth, async (req: any, res) => {
     if (!image) return res.status(400).json({ error: 'No image provided' });
 
     const response = await anthropic.messages.create({
-      model: 'claude-3-haiku-20240307',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 500,
       system: [{ type: 'text', text: 'Extract food items from this receipt or menu photo. Return JSON only, no markdown: { "items": [{ "food_name": "string", "quantity": "string or null", "estimated_calories": number or null }] }', cache_control: { type: 'ephemeral' } }],
       messages: [{
@@ -147,7 +147,7 @@ router.post('/v2/recipe-from-image', requireAuth, async (req: any, res) => {
 
     // Step 1: Extract ingredients from the image
     const extractRes = await anthropic.messages.create({
-      model: 'claude-3-haiku-20240307',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 300,
       system: [{ type: 'text', text: 'Extract food ingredients from this image (receipt, grocery haul, fridge photo, or pantry). Return JSON only, no markdown: {"ingredients":["string"],"notes":"string or null"}', cache_control: { type: 'ephemeral' } }],
       messages: [{

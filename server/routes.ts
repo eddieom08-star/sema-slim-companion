@@ -2259,12 +2259,22 @@ Always respond with valid JSON only, no additional text.`;
 {"high_protein":bool,"low_carb":bool,"vegetarian":bool,"quick_cook":bool,"avoid":[],"servings":1}`;
 
       logger.info('Step 1: Extracting preferences with Haiku', { userInput });
-      const prefsRes = await anthropic.messages.create({
-        model: 'claude-3-haiku-20240307',
-        max_tokens: 100,
-        system: [{ type: 'text', text: PREFS_SYSTEM, cache_control: { type: 'ephemeral' } }],
-        messages: [{ role: 'user', content: userInput }],
-      });
+      let prefsRes;
+      const haikuModels = ['claude-haiku-4-5-20251001', 'claude-3-haiku-20240307'];
+      for (const haikuModel of haikuModels) {
+        try {
+          prefsRes = await anthropic.messages.create({
+            model: haikuModel,
+            max_tokens: 100,
+            system: [{ type: 'text', text: PREFS_SYSTEM }],
+            messages: [{ role: 'user', content: userInput }],
+          });
+          break;
+        } catch (e) {
+          logger.warn(`Haiku model ${haikuModel} failed, trying next`, e);
+        }
+      }
+      if (!prefsRes) throw new Error('All Haiku models failed for preference extraction');
       const prefs = JSON.parse((prefsRes.content[0] as { type: string; text: string }).text);
       logger.info('Preferences extracted', { prefs });
 
@@ -2276,22 +2286,22 @@ Return JSON only, no markdown:
 
       logger.info('Step 2: Generating recipe with Sonnet');
       let recipeRes;
-      try {
-        recipeRes = await anthropic.messages.create({
-          model: 'claude-sonnet-4-5-20250514',
-          max_tokens: 800,
-          system: [{ type: 'text', text: RECIPE_SYSTEM, cache_control: { type: 'ephemeral' } }],
-          messages: [{ role: 'user', content: JSON.stringify(prefs) }],
-        });
-      } catch (modelErr) {
-        logger.warn('Sonnet 4.5 failed, falling back to 3.5 Sonnet', modelErr);
-        recipeRes = await anthropic.messages.create({
-          model: 'claude-3-5-sonnet-20241022',
-          max_tokens: 800,
-          system: [{ type: 'text', text: RECIPE_SYSTEM }],
-          messages: [{ role: 'user', content: JSON.stringify(prefs) }],
-        });
+      const sonnetModels = ['claude-sonnet-4-5-20250514', 'claude-3-5-sonnet-20241022', 'claude-3-haiku-20240307'];
+      for (const sonnetModel of sonnetModels) {
+        try {
+          recipeRes = await anthropic.messages.create({
+            model: sonnetModel,
+            max_tokens: 800,
+            system: [{ type: 'text', text: RECIPE_SYSTEM }],
+            messages: [{ role: 'user', content: JSON.stringify(prefs) }],
+          });
+          logger.info(`Recipe generated with model: ${sonnetModel}`);
+          break;
+        } catch (e) {
+          logger.warn(`Model ${sonnetModel} failed, trying next`, e);
+        }
       }
+      if (!recipeRes) throw new Error('All models failed for recipe generation');
 
       const recipeText = (recipeRes.content[0] as { type: string; text: string }).text;
       const recipe = JSON.parse(recipeText);

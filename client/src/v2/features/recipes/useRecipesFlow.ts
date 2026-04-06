@@ -41,7 +41,7 @@ export function useRecipesFlow() {
     try {
       const res = await apiRequest('POST', '/api/recipes/generate', {
           preferences: preferences || 'high protein, easy to digest, GLP-1 friendly',
-        }, { timeout: 30000 })
+        }, { timeout: 60000 })
       const recipe = await res.json()
 
       const handleSave = async () => {

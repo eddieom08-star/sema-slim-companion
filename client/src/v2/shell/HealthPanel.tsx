@@ -2,8 +2,12 @@ import { useHealthPanel } from '@/v2/agent/HealthPanelContext'
 import { useHealthPanelData } from './useHealthPanelData'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSubscription } from '@/contexts/SubscriptionContext'
+import { useQuery } from '@tanstack/react-query'
+import { apiRequest } from '@/lib/queryClient'
 import TrendFullView from './TrendFullView'
 import ReportsSection from './ReportsSection'
+import SavedRecipesCarousel from '@/v2/features/recipes/SavedRecipesCarousel'
+import { ChefHat } from 'lucide-react'
 
 interface InlineSparkProps { data: number[]; color: string }
 function InlineSpark({ data, color }: InlineSparkProps) {
@@ -58,7 +62,13 @@ export default function HealthPanel({ userInitials }: { userInitials: string }) 
   const { isOpen, setIsOpen, section, setSection, openTrend } = useHealthPanel()
   const { dashboard, foodToday, foodWeek, weightLogs, hungerToday, hungerWeek, medLogsWeek } = useHealthPanelData()
   const { user } = useAuth()
-  const { isPro } = useSubscription()
+  const { isPro, openCheckout } = useSubscription()
+
+  const { data: savedRecipes } = useQuery({
+    queryKey: ['panel-saved-recipes'], enabled: isOpen,
+    queryFn: () => apiRequest('GET', '/api/recipes/favorites').then(r => r.json()),
+    staleTime: 5 * 60 * 1000,
+  })
 
   const wtData = (weightLogs || []).slice(-7).map((l: any) => Number(l.weight)).filter((v: number) => !isNaN(v))
   const calData = (foodToday || []).reduce((s: number, e: any) => s + (Number(e.calories) || 0), 0)
@@ -182,6 +192,18 @@ export default function HealthPanel({ userInitials }: { userInitials: string }) 
                 </div>
                 <InlineSpark data={adherenceData} color="#1D9E75" />
               </div>
+
+              {/* Saved recipes */}
+              {savedRecipes?.length > 0 && (
+                <div className="bg-white rounded-2xl p-3 shadow-md border border-gray-100/80">
+                  <div className="flex items-center gap-2 mb-2">
+                    <ChefHat className="w-4 h-4 text-purple-500" />
+                    <p className="text-sm font-semibold text-gray-900">Saved recipes</p>
+                    <span className="text-[10px] text-gray-400 ml-auto">{savedRecipes.length} saved</span>
+                  </div>
+                  <SavedRecipesCarousel recipes={savedRecipes} isPro={isPro} onUpgrade={() => openCheckout('annual')} />
+                </div>
+              )}
             </div>
           )}
           {section === 'reports' && <ReportsSection />}

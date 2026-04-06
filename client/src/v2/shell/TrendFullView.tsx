@@ -70,7 +70,7 @@ export default function TrendFullView() {
     <div className={`absolute inset-0 bg-white z-30 flex flex-col transition-transform duration-[280ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${trendOpen ? 'translate-y-0' : 'translate-y-full'}`}>
 
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-500 to-purple-600 pt-12 px-4 pb-3 flex-shrink-0">
+      <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-4 pb-3 flex-shrink-0" style={{ paddingTop: 'max(env(safe-area-inset-top), 48px)' }}>
         <div className="flex items-center justify-between">
           <button onClick={closeTrend} className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white text-sm">&larr;</button>
           <div className="text-center">

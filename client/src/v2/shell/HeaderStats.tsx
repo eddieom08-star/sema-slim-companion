@@ -29,7 +29,7 @@ export default function HeaderStats({
     : 'satisfied'
 
   return (
-    <div className="z-50 bg-gradient-to-r from-blue-500 to-purple-600 px-4 pb-4 flex-shrink-0 w-full max-w-full overflow-x-hidden" style={{ paddingTop: 'max(env(safe-area-inset-top), 48px)' }}>
+    <div className="z-50 bg-gradient-to-r from-blue-500 to-purple-600 px-4 pb-4 flex-shrink-0 w-full max-w-full overflow-x-hidden" style={{ paddingTop: 'max(env(safe-area-inset-top), 56px)' }}>
       {/* Top row */}
       <div className="flex items-center justify-between mb-4">
         <button

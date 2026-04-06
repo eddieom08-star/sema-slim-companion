@@ -45,14 +45,29 @@ export function useRecipesFlow() {
       const recipe = await res.json()
 
       const handleSave = async () => {
-        if (recipe.id) {
-          try {
-            await apiRequest('POST', `/api/recipes/${recipe.id}/favorite`)
-            queryClient.invalidateQueries({ queryKey: ['recipes'] })
-            addAgentMessage('Saved! Find it in your saved recipes anytime.', { isTemplated: true })
-          } catch {
-            addAgentMessage('Failed to save. Try again.', { isTemplated: true })
+        if (!recipe.id) return
+        if (!isPro) {
+          const saved = queryClient.getQueryData<any[]>(['panel-saved-recipes'])
+          if (saved && saved.length >= 5) {
+            addAgentMessage('', {
+              isTemplated: true,
+              component: createElement(ProMomentCard, {
+                trigger: 'save_recipe_limit',
+                onUpgrade: openCheckout,
+                onBuyTokens: purchaseTokens,
+                onDismiss: () => {},
+              }),
+            })
+            return
           }
+        }
+        try {
+          await apiRequest('POST', `/api/recipes/${recipe.id}/favorite`)
+          queryClient.invalidateQueries({ queryKey: ['recipes'] })
+          queryClient.invalidateQueries({ queryKey: ['panel-saved-recipes'] })
+          addAgentMessage('Saved! Find it in your saved recipes anytime.', { isTemplated: true })
+        } catch {
+          addAgentMessage('Failed to save. Try again.', { isTemplated: true })
         }
       }
 
@@ -130,14 +145,29 @@ export function useRecipesFlow() {
       }
 
       const handleImageSave = async () => {
-        if (data.recipe.id) {
-          try {
-            await apiRequest('POST', `/api/recipes/${data.recipe.id}/favorite`)
-            queryClient.invalidateQueries({ queryKey: ['recipes'] })
-            addAgentMessage('Saved! Find it in your saved recipes anytime.', { isTemplated: true })
-          } catch {
-            addAgentMessage('Failed to save. Try again.', { isTemplated: true })
+        if (!data.recipe.id) return
+        if (!isPro) {
+          const saved = queryClient.getQueryData<any[]>(['panel-saved-recipes'])
+          if (saved && saved.length >= 5) {
+            addAgentMessage('', {
+              isTemplated: true,
+              component: createElement(ProMomentCard, {
+                trigger: 'save_recipe_limit',
+                onUpgrade: openCheckout,
+                onBuyTokens: purchaseTokens,
+                onDismiss: () => {},
+              }),
+            })
+            return
           }
+        }
+        try {
+          await apiRequest('POST', `/api/recipes/${data.recipe.id}/favorite`)
+          queryClient.invalidateQueries({ queryKey: ['recipes'] })
+          queryClient.invalidateQueries({ queryKey: ['panel-saved-recipes'] })
+          addAgentMessage('Saved! Find it in your saved recipes anytime.', { isTemplated: true })
+        } catch {
+          addAgentMessage('Failed to save. Try again.', { isTemplated: true })
         }
       }
 

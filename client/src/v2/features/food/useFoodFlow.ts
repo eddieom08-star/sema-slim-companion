@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { createElement } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAgent } from '@/v2/agent/AgentContext'
@@ -13,6 +13,7 @@ export function useFoodFlow() {
   const { addAgentMessage } = useAgent()
   const { isPro, openCheckout } = useSubscription()
   const queryClient = useQueryClient()
+  const [scannerOpen, setScannerOpen] = useState(false)
 
   const logAndConfirm = useCallback(async (food: FoodResult, qty: number, mealType: string) => {
     addAgentMessage('Here\'s what I found:', {
@@ -145,11 +146,51 @@ export function useFoodFlow() {
         })
         return
       }
-      addAgentMessage('Barcode scanner coming soon.', { isTemplated: true })
+      setScannerOpen(true)
     } catch {
-      addAgentMessage('Barcode scanner coming soon.', { isTemplated: true })
+      addAgentMessage('Could not verify scan limit. Try again.', { isTemplated: true })
     }
   }, [addAgentMessage, openCheckout])
 
-  return { handleFoodInput, handleBarcodeIntent }
+  const handleBarcodeScan = useCallback(async (barcode: string) => {
+    setScannerOpen(false)
+    addAgentMessage(`Scanning barcode ${barcode}...`, { isTemplated: true })
+
+    try {
+      const res = await apiRequest('GET', `/api/food-database/barcode/${encodeURIComponent(barcode)}`)
+
+      if (!res.ok) {
+        addAgentMessage(`No product found for barcode ${barcode}. Try a different product or log manually.`, {
+          isTemplated: true,
+          suggestions: ['Log food', 'Scan another'],
+        })
+        return
+      }
+
+      const product = await res.json()
+      const food: FoodResult = {
+        id: product.id,
+        name: product.name,
+        brand: product.brand,
+        calories: Number(product.calories) || 0,
+        protein: Number(product.protein) || 0,
+        carbs: Number(product.carbs) || 0,
+        fat: Number(product.fat) || 0,
+        fiber: product.fiber != null ? Number(product.fiber) : null,
+        sugar: product.sugar != null ? Number(product.sugar) : null,
+        servingSize: Number(product.servingSize) || 100,
+        servingUnit: product.servingUnit || 'g',
+      }
+
+      const mealType = inferMealType()
+      logAndConfirm(food, 1, mealType)
+    } catch {
+      addAgentMessage('Failed to look up that barcode. Check your connection and try again.', {
+        isTemplated: true,
+        suggestions: ['Scan another', 'Log food'],
+      })
+    }
+  }, [addAgentMessage, logAndConfirm])
+
+  return { handleFoodInput, handleBarcodeIntent, handleBarcodeScan, scannerOpen, setScannerOpen }
 }

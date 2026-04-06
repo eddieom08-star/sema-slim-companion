@@ -16,10 +16,19 @@ export function useHealthPanelData() {
     queryKey: ['panel-food-today', today], enabled: isOpen,
     queryFn: () => apiRequest('GET', `/api/food-entries?date=${today}`).then(r => r.json()),
   })
-  const { data: weightLogs, refetch: refetchWeight } = useQuery({
+  const { data: weightLogsResult, refetch: refetchWeight } = useQuery({
     queryKey: ['panel-weight', period], enabled: isOpen,
-    queryFn: () => apiRequest('GET', `/api/weight-logs?limit=${period + 5}`).then(r => r.json()),
+    queryFn: async () => {
+      const r = await apiRequest('GET', `/api/weight-logs?limit=${period + 5}`)
+      const truncated = r.headers.get('X-Data-Truncated') === 'true'
+      const retentionDays = parseInt(r.headers.get('X-Retention-Days') || '0')
+      const data = await r.json()
+      return { data, truncated, retentionDays }
+    },
   })
+  const weightLogs = weightLogsResult?.data
+  const isDataTruncated = weightLogsResult?.truncated ?? false
+  const retentionDays = weightLogsResult?.retentionDays ?? 0
   const { data: medications } = useQuery({
     queryKey: ['panel-medications'], enabled: isOpen,
     queryFn: () => apiRequest('GET', '/api/medications').then(r => r.json()),
@@ -58,5 +67,6 @@ export function useHealthPanelData() {
     dashboard, foodToday, foodWeek, weightLogs, medications,
     hungerToday, hungerWeek, foodRange, hungerLogs, medLogs, medLogsWeek,
     refetchFood, refetchWeight, refetchHunger,
+    isDataTruncated, retentionDays,
   }
 }

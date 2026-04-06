@@ -127,6 +127,8 @@ interface SubscriptionContextValue {
     tokensUsed: boolean;
     newBalance?: number;
   }>;
+  cancelSubscription: () => Promise<{ success: boolean; currentPeriodEnd?: string }>;
+  reactivateSubscription: () => Promise<{ success: boolean }>;
 }
 
 const SubscriptionContext = createContext<SubscriptionContextValue | null>(null);
@@ -418,6 +420,35 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
     }
   }, [fetchWithAuth, refreshTokenBalance]);
 
+  const cancelSubscription = useCallback(async () => {
+    try {
+      const response = await fetchWithAuth('/api/subscription/cancel', { method: 'POST' });
+      const result = await response.json();
+      if (response.ok) {
+        clearCache();
+        await refreshSubscription(true);
+        return { success: true, currentPeriodEnd: result.currentPeriodEnd };
+      }
+      return { success: false };
+    } catch {
+      return { success: false };
+    }
+  }, [fetchWithAuth, refreshSubscription]);
+
+  const reactivateSubscription = useCallback(async () => {
+    try {
+      const response = await fetchWithAuth('/api/subscription/reactivate', { method: 'POST' });
+      if (response.ok) {
+        clearCache();
+        await refreshSubscription(true);
+        return { success: true };
+      }
+      return { success: false };
+    } catch {
+      return { success: false };
+    }
+  }, [fetchWithAuth, refreshSubscription]);
+
   const checkFeature = useCallback(async (feature: string, quantity: number = 1) => {
     // Offline-first: use local entitlements to check
     if (isOffline && entitlements) {
@@ -489,6 +520,8 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
         return ent.aiRecipeSuggestionsUsed + quantity <= ent.aiRecipeSuggestionsPerMonth || ent.aiTokens >= quantity;
       case 'pdf_export':
         return (ent.tier === 'pro' && ent.pdfExportsUsed + quantity <= ent.pdfExportsIncluded) || ent.exportTokens >= quantity;
+      case 'receipt_scan':
+        return ent.receiptScansTotal === -1 || ent.receiptScansUsed < ent.receiptScansTotal;
       default:
         return true;
     }
@@ -648,6 +681,8 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
     purchaseTokens,
     checkFeature,
     consumeFeature,
+    cancelSubscription,
+    reactivateSubscription,
   };
 
   return (

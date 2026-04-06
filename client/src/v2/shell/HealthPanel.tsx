@@ -60,7 +60,7 @@ function buildDailyAverages(logs: any[] | undefined, days: number): number[] {
 
 export default function HealthPanel({ userInitials }: { userInitials: string }) {
   const { isOpen, setIsOpen, section, setSection, openTrend } = useHealthPanel()
-  const { dashboard, foodToday, foodWeek, weightLogs, hungerToday, hungerWeek, medLogsWeek } = useHealthPanelData()
+  const { dashboard, foodToday, foodWeek, weightLogs, hungerToday, hungerWeek, medLogsWeek, isDataTruncated, retentionDays } = useHealthPanelData()
   const { user } = useAuth()
   const { isPro, openCheckout } = useSubscription()
 
@@ -141,6 +141,18 @@ export default function HealthPanel({ userInitials }: { userInitials: string }) 
         <div className="flex-1 overflow-y-auto -webkit-overflow-scrolling-touch" style={{ WebkitOverflowScrolling: 'touch' }}>
           {section === 'dashboard' && (
             <div className="p-4 space-y-3">
+              {/* History retention warning */}
+              {isDataTruncated && !isPro && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 flex items-center gap-2 overflow-hidden max-w-full">
+                  <span className="text-xs text-amber-700 min-w-0 truncate">Showing last {retentionDays} days only.</span>
+                  <button
+                    onClick={() => openCheckout('annual')}
+                    className="text-[11px] font-medium text-purple-600 bg-purple-50 rounded-full px-2 py-1 ml-auto whitespace-nowrap flex-shrink-0"
+                  >
+                    Unlock full history
+                  </button>
+                </div>
+              )}
               {/* Today snapshot */}
               <div className="grid grid-cols-2 gap-3">
                 {[
@@ -193,17 +205,35 @@ export default function HealthPanel({ userInitials }: { userInitials: string }) 
                 <InlineSpark data={adherenceData} color="#1D9E75" />
               </div>
 
-              {/* Saved recipes */}
-              {savedRecipes?.length > 0 && (
-                <div className="bg-white rounded-2xl p-3 shadow-md border border-gray-100/80">
-                  <div className="flex items-center gap-2 mb-2">
-                    <ChefHat className="w-4 h-4 text-purple-500" />
-                    <p className="text-sm font-semibold text-gray-900">Saved recipes</p>
+              {/* Saved recipes — always visible */}
+              <div className="bg-white rounded-2xl p-3 shadow-md border border-gray-100/80">
+                <div className="flex items-center gap-2 mb-2">
+                  <ChefHat className="w-4 h-4 text-purple-500" />
+                  <p className="text-sm font-semibold text-gray-900">Saved recipes</p>
+                  {savedRecipes?.length > 0 && (
                     <span className="text-[10px] text-gray-400 ml-auto">{savedRecipes.length} saved</span>
-                  </div>
-                  <SavedRecipesCarousel recipes={savedRecipes} isPro={isPro} onUpgrade={() => openCheckout('annual')} />
+                  )}
                 </div>
-              )}
+                {savedRecipes?.length > 0 ? (
+                  <SavedRecipesCarousel recipes={savedRecipes} isPro={isPro} onUpgrade={() => openCheckout('annual')} />
+                ) : (
+                  <div className="flex flex-col items-center py-6 text-center">
+                    <div className="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center mb-2">
+                      <ChefHat className="w-5 h-5 text-purple-400" />
+                    </div>
+                    <p className="text-xs text-gray-500 mb-1">No saved recipes yet</p>
+                    <p className="text-[10px] text-gray-400 mb-3 max-w-[200px]">Ask me to generate a recipe, then tap save to keep it here.</p>
+                    {!isPro && (
+                      <button
+                        onClick={() => openCheckout('annual')}
+                        className="text-[11px] font-medium text-purple-600 bg-purple-50 rounded-full px-3 py-1.5"
+                      >
+                        Pro: Unlimited saved recipes
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           )}
           {section === 'reports' && <ReportsSection />}

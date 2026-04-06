@@ -20,6 +20,9 @@ export interface FeatureLimits {
   pdfExportsIncluded: number;
   dataExportEnabled: boolean;
 
+  // Receipt scanning
+  receiptScansTotal: number; // -1 for unlimited, lifetime cap for free
+
   // Social
   familySharingSlots: number;
 }
@@ -35,6 +38,7 @@ export const TIER_LIMITS: Record<'free' | 'pro', FeatureLimits> = {
     monthlyStreakShields: 0,
     pdfExportsIncluded: 0,
     dataExportEnabled: false,
+    receiptScansTotal: 1,
     familySharingSlots: 0,
   },
   pro: {
@@ -47,6 +51,7 @@ export const TIER_LIMITS: Record<'free' | 'pro', FeatureLimits> = {
     monthlyStreakShields: 2,
     pdfExportsIncluded: 5,
     dataExportEnabled: true,
+    receiptScansTotal: -1, // unlimited
     familySharingSlots: 3,
   },
 };
@@ -62,6 +67,7 @@ export interface UserEntitlements extends FeatureLimits {
   aiRecipeSuggestionsUsed: number;
   barcodeScansToday: number;
   pdfExportsUsed: number;
+  receiptScansUsed: number;
 
   // Token balances (purchased or earned)
   aiTokens: number;
@@ -164,6 +170,7 @@ export const FEATURE_TYPES = {
   AI_MEAL_PLAN: 'ai_meal_plan',
   AI_RECIPE: 'ai_recipe',
   PDF_EXPORT: 'pdf_export',
+  RECEIPT_SCAN: 'receipt_scan',
 } as const;
 
 export type FeatureType = typeof FEATURE_TYPES[keyof typeof FEATURE_TYPES];

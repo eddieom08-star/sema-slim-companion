@@ -6,6 +6,7 @@ export type Intent =
   | 'recipe.generate' | 'recipe.saved' | 'recipe.receipt'
   | 'weight.log' | 'weight.progress'
   | 'trends.general' | 'general'
+  | 'export.data' | 'mealplan.generate'
 
 export interface ActionButton {
   label: string

@@ -5,7 +5,8 @@ import { useUpsellTracker } from './useUpsellTracker'
 type TriggerType =
   | 'recipe_limit' | 'history_limit' | 'satiety_intel'
   | 'receipt_scan' | 'barcode_limit' | 'streak_shields'
-  | 'pdf_export' | 'appetite_trends'
+  | 'pdf_export' | 'appetite_trends' | 'meal_plan_limit'
+  | 'save_recipe_limit'
 
 interface ProMomentCardProps {
   trigger: TriggerType
@@ -23,6 +24,8 @@ const CONFIG: Record<TriggerType, { headline: string; sub: string; hasTokenPath:
   streak_shields: { headline: 'Streak shields', sub: 'Protect your streak on off-days.', hasTokenPath: true },
   pdf_export:     { headline: 'PDF health reports', sub: 'Generate a report to share with your prescriber.', hasTokenPath: true },
   appetite_trends:{ headline: 'Appetite insights', sub: 'Discover your hunger patterns over 30 days.', hasTokenPath: false },
+  meal_plan_limit:{ headline: 'AI Meal Plans', sub: 'You\'ve used your free meal plan generations this month.', hasTokenPath: true },
+  save_recipe_limit:{ headline: 'Save more recipes', sub: 'Free plan limited to 5 saved recipes.', hasTokenPath: false },
 }
 
 export default function ProMomentCard({ trigger, onUpgrade, onBuyTokens, onDismiss }: ProMomentCardProps) {
@@ -51,16 +54,16 @@ export default function ProMomentCard({ trigger, onUpgrade, onBuyTokens, onDismi
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-purple-200/80 overflow-hidden w-full shadow-lg">
+    <div className="bg-white rounded-2xl border border-purple-200/80 overflow-hidden w-full max-w-full shadow-lg">
       <div className="bg-purple-50/80 px-4 py-3">
         <p className="text-sm font-semibold text-purple-900">{config.headline}</p>
         <p className="text-xs text-purple-600 mt-0.5">{config.sub}</p>
       </div>
 
-      <div className="px-4 py-2 flex items-baseline gap-2">
-        <span className="text-xl font-bold text-gray-900">£6.67</span>
-        <span className="text-xs text-gray-400">/month</span>
-        <span className="text-[10px] bg-purple-100 text-purple-700 rounded-full px-2 py-0.5 ml-auto">Annual plan</span>
+      <div className="px-4 py-2 flex items-baseline gap-2 overflow-hidden">
+        <span className="text-xl font-bold text-gray-900 flex-shrink-0">£6.67</span>
+        <span className="text-xs text-gray-400 flex-shrink-0">/month</span>
+        <span className="text-[10px] bg-purple-100 text-purple-700 rounded-full px-2 py-0.5 ml-auto flex-shrink-0 whitespace-nowrap">Annual plan</span>
       </div>
 
       <div className="px-4 pb-4 space-y-2">

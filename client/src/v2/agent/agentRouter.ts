@@ -20,6 +20,8 @@ export function classifyIntent(text: string): Intent {
   if (/\d+\s*(?:kg|lbs?|st)\b/.test(t)) return 'weight.log'
   if (has(['weight trend','weight progress','how much have i lost','weight chart'])) return 'weight.progress'
   if (has(['how am i doing','my progress','this week','weekly summary','analytics','adherence','overview'])) return 'trends.general'
+  if (has(['meal plan','weekly plan','plan my meals','plan my week','weekly menu','7 day plan','7-day plan','what should i eat this week'])) return 'mealplan.generate'
+  if (has(['export my data','export data','download my data','data export','download report','get my report','pdf report','share my data'])) return 'export.data'
   return 'general'
 }
 

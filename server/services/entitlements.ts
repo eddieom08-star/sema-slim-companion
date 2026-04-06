@@ -31,11 +31,12 @@ export class EntitlementsService {
       }
     }
 
-    const [subscription, tokenBalance, todayUsage, monthlyUsage] = await Promise.all([
+    const [subscription, tokenBalance, todayUsage, monthlyUsage, receiptScansUsed] = await Promise.all([
       this.getSubscription(userId),
       this.getOrCreateTokenBalance(userId),
       this.getTodayUsage(userId),
       this.getMonthlyUsage(userId),
+      this.getLifetimeReceiptScans(userId),
     ]);
 
     const tier = this.determineTier(subscription);
@@ -59,6 +60,8 @@ export class EntitlementsService {
       aiRecipeSuggestionsUsed: monthlyUsage.aiRecipes,
       barcodeScansToday: todayUsage.barcodeScans,
       pdfExportsUsed: tokenBalance?.exportsMonthlyUsed ?? 0,
+
+      receiptScansUsed,
 
       // Token balances
       aiTokens: tokenBalance?.aiTokens ?? 0,
@@ -179,6 +182,25 @@ export class EntitlementsService {
         };
       }
 
+      case FEATURE_TYPES.RECEIPT_SCAN: {
+        const limit = entitlements.receiptScansTotal;
+        // Pro users have unlimited (-1)
+        if (limit === -1) {
+          return { allowed: true, remaining: -1 };
+        }
+        const used = entitlements.receiptScansUsed;
+        const remaining = limit - used;
+        if (remaining >= quantity) {
+          return { allowed: true, remaining };
+        }
+        return {
+          allowed: false,
+          reason: 'receipt_scan_limit_reached',
+          upsellType: 'pro',
+          remaining: 0,
+        };
+      }
+
       default:
         return { allowed: true };
     }
@@ -292,6 +314,13 @@ export class EntitlementsService {
         if (entitlements.exportTokens >= quantity) return { allowed: true, remaining: entitlements.exportTokens };
         return { allowed: false, reason: 'no_export_tokens', upsellType: entitlements.tier === 'free' ? 'pro_or_export_tokens' : 'export_tokens', remaining: 0 };
       }
+      case FEATURE_TYPES.RECEIPT_SCAN: {
+        const limit = entitlements.receiptScansTotal;
+        if (limit === -1) return { allowed: true, remaining: -1 };
+        const remaining = limit - entitlements.receiptScansUsed;
+        if (remaining >= quantity) return { allowed: true, remaining };
+        return { allowed: false, reason: 'receipt_scan_limit_reached', upsellType: 'pro', remaining: 0 };
+      }
       default:
         return { allowed: true };
     }
@@ -343,6 +372,11 @@ export class EntitlementsService {
       WHERE user_id = $1 AND feature_type = $2 AND usage_date >= $3
     `, [userId, FEATURE_TYPES.AI_RECIPE, monthStart]);
 
+    const receiptScanResult = await client.query(`
+      SELECT COALESCE(SUM(usage_count), 0) as count FROM feature_usage
+      WHERE user_id = $1 AND feature_type = $2
+    `, [userId, FEATURE_TYPES.RECEIPT_SCAN]);
+
     const tier = this.determineTier(subscription);
     const limits = TIER_LIMITS[tier];
 
@@ -358,6 +392,7 @@ export class EntitlementsService {
       aiRecipeSuggestionsUsed: Number(monthlyRecipeResult.rows[0]?.count ?? 0),
       barcodeScansToday: Number(todayResult.rows[0]?.count ?? 0),
       pdfExportsUsed: tokenBalance?.exports_monthly_used ?? 0,
+      receiptScansUsed: Number(receiptScanResult.rows[0]?.count ?? 0),
       aiTokens: tokenBalance?.ai_tokens ?? 0,
       exportTokens: tokenBalance?.export_tokens ?? 0,
       streakShields: tokenBalance?.streak_shields ?? 0,
@@ -606,6 +641,20 @@ export class EntitlementsService {
       );
 
     return { barcodeScans: Number(usage?.count ?? 0) };
+  }
+
+  private async getLifetimeReceiptScans(userId: string): Promise<number> {
+    const [usage] = await db.select({
+      count: sql<number>`COALESCE(SUM(${featureUsage.usageCount}), 0)`,
+    })
+      .from(featureUsage)
+      .where(
+        and(
+          eq(featureUsage.userId, userId),
+          eq(featureUsage.featureType, FEATURE_TYPES.RECEIPT_SCAN)
+        )
+      );
+    return Number(usage?.count ?? 0);
   }
 
   private async getMonthlyUsage(userId: string): Promise<{ aiMealPlans: number; aiRecipes: number }> {

@@ -2,6 +2,8 @@ import { Router } from 'express';
 import Anthropic from '@anthropic-ai/sdk';
 import { requireAuth } from '../clerkAuth';
 import { storage } from '../storage';
+import { entitlementsService } from '../services/entitlements';
+import { FEATURE_TYPES } from '../../shared/features';
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -111,9 +113,20 @@ Plain text only, no markdown, no lists. Be specific and actionable.`;
   }
 });
 
-// POST /api/v2/scan-receipt — RECEIPT SCANNING
+// POST /api/v2/scan-receipt — RECEIPT SCANNING (gated: 1 free, unlimited pro)
 router.post('/v2/scan-receipt', requireAuth, async (req: any, res) => {
   try {
+    const userId = req.auth?.userId;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    // Feature gate: receipt scan (lifetime limit for free users)
+    const canUse = await entitlementsService.canUseFeature(userId, FEATURE_TYPES.RECEIPT_SCAN);
+    if (!canUse.allowed) {
+      return res.status(402).json({
+        error: { code: canUse.reason, upsell: { type: canUse.upsellType, remaining: canUse.remaining } },
+      });
+    }
+
     const { image } = req.body;
     if (!image) return res.status(400).json({ error: 'No image provided' });
 
@@ -132,6 +145,10 @@ router.post('/v2/scan-receipt', requireAuth, async (req: any, res) => {
 
     const text = (response.content[0] as { type: string; text: string }).text;
     const parsed = JSON.parse(text);
+
+    // Consume the receipt scan feature after successful extraction
+    await entitlementsService.consumeFeature(userId, FEATURE_TYPES.RECEIPT_SCAN);
+
     res.json(parsed);
   } catch (error: any) {
     console.error('Receipt scan error:', error);
@@ -139,9 +156,20 @@ router.post('/v2/scan-receipt', requireAuth, async (req: any, res) => {
   }
 });
 
-// POST /api/v2/recipe-from-image — Generate recipe from photo of ingredients/receipt
+// POST /api/v2/recipe-from-image — Generate recipe from photo of ingredients/receipt (gated: AI_RECIPE)
 router.post('/v2/recipe-from-image', requireAuth, async (req: any, res) => {
   try {
+    const userId = req.auth?.userId;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    // Feature gate: AI recipe
+    const canUse = await entitlementsService.canUseFeature(userId, FEATURE_TYPES.AI_RECIPE);
+    if (!canUse.allowed) {
+      return res.status(402).json({
+        error: { code: canUse.reason, upsell: { type: canUse.upsellType, remaining: canUse.remaining } },
+      });
+    }
+
     const { image } = req.body;
     if (!image) return res.status(400).json({ error: 'No image provided' });
 
@@ -195,7 +223,6 @@ Return JSON only, no markdown:
     const recipe = JSON.parse(recipeRaw);
 
     // Persist to DB so user can save/favourite it
-    const userId = req.auth?.userId;
     let savedRecipe = recipe;
     try {
       savedRecipe = await storage.createRecipe({
@@ -218,10 +245,70 @@ Return JSON only, no markdown:
       });
     } catch { /* non-critical — return without id */ }
 
+    // Consume AI recipe feature after successful generation
+    await entitlementsService.consumeFeature(userId, FEATURE_TYPES.AI_RECIPE);
+
     res.json({ recipe: { ...recipe, id: savedRecipe.id }, ingredients: extracted.ingredients });
   } catch (error: any) {
     console.error('Recipe from image error:', error);
     res.status(500).json({ error: 'Failed to generate recipe from image' });
+  }
+});
+
+// POST /api/v2/generate-meal-plan — AI meal plan generation (gated: AI_MEAL_PLAN)
+router.post('/v2/generate-meal-plan', requireAuth, async (req: any, res) => {
+  try {
+    const userId = req.auth?.userId;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    // Feature gate: AI meal plan
+    const canUse = await entitlementsService.canUseFeature(userId, FEATURE_TYPES.AI_MEAL_PLAN);
+    if (!canUse.allowed) {
+      return res.status(402).json({
+        error: { code: canUse.reason, upsell: { type: canUse.upsellType, remaining: canUse.remaining } },
+      });
+    }
+
+    const ctx = await getUserContext(userId);
+
+    const SYSTEM = `You are a GLP-1 nutrition expert. Generate a 7-day meal plan optimised for someone on GLP-1 medication.
+Requirements: high protein (>25g per meal), moderate calories (1200-1600/day), small portions, gentle on stomach, easy to prepare.${ctx ? `\n${ctx}` : ''}
+Return JSON only, no markdown:
+{"name":"string","days":[{"day":1,"dayName":"Monday","meals":[{"mealType":"breakfast|lunch|dinner|snack","name":"string","calories":number,"protein":number,"description":"string"}]}],"totalDailyCalories":number,"totalDailyProtein":number}`;
+
+    const response = await anthropic.messages.create({
+      model: 'claude-3-haiku-20240307',
+      max_tokens: 2000,
+      system: [{ type: 'text', text: SYSTEM, cache_control: { type: 'ephemeral' } }],
+      messages: [{ role: 'user', content: 'Generate a 7-day GLP-1 friendly meal plan.' }],
+    });
+
+    let raw = (response.content[0] as { type: string; text: string }).text;
+    raw = raw.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+    const plan = JSON.parse(raw);
+
+    // Persist to DB
+    try {
+      const saved = await storage.createMealPlan({
+        userId,
+        name: plan.name || '7-Day GLP-1 Plan',
+        description: `AI-generated meal plan — ~${plan.totalDailyCalories} cal/day`,
+        startDate: new Date().toISOString().split('T')[0],
+        endDate: new Date(Date.now() + 6 * 86400000).toISOString().split('T')[0],
+        targetCalories: plan.totalDailyCalories,
+        targetProtein: plan.totalDailyProtein,
+        isActive: true,
+      });
+      plan.id = saved.id;
+    } catch { /* non-critical */ }
+
+    // Consume the feature
+    await entitlementsService.consumeFeature(userId, FEATURE_TYPES.AI_MEAL_PLAN);
+
+    res.json({ plan });
+  } catch (error: any) {
+    console.error('Meal plan generation error:', error);
+    res.status(500).json({ error: 'Failed to generate meal plan' });
   }
 });
 

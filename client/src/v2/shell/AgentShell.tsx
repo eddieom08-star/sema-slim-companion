@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, createElement } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiRequest } from '@/lib/queryClient'
 import { useAgent } from '@/v2/agent/AgentContext'
@@ -11,11 +11,15 @@ import { useMedicationFlow } from '@/v2/features/medication/useMedicationFlow'
 import { useRecipesFlow } from '@/v2/features/recipes/useRecipesFlow'
 import { useWeightFlow } from '@/v2/features/weight/useWeightFlow'
 import { useTrendsFlow } from '@/v2/features/trends/useTrendsFlow'
+import { useMealPlanFlow } from '@/v2/features/mealplan/useMealPlanFlow'
 import { useTrialBanner } from '@/v2/monetisation/TrialBanner'
+import ProMomentCard from '@/v2/monetisation/ProMomentCard'
+import BarcodeScannerOverlay from '@/v2/features/food/BarcodeScannerOverlay'
 import HeaderStats from './HeaderStats'
 import ChatArea from './ChatArea'
 import InputBar from './InputBar'
 import HealthPanel from './HealthPanel'
+import { captureRecipeImage, logHungerLevel } from './agentHelpers'
 import type { UserContext } from '@/v2/agent/types'
 
 const SUB_ACTIONS: Record<string, { label: string; send: string }[]> = {
@@ -49,14 +53,15 @@ export default function AgentShell() {
 function AgentShellInner() {
   const { state, addUserMessage, addAgentMessage, clearMessages, setActiveFlow } = useAgent()
   const queryClient = useQueryClient()
-  const { handleFoodInput, handleBarcodeIntent } = useFoodFlow()
+  const { handleFoodInput, handleBarcodeIntent, handleBarcodeScan, scannerOpen, setScannerOpen } = useFoodFlow()
   const { checkAndAlertOverdue, quickLog, handleSideEffectMention, handleSeverityInput } = useMedicationFlow()
   const { handleGenerateRecipe, handleSavedRecipes, handleRecipeFromImage } = useRecipesFlow()
   const { handleWeightInput } = useWeightFlow()
   const { handleTrendsRequest } = useTrendsFlow()
+  const { handleGenerateMealPlan } = useMealPlanFlow()
   const panel = useHealthPanel()
   const { user, userId } = useAuth()
-  const { isPro } = useSubscription()
+  const { isPro, openCheckout, purchaseTokens, checkFeature } = useSubscription()
   const [hasWelcomed, setHasWelcomed] = useState(false)
   const [awaitingInput, setAwaitingInput] = useState<'food' | 'weight' | 'appetite' | 'side_effect' | null>(null)
   useTrialBanner()
@@ -119,38 +124,11 @@ function AgentShellInner() {
     }
   }, [panel.isOpen])
 
-  const captureRecipeImage = async (source: 'Photos' | 'Camera') => {
-    try {
-      const { Camera: CapCamera, CameraResultType, CameraSource } = await import('@capacitor/camera')
-      const photo = await CapCamera.getPhoto({
-        quality: 80,
-        allowEditing: false,
-        resultType: CameraResultType.Base64,
-        source: source === 'Camera' ? CameraSource.Camera : CameraSource.Photos,
-      })
-      if (photo.base64String) {
-        addUserMessage(source === 'Camera' ? 'Snap a receipt' : 'Photo of ingredients')
-        await handleRecipeFromImage(photo.base64String)
-      }
-    } catch (e: any) {
-      if (e?.message?.includes('User cancelled')) return
-      addAgentMessage('Camera is not available right now.', { isTemplated: true })
-    }
-  }
+  const doCapture = (source: 'Photos' | 'Camera') =>
+    captureRecipeImage(source, addUserMessage, addAgentMessage, handleRecipeFromImage)
 
-  const logHungerLevel = async (level: number, tip: string, suggestions: string[]) => {
-    try {
-      await apiRequest('POST', '/api/hunger-logs', { hungerBefore: level, loggedAt: new Date().toISOString() })
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
-      queryClient.invalidateQueries({ queryKey: ['panel-dashboard'] })
-      queryClient.invalidateQueries({ queryKey: ['panel-hunger-today'] })
-      queryClient.invalidateQueries({ queryKey: ['panel-hunger-week'] })
-      queryClient.invalidateQueries({ queryKey: ['panel-hunger-range'] })
-      addAgentMessage(`Logged hunger level ${level}/10. ${tip}`, { isTemplated: true, suggestions })
-    } catch {
-      addAgentMessage('Failed to log appetite. Try again.', { isTemplated: true })
-    }
-  }
+  const doLogHunger = (level: number, tip: string, suggestions: string[]) =>
+    logHungerLevel(level, tip, suggestions, queryClient, addAgentMessage)
 
   // ── FOLLOWUP_LABELS: suggestion buttons that need direct handling (zero API cost)
   const FOLLOWUP_LABELS: Record<string, () => void | Promise<void>> = {
@@ -185,9 +163,9 @@ function AgentShellInner() {
         isTemplated: true, suggestions: ['Log my weight', 'Need a recipe', 'How am I doing?'],
       })
     },
-    '1-3 Very hungry': () => logHungerLevel(2, 'Try a high-protein snack to help with hunger.', ['Log a meal', 'Need a recipe']),
-    '4-6 Moderate': () => logHungerLevel(5, 'Moderate appetite is normal on GLP-1 medication.', ['Log a meal', 'How am I doing?']),
-    '7-10 Satisfied': () => logHungerLevel(8, 'Feeling satisfied — your medication is working well.', ['Log my weight', 'Need a recipe', 'How am I doing?']),
+    '1-3 Very hungry': () => doLogHunger(2, 'Try a high-protein snack to help with hunger.', ['Log a meal', 'Need a recipe']),
+    '4-6 Moderate': () => doLogHunger(5, 'Moderate appetite is normal on GLP-1 medication.', ['Log a meal', 'How am I doing?']),
+    '7-10 Satisfied': () => doLogHunger(8, 'Feeling satisfied — your medication is working well.', ['Log my weight', 'Need a recipe', 'How am I doing?']),
     'Log another symptom': () => {
       addAgentMessage('What are you experiencing?', {
         isTemplated: true,
@@ -201,6 +179,11 @@ function AgentShellInner() {
     },
     'Generate another': () => { handleGenerateRecipe() },
     'Something different': () => { handleGenerateRecipe('something different, surprise me') },
+    'Show saved recipes': () => {
+      panel.setIsOpen(true)
+      panel.setSection('dashboard')
+    },
+    'Scan another': () => { handleBarcodeIntent() },
     'Update my dosage': () => {
       addAgentMessage('What is your new dose? (e.g. "0.5mg", "1mg")', { isTemplated: true })
     },
@@ -239,8 +222,8 @@ function AgentShellInner() {
     // These always cancel any pending input prompt and route directly.
 
     // Camera/gallery shortcuts
-    if (text === '__recipe_photo__' || text === 'Photo of ingredients') { setAwaitingInput(null); await captureRecipeImage('Photos'); return }
-    if (text === '__recipe_camera__' || text === 'Snap a receipt') { setAwaitingInput(null); await captureRecipeImage('Camera'); return }
+    if (text === '__recipe_photo__' || text === 'Photo of ingredients') { setAwaitingInput(null); await doCapture('Photos'); return }
+    if (text === '__recipe_camera__' || text === 'Snap a receipt') { setAwaitingInput(null); await doCapture('Camera'); return }
 
     // Parent quick action → show sub-menu
     const subActions = SUB_ACTIONS[text]
@@ -259,8 +242,8 @@ function AgentShellInner() {
     if (subAction) {
       setAwaitingInput(null)
       if (subAction.send.startsWith('__recipe_')) {
-        if (subAction.send === '__recipe_photo__') { await captureRecipeImage('Photos'); return }
-        if (subAction.send === '__recipe_camera__') { await captureRecipeImage('Camera'); return }
+        if (subAction.send === '__recipe_photo__') { await doCapture('Photos'); return }
+        if (subAction.send === '__recipe_camera__') { await doCapture('Camera'); return }
       }
       addUserMessage(text)
       const { intent, entities } = await classify(subAction.send)
@@ -309,7 +292,7 @@ function AgentShellInner() {
           const suggestions = level <= 3 ? ['Log a meal', 'Need a recipe']
             : level >= 7 ? ['Log my weight', 'Need a recipe', 'How am I doing?']
             : ['Log a meal', 'How am I doing?']
-          await logHungerLevel(level, tip, suggestions)
+          await doLogHunger(level, tip, suggestions)
           return
         }
         case 'side_effect':
@@ -394,6 +377,25 @@ function AgentShellInner() {
           suggestions: ['Photo of ingredients', 'Snap a receipt'],
         })
         break
+      case 'export.data':
+        if (isPro) {
+          panel.setIsOpen(true)
+          panel.setSection('reports')
+          addAgentMessage('I\'ve opened your reports section. You can generate and download PDF reports from there.', { isTemplated: true })
+        } else {
+          addAgentMessage('', {
+            isTemplated: true,
+            component: createElement(ProMomentCard, {
+              trigger: 'pdf_export' as const,
+              onUpgrade: openCheckout,
+              onDismiss: () => {},
+            }),
+          })
+        }
+        break
+      case 'mealplan.generate':
+        await handleGenerateMealPlan()
+        break
       default:
         addAgentMessage("I'm not sure how to help with that yet. Try one of these:", {
           isTemplated: true,
@@ -406,9 +408,16 @@ function AgentShellInner() {
     <div className="relative w-full max-w-[100vw] overflow-hidden" style={{ height: '100dvh' }}>
       {/* Fixed status bar strip for Dynamic Island */}
       <div className="fixed top-0 left-0 right-0 z-[80] bg-gradient-to-r from-blue-500 to-purple-600"
-           style={{ height: 'env(safe-area-inset-top, 48px)' }} />
+           style={{ height: 'env(safe-area-inset-top, 56px)' }} />
       {/* Panel outside overflow-hidden container */}
       <HealthPanel userInitials={initials} />
+      {/* Barcode scanner overlay */}
+      {scannerOpen && (
+        <BarcodeScannerOverlay
+          onScan={handleBarcodeScan}
+          onClose={() => setScannerOpen(false)}
+        />
+      )}
       {/* Main content */}
       <div className="flex flex-col w-full max-w-[100vw] h-full overflow-hidden overflow-x-hidden bg-white dark:bg-gray-900 touch-pan-y">
         <HeaderStats
@@ -441,6 +450,19 @@ function AgentShellInner() {
         </div>
         )}
         <InputBar onSend={handleSend} onCamera={async () => {
+          // Gate receipt scanning: 1 free, unlimited pro
+          const gate = await checkFeature('receipt_scan', 1)
+          if (!gate.allowed) {
+            addAgentMessage('', {
+              isTemplated: true,
+              component: createElement(ProMomentCard, {
+                trigger: 'receipt_scan' as const,
+                onUpgrade: openCheckout,
+                onDismiss: () => {},
+              }),
+            })
+            return
+          }
           try {
             const { Camera: CapCamera, CameraResultType, CameraSource } = await import('@capacitor/camera')
             const photo = await CapCamera.getPhoto({

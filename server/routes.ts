@@ -421,6 +421,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Pass cutoff to database query for efficient filtering
       const logs = await storage.getUserMedicationLogs(userId, limit, cutoffDate);
 
+      if (entitlements.historyRetentionDays !== -1) {
+        res.setHeader('X-Data-Truncated', 'true');
+        res.setHeader('X-Retention-Days', String(entitlements.historyRetentionDays));
+      }
       res.json(logs);
     } catch (error) {
       console.error("Error fetching medication logs:", error);
@@ -509,6 +513,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Apply limit if specified
       const limitedEntries = limit ? filteredEntries.slice(0, limit) : filteredEntries;
 
+      if (entitlements.historyRetentionDays !== -1) {
+        res.setHeader('X-Data-Truncated', 'true');
+        res.setHeader('X-Retention-Days', String(entitlements.historyRetentionDays));
+      }
       res.json(limitedEntries);
     } catch (error) {
       console.error("Error fetching food logs:", error);
@@ -819,6 +827,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const cutoffDate = new Date();
         cutoffDate.setDate(cutoffDate.getDate() - entitlements.historyRetentionDays);
         const filteredLogs = logs.filter((log: any) => new Date(log.loggedAt) >= cutoffDate);
+        res.setHeader('X-Data-Truncated', 'true');
+        res.setHeader('X-Retention-Days', String(entitlements.historyRetentionDays));
         return res.json(filteredLogs);
       }
 
@@ -1057,6 +1067,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const retentionCutoff = new Date();
         retentionCutoff.setDate(retentionCutoff.getDate() - entitlements.historyRetentionDays);
         const filteredLogs = logs.filter((log: any) => new Date(log.loggedAt) >= retentionCutoff);
+        res.setHeader('X-Data-Truncated', 'true');
+        res.setHeader('X-Retention-Days', String(entitlements.historyRetentionDays));
         return res.json(filteredLogs);
       }
 

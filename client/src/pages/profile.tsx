@@ -5,32 +5,15 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { updateUserProfileSchema } from "@shared/schema";
-import { z } from "zod";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { ArrowLeft, Edit, Save, X, LogOut } from "lucide-react";
-
-const profileFormSchema = updateUserProfileSchema.extend({
-  currentWeight: z.preprocess(
-    (val) => val === "" || val === null || val === undefined ? null : val,
-    z.coerce.number({ invalid_type_error: "Must be a valid number" }).nullable().optional()
-  ),
-  targetWeight: z.preprocess(
-    (val) => val === "" || val === null || val === undefined ? null : val,
-    z.coerce.number({ invalid_type_error: "Must be a valid number" }).nullable().optional()
-  ),
-  height: z.preprocess(
-    (val) => val === "" || val === null || val === undefined ? null : val,
-    z.coerce.number({ invalid_type_error: "Must be a valid number" }).nullable().optional()
-  ),
-});
-
-type ProfileFormData = z.infer<typeof updateUserProfileSchema>;
+import { ArrowLeft, Edit, Save, X, LogOut, Camera } from "lucide-react";
+import SubscriptionCard from "@/v2/monetisation/SubscriptionCard";
+import { profileFormSchema, type ProfileFormData } from "./profileSchema";
 
 export default function Profile() {
   const [, setLocation] = useLocation();
@@ -146,6 +129,56 @@ export default function Profile() {
                   </div>
                 </CardHeader>
                 <CardContent className="p-4 md:p-6 space-y-4">
+                  {/* Avatar */}
+                  <div className="flex items-center gap-4 overflow-hidden">
+                    <div className="relative flex-shrink-0">
+                      {form.watch('profileImageUrl') ? (
+                        <img
+                          src={form.watch('profileImageUrl') as string}
+                          alt="Profile"
+                          className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
+                        />
+                      ) : (
+                        <div className="w-16 h-16 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-lg font-semibold">
+                          {[(user as any)?.firstName?.[0], (user as any)?.lastName?.[0]].filter(Boolean).join('') || 'U'}
+                        </div>
+                      )}
+                      {isEditing && (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              const { Camera: CapCamera, CameraResultType, CameraSource } = await import('@capacitor/camera')
+                              const photo = await CapCamera.getPhoto({
+                                quality: 70,
+                                allowEditing: true,
+                                resultType: CameraResultType.DataUrl,
+                                source: CameraSource.Prompt,
+                                width: 200,
+                                height: 200,
+                              })
+                              if (photo.dataUrl) {
+                                form.setValue('profileImageUrl', photo.dataUrl)
+                              }
+                            } catch (e: any) {
+                              if (e?.message?.includes('User cancelled')) return
+                              toast({ title: 'Camera unavailable', variant: 'destructive' })
+                            }
+                          }}
+                          className="absolute -bottom-1 -right-1 w-7 h-7 bg-purple-600 text-white rounded-full flex items-center justify-center shadow-md"
+                        >
+                          <Camera className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                    <div className="min-w-0 overflow-hidden">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {[(user as any)?.firstName, (user as any)?.lastName].filter(Boolean).join(' ') || 'User'}
+                      </p>
+                      <p className="text-xs text-gray-500 truncate">{(user as any)?.email || ''}</p>
+                    </div>
+                  </div>
+
                   <div>
                     <FormLabel>Email</FormLabel>
                     <Input
@@ -403,6 +436,17 @@ export default function Profile() {
                       )}
                     />
                   </div>
+                </CardContent>
+              </Card>
+
+              {/* Subscription & Billing */}
+              <Card className="md:col-span-2">
+                <CardHeader className="p-4 md:p-6">
+                  <CardTitle>Subscription & Billing</CardTitle>
+                  <CardDescription>Manage your plan and tokens</CardDescription>
+                </CardHeader>
+                <CardContent className="p-4 md:p-6">
+                  <SubscriptionCard />
                 </CardContent>
               </Card>
 

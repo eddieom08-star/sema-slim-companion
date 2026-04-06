@@ -2254,38 +2254,21 @@ Always respond with valid JSON only, no additional text.`;
         if (parts.length) userCtx = `\nUser profile: ${parts.join(', ')}.`;
       } catch { /* non-critical */ }
 
-      // Step 1: Haiku extracts structured preferences (cached system prompt)
-      const PREFS_SYSTEM = `Extract dietary preferences. Return JSON only, no markdown:
-{"high_protein":bool,"low_carb":bool,"vegetarian":bool,"quick_cook":bool,"avoid":[],"servings":1}`;
-
-      logger.info('Step 1: Extracting preferences with Haiku', { userInput });
-      const prefsRes = await anthropic.messages.create({
-        model: 'claude-3-haiku-20240307',
-        max_tokens: 100,
-        system: [{ type: 'text', text: PREFS_SYSTEM }],
-        messages: [{ role: 'user', content: userInput }],
-      });
-      let prefsText = (prefsRes.content[0] as { type: string; text: string }).text;
-      prefsText = prefsText.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
-      const prefs = JSON.parse(prefsText);
-      logger.info('Preferences extracted', { prefs });
-
-      // Step 2: Sonnet generates recipe from structured prefs (cached system prompt)
+      // Single-step recipe generation — one LLM call to stay within Vercel timeout
       const RECIPE_SYSTEM = `You are a GLP-1 nutrition expert. Generate a single recipe optimised for people on Ozempic, Mounjaro, Wegovy, or Rybelsus.
 Requirements: high protein (>25g), moderate calories (300-500), easy to eat in small portions, gentle on the stomach.${userCtx}
-Return JSON only, no markdown:
+Return ONLY valid JSON, no markdown fences, no extra text:
 {"name":"string","prepTime":number,"cookTime":number,"servings":1,"ingredients":[{"name":"string","quantity":"string","unit":"string"}],"instructions":"string","calories":number,"protein":number,"carbs":number,"fat":number,"tags":["string"]}`;
 
-      logger.info('Step 2: Generating recipe with Sonnet');
+      logger.info('Generating recipe', { userInput });
       const recipeRes = await anthropic.messages.create({
-        model: 'claude-sonnet-4-5-20250929',
+        model: 'claude-3-haiku-20240307',
         max_tokens: 800,
         system: [{ type: 'text', text: RECIPE_SYSTEM }],
-        messages: [{ role: 'user', content: JSON.stringify(prefs) }],
+        messages: [{ role: 'user', content: `User preferences: ${userInput}` }],
       });
 
       let recipeText = (recipeRes.content[0] as { type: string; text: string }).text;
-      // Strip markdown code fences if present
       recipeText = recipeText.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
       const recipe = JSON.parse(recipeText);
 

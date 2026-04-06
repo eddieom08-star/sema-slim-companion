@@ -61,10 +61,12 @@ export function useRecipesFlow() {
         component: createElement(RecipeCard, { recipe, onSave: handleSave, isSaved: false }),
         suggestions: ['Generate another', 'Something different', 'Show saved recipes'],
       })
-    } catch {
-      addAgentMessage('Recipe generation failed. Try again in a moment.', { isTemplated: true })
+    } catch (err: any) {
+      const detail = err?.message || 'Unknown error'
+      console.error('Recipe generation error:', detail)
+      addAgentMessage(`Recipe generation failed: ${detail}`, { isTemplated: true })
     }
-  }, [addAgentMessage, checkFeature, openCheckout, purchaseTokens])
+  }, [addAgentMessage, checkFeature, openCheckout, purchaseTokens, queryClient])
 
   const handleSavedRecipes = useCallback(async () => {
     try {

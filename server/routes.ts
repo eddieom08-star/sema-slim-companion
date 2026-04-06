@@ -2275,7 +2275,9 @@ Always respond with valid JSON only, no additional text.`;
         }
       }
       if (!prefsRes) throw new Error('All Haiku models failed for preference extraction');
-      const prefs = JSON.parse((prefsRes.content[0] as { type: string; text: string }).text);
+      let prefsText = (prefsRes.content[0] as { type: string; text: string }).text;
+      prefsText = prefsText.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+      const prefs = JSON.parse(prefsText);
       logger.info('Preferences extracted', { prefs });
 
       // Step 2: Sonnet generates recipe from structured prefs (cached system prompt)
@@ -2303,7 +2305,9 @@ Return JSON only, no markdown:
       }
       if (!recipeRes) throw new Error('All models failed for recipe generation');
 
-      const recipeText = (recipeRes.content[0] as { type: string; text: string }).text;
+      let recipeText = (recipeRes.content[0] as { type: string; text: string }).text;
+      // Strip markdown code fences if present
+      recipeText = recipeText.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
       const recipe = JSON.parse(recipeText);
 
       // Persist to DB so user can save/favourite it

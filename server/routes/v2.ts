@@ -159,7 +159,9 @@ router.post('/v2/recipe-from-image', requireAuth, async (req: any, res) => {
       }],
     });
 
-    const extracted = JSON.parse((extractRes.content[0] as { type: string; text: string }).text);
+    let extractText = (extractRes.content[0] as { type: string; text: string }).text;
+    extractText = extractText.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+    const extracted = JSON.parse(extractText);
     if (!extracted.ingredients?.length) {
       return res.json({ error: 'no_ingredients', message: 'No ingredients found in the image.' });
     }
@@ -188,7 +190,9 @@ Return JSON only, no markdown:
       });
     }
 
-    const recipe = JSON.parse((recipeRes.content[0] as { type: string; text: string }).text);
+    let recipeRaw = (recipeRes.content[0] as { type: string; text: string }).text;
+    recipeRaw = recipeRaw.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+    const recipe = JSON.parse(recipeRaw);
 
     // Persist to DB so user can save/favourite it
     const userId = req.auth?.userId;

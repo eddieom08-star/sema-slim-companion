@@ -431,7 +431,7 @@ function AgentShellInner() {
         <ChatArea messages={state.messages} onSuggestionTap={handleSend} onClear={() => { setAwaitingInput(null); clearMessages() }} />
         {/* Quick action pills — visible only after conversation starts */}
         {state.messages.length > 1 && (
-        <div className="flex-shrink-0 px-3 py-2 bg-white dark:bg-gray-900 flex gap-2 overflow-x-auto w-full max-w-[100vw]">
+        <div className="flex-shrink-0 px-3 py-2 bg-white dark:bg-gray-900 flex gap-2 overflow-x-auto w-full max-w-full">
           {[
             { label: 'Log food', emoji: '🍽' },
             { label: 'Log my dose', emoji: '💊' },

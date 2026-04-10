@@ -27,7 +27,7 @@ export default function ChatArea({ messages, onSuggestionTap, onClear }: ChatAre
   const scrollRef = useRef<HTMLDivElement>(null)
   const isEmpty = messages.length === 0
 
-  // Swipe-down-to-clear: detect a fast downward swipe anywhere in the chat
+  // Swipe-up-to-clear: detect a fast upward swipe anywhere in the chat
   const [showClearPrompt, setShowClearPrompt] = useState(false)
   const touchStartY = useRef(0)
   const touchStartTime = useRef(0)
@@ -49,9 +49,9 @@ export default function ChatArea({ messages, onSuggestionTap, onClear }: ChatAre
     const dt = Date.now() - touchStartTime.current
     const scrollDelta = (scrollRef.current?.scrollTop ?? 0) - scrollAtStart.current
 
-    // Fast swipe down (>120px in <400ms) while the scroll didn't actually move much
-    // This means they're at the bottom and swiping down, or overscrolling
-    if (dy > 120 && dt < 400 && Math.abs(scrollDelta) < 20) {
+    // Fast swipe up (>120px in <400ms) while the scroll didn't actually move much
+    // This means they're at the top and swiping up, or overscrolling
+    if (dy < -120 && dt < 400 && Math.abs(scrollDelta) < 20) {
       setShowClearPrompt(true)
     }
   }, [isEmpty, showClearPrompt])
@@ -68,9 +68,9 @@ export default function ChatArea({ messages, onSuggestionTap, onClear }: ChatAre
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
-      {/* Clear chat confirmation */}
+      {/* Clear chat confirmation — strip above input bar */}
       {showClearPrompt && (
-        <div className="sticky top-0 z-20 flex items-center justify-between px-4 py-3 bg-gray-900/90 dark:bg-gray-100/90 backdrop-blur-sm">
+        <div className="sticky bottom-0 z-20 flex items-center justify-between px-4 py-3 bg-gray-900/90 dark:bg-gray-100/90 backdrop-blur-sm">
           <div className="flex items-center gap-2">
             <Trash2 className="w-4 h-4 text-white dark:text-gray-900" />
             <span className="text-sm font-medium text-white dark:text-gray-900">Clear this conversation?</span>
@@ -144,14 +144,14 @@ export default function ChatArea({ messages, onSuggestionTap, onClear }: ChatAre
                 <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                   <Bot className="w-3.5 h-3.5 text-blue-500" />
                 </div>
-                <div className="space-y-2 max-w-[82%]">
+                <div className="space-y-2 max-w-[82%] min-w-0">
                   {msg.content && (
                     <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-gray-800 dark:text-gray-100 overflow-hidden break-words">
                       {msg.content}
                     </div>
                   )}
                   {msg.component && (
-                    <div className="overflow-hidden w-full max-w-full">{msg.component}</div>
+                    <div className="overflow-hidden w-full max-w-full min-w-0">{msg.component}</div>
                   )}
                   {msg.suggestions && msg.suggestions.length > 0 && (
                     <div className="flex flex-wrap gap-2">

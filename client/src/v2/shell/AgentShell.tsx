@@ -218,6 +218,7 @@ function AgentShellInner() {
   }
 
   const handleSend = async (text: string) => {
+   try {
     // ─── LAYER 1: Structured taps (buttons, pills, suggestions) ───
     // These always cancel any pending input prompt and route directly.
 
@@ -307,6 +308,13 @@ function AgentShellInner() {
     // No keyword match, no pending flow (or side_effect didn't match) — escalate to Haiku
     const { intent, entities } = await classify(text)
     await dispatchIntent(intent, text, entities)
+   } catch (err) {
+    console.error('[Chat] handleSend error:', err)
+    addAgentMessage("Something went wrong — try again.", {
+      isTemplated: true,
+      suggestions: getContextualChips(userContext),
+    })
+   }
   }
 
   const dispatchIntent = async (intent: string, text: string, entities?: Record<string, string | null>) => {

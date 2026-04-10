@@ -312,4 +312,45 @@ Return JSON only, no markdown:
   }
 });
 
+// POST /api/v2/chat — general conversational replies
+router.post('/v2/chat', requireAuth, async (req: any, res) => {
+  try {
+    const userId = req.auth?.userId;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const { text, history } = req.body;
+    if (!text || typeof text !== 'string') {
+      return res.json({ reply: "I didn't catch that — could you try again?" });
+    }
+
+    const ctx = await getUserContext(userId);
+
+    const SYSTEM = `You are a friendly GLP-1 health companion. You help users track food, medication, weight, and recipes.
+Keep replies to 2-3 short sentences. Be warm but concise. Plain text only, no markdown.
+If the user asks something you can help with, answer directly.
+If they seem to want an action (log food, log dose, etc.), suggest the relevant action.
+${ctx}`;
+
+    const messages: { role: 'user' | 'assistant'; content: string }[] = [];
+    if (Array.isArray(history)) {
+      for (const m of history.slice(-6)) {
+        if (m.role && m.content) messages.push({ role: m.role, content: m.content });
+      }
+    }
+    messages.push({ role: 'user', content: text.trim() });
+
+    const response = await anthropic.messages.create({
+      model: 'claude-3-haiku-20240307',
+      max_tokens: 200,
+      system: [{ type: 'text', text: SYSTEM, cache_control: { type: 'ephemeral' } }],
+      messages,
+    });
+
+    const reply = (response.content[0] as { type: 'text'; text: string }).text.trim();
+    res.json({ reply });
+  } catch {
+    res.json({ reply: "I'm having trouble right now — try one of the quick actions below." });
+  }
+});
+
 export default router;

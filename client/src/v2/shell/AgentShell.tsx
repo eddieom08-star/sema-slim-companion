@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiRequest } from '@/lib/queryClient'
 import { useAgent } from '@/v2/agent/AgentContext'
 import { useHealthPanel } from '@/v2/agent/HealthPanelContext'
-import { classifyIntent, getContextualChips } from '@/v2/agent/agentRouter'
+import { classifyIntent, getContextualChips, buildAPIContext } from '@/v2/agent/agentRouter'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSubscription } from '@/contexts/SubscriptionContext'
 import { useFoodFlow } from '@/v2/features/food/useFoodFlow'
@@ -404,11 +404,21 @@ function AgentShellInner() {
       case 'mealplan.generate':
         await handleGenerateMealPlan()
         break
-      default:
-        addAgentMessage("I'm not sure how to help with that yet. Try one of these:", {
-          isTemplated: true,
-          suggestions: getContextualChips(userContext),
-        })
+      default: {
+        const history = buildAPIContext(state.messages)
+        try {
+          const res = await apiRequest('POST', '/api/v2/chat', { text, history })
+          const { reply } = await res.json()
+          addAgentMessage(reply || "I'm not sure how to help with that yet.", {
+            suggestions: getContextualChips(userContext),
+          })
+        } catch {
+          addAgentMessage("I'm not sure how to help with that yet. Try one of these:", {
+            isTemplated: true,
+            suggestions: getContextualChips(userContext),
+          })
+        }
+      }
     }
   }
 

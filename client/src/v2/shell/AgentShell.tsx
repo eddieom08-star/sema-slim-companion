@@ -423,7 +423,7 @@ function AgentShellInner() {
   }
 
   return (
-    <div className="relative w-full max-w-[100vw] overflow-hidden" style={{ height: '100dvh' }}>
+    <div className="relative w-full max-w-full overflow-hidden" style={{ height: '100dvh' }}>
       {/* Fixed status bar strip for Dynamic Island */}
       <div className="fixed top-0 left-0 right-0 z-[80] bg-gradient-to-r from-blue-500 to-purple-600"
            style={{ height: 'env(safe-area-inset-top, 56px)' }} />
@@ -437,7 +437,7 @@ function AgentShellInner() {
         />
       )}
       {/* Main content */}
-      <div className="flex flex-col w-full max-w-[100vw] h-full overflow-hidden overflow-x-hidden bg-white dark:bg-gray-900 touch-pan-y">
+      <div className="flex flex-col w-full max-w-full h-full overflow-hidden overflow-x-hidden bg-white dark:bg-gray-900 touch-pan-y">
         <HeaderStats
           userContext={userContext}
           userInitials={initials}
